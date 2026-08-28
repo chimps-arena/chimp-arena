@@ -6,6 +6,7 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { XpBar } from "@/components/xp-bar";
 import { CrewBadge } from "@/components/crew-badge";
 import { HandleEditor } from "@/components/handle-editor";
+import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL, WEEKLY_CHIMP_POOL } from "@/lib/game/economy";
@@ -46,6 +47,9 @@ export default function DashboardPage() {
               {shortWallet(player.wallet)} · joined{" "}
               {new Date(player.createdAt).toLocaleDateString()}
             </p>
+            <div className="mt-2">
+              <DevnetFaucet />
+            </div>
           </div>
           <div className="flex gap-6 text-right">
             <div>

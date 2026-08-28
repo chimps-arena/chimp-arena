@@ -24,7 +24,8 @@ export function isLikelySolanaAddress(value: unknown): value is string {
 
 /**
  * Verify an ed25519 signature over `message` for `wallet` (base58 pubkey).
- * `signature` is base58-encoded (what connectPhantom returns).
+ * `signature` is base58-encoded (the wallet-adapter `signMessage` result,
+ * bs58-encoded client-side).
  */
 export function verifySignature(
   message: string,

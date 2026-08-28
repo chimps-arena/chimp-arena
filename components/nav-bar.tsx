@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { shortWallet } from "@/lib/format";
@@ -15,8 +16,18 @@ const LINKS = [
 
 export function NavBar() {
   const { me, loading, logout } = useSession();
+  const { disconnect } = useWallet();
   const pathname = usePathname();
   const player = me?.player ?? null;
+
+  async function fullDisconnect() {
+    await logout();
+    try {
+      await disconnect();
+    } catch {
+      /* wallet already disconnected */
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
@@ -57,7 +68,10 @@ export function NavBar() {
                   {player.xp.toLocaleString()} XP · {shortWallet(player.wallet)}
                 </div>
               </div>
-              <button className="btn btn-ghost text-sm" onClick={() => logout()}>
+              <button
+                className="btn btn-ghost text-sm"
+                onClick={() => fullDisconnect()}
+              >
                 Disconnect
               </button>
             </>

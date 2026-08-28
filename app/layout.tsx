@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SolanaProvider } from "@/components/solana-provider";
 import { SessionProvider } from "@/components/session-provider";
+import { WalletSessionGuard } from "@/components/wallet-session-guard";
 import { NavBar } from "@/components/nav-bar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -24,16 +26,19 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SessionProvider>
-          <NavBar />
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-            {children}
-          </main>
-          <footer className="border-t border-border/60 py-6 text-center text-xs text-muted">
-            CHIMP Arena — community MVP. Not financial advice. XP has no monetary
-            value.
-          </footer>
-        </SessionProvider>
+        <SolanaProvider>
+          <SessionProvider>
+            <WalletSessionGuard />
+            <NavBar />
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              {children}
+            </main>
+            <footer className="border-t border-border/60 py-6 text-center text-xs text-muted">
+              CHIMP Arena — community MVP. Not financial advice. XP has no
+              monetary value.
+            </footer>
+          </SessionProvider>
+        </SolanaProvider>
       </body>
     </html>
   );

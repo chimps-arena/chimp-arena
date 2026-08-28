@@ -4,7 +4,7 @@ Full path from the current MVP to a live on-chain economy. See
 [ECONOMY.md](ECONOMY.md) for the design rationale.
 
 **81 items** (6 dropped when #68 locked to wallet-only).
-Done: 17 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~55.
+Done: 27 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~48.
 
 Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs external action)
 
@@ -65,16 +65,14 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 ## F. Wallet integration refactor — 6
 
-> Needs decisions #12, #13 (and #68).
-
 | # | Item | Status |
 | --- | --- | --- |
-| 25 | Add `@solana/wallet-adapter-react`, migrate off `window.phantom` | ☐ |
-| 26 | Keep sign-in-with-signature, sourced from the adapter | ☐ |
-| 27 | Shared helper: server builds unsigned tx → client signs once → indexer reconciles | ☐ |
-| 28 | Fee-payer relay (server as fee payer + co-signer) | ☐ |
-| 29 | Devnet SOL faucet button (stopgap) | ☐ |
-| 30 | Tx simulation, blockhash rebuild-retry, session-wallet == JWT-wallet check | ☐ |
+| 25 | Add `@solana/wallet-adapter-react`, migrate off `window.phantom` | ☑ `SolanaProvider` (Connection + Wallet + Modal), `lib/phantom.ts` deleted |
+| 26 | Keep sign-in-with-signature, sourced from the adapter | ☑ `wallet-connect.tsx` uses `useWallet().signMessage`; modal picks any Wallet-Standard wallet |
+| 27 | Shared helper: server builds unsigned tx → client signs once → confirm | ☑ `lib/chain/tx.ts` `signAndSend()` + `lib/chain/connection.ts` |
+| 28 | Fee-payer relay (server as fee payer + co-signer) | ◐ deferred to Group G — needs the treasury keypair from Squads (#32) |
+| 29 | Devnet SOL faucet button (stopgap) | ☑ `DevnetFaucet` on the dashboard (devnet only) |
+| 30 | Tx simulation, blockhash rebuild-retry, session-wallet == JWT-wallet check | ☑ sim + retry in `signAndSend`; `WalletSessionGuard` banner on mismatch |
 
 ## G. P2 — CHIMP on devnet + weekly claim — 7
 
