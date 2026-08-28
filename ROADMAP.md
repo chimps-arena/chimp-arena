@@ -4,7 +4,7 @@ Full path from the current MVP to a live on-chain economy. See
 [ECONOMY.md](ECONOMY.md) for the design rationale.
 
 **81 items** (6 dropped when #68 locked to wallet-only).
-Done: 17 · Decisions locked: 4 of 9 (#12, #13, #15, #68) · Build remaining: ~55.
+Done: 17 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~55.
 
 Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs external action)
 
@@ -36,15 +36,15 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Decision | Locked |
 | --- | --- | --- |
-| 11 | Off-chain yield/tax at launch **vs** custom Anchor program | ☐ (recommend: off-chain) |
+| 11 | Off-chain yield/tax **vs** custom Anchor program | ☑ **Off-chain in Supabase** at launch; Anchor program is a later upgrade |
 | 12 | Fee-payer relay **vs** users bring their own SOL | ☑ **Fee-payer relay** (treasury pays gas) |
 | 13 | Multi-wallet via wallet-adapter **vs** Phantom-only | ☑ **Multi-wallet** (`@solana/wallet-adapter-react`) |
-| 14 | Unclaimed rewards: 8-week clawback **vs** stack forever | ☐ (recommend: 8-week window) |
+| 14 | Unclaimed rewards: 8-week clawback **vs** stack forever | ☑ **8-week window**, then clawback to treasury |
 | 15 | `$CHIMP` mint + treasury authority in a Squads multisig from day one | ☑ **Squads from day one** |
-| 16 | Retroactive XP→CHIMP at P2 **vs** "Season 1 starts now" | ☐ (recommend: Season 1 starts now) |
-| 17 | Marketplace: integrate Tensor/ME **vs** build escrow (P6) | ☐ (recommend: integrate) |
-| 68 | Auth model | ☑ **Wallet-only** — no email/embedded wallet; Group M collapses to #73 + polish |
-| 76 | Fiat on-ramp **vs** earn-only | ☐ (P6 — defer) |
+| 16 | Retroactive XP→CHIMP at P2 **vs** "Season 1 starts now" | ☑ **Season 1 starts now** — no back-pay (optional founder grant) |
+| 17 | Marketplace: integrate Tensor/ME **vs** build escrow | ☑ **Build a minimal in-app escrow** — custom program, needs audit (Group K) |
+| 68 | Auth model | ☑ **Wallet-only** — no email/embedded wallet; Group M collapsed |
+| 76 | Fiat on-ramp **vs** earn-only | ☐ (P6 — deferred) |
 
 ## D. Economic modeling — 4
 
@@ -122,7 +122,7 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 53 | Marketplace integration (Tensor / Magic Eden) | ☐ |
+| 53 | Minimal in-app escrow marketplace program (custom, per decision #17) + audit | ☐ |
 | 54 | `$CHIMP` liquidity pool (Raydium / Orca) | ☐ |
 | 55 | Crew treasury feature | ☐ |
 | 56 | Territory + treasury leaderboard boards | ☐ |
