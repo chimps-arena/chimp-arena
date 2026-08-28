@@ -13,12 +13,12 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 1 | Create the Supabase project | ⊘ needs Supabase account (owner) |
-| 2 | Run DB setup — [`supabase/setup.sql`](supabase/setup.sql) (one-shot: schema + both migrations) | ⊘ after #1 |
-| 3 | Fill the 3 empty Supabase keys in `.env.local`, then `npm run verify:db` | ⊘ after #1 |
-| 4 | `git init` + first commit | ☑ Git 2.55 installed, repo on `main`, 2 commits, `.gitattributes` (LF), secrets excluded |
+| 1 | Create the Supabase project | ☑ project `kisegtuyqddqhdmxhwuy`, new-format API keys |
+| 2 | Run DB setup — [`supabase/setup.sql`](supabase/setup.sql) (one-shot: schema + both migrations) | ☑ `verify:db` all green |
+| 3 | Fill the 3 Supabase keys in `.env.local`, then `npm run verify:db` | ☑ publishable + secret keys in `.env.local` |
+| 4 | `git init` + first commit | ☑ Git 2.55 installed, repo on `main`, `.gitattributes` (LF), secrets excluded |
 | 5 | Fix the 3 `react-hooks/set-state-in-effect` lint errors | ☑ |
-| 6 | End-to-end smoke test: connect → play → XP → leaderboard | ☐ after #1–3 |
+| 6 | End-to-end smoke test: connect → play → XP → leaderboard | ◐ server + `/api/leaderboard` verified vs live DB; wallet/play flow needs manual run |
 
 > Prep done: [`supabase/setup.sql`](supabase/setup.sql) (paste once), [`scripts/verify-supabase.mjs`](scripts/verify-supabase.mjs) via `npm run verify:db` (checks every table/view/function). The moment keys land in `.env.local`, `verify:db` confirms #2 + #7 + #8 in one shot.
 
@@ -26,8 +26,8 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 7 | `add_player_xp()` atomic Postgres function (replaces read-modify-write) | ◐ code done ([0001](supabase/migrations/0001_atomic_xp.sql) + submit route), untested vs live DB |
-| 8 | `weekly_scores` snapshot table + aggregation logic | ◐ code done ([0002](supabase/migrations/0002_weekly_scores.sql)), untested vs live DB |
+| 7 | `add_player_xp()` atomic Postgres function (replaces read-modify-write) | ☑ [0001](supabase/migrations/0001_atomic_xp.sql) + submit route; verified vs live DB |
+| 8 | `weekly_scores` snapshot table + aggregation logic | ☑ [0002](supabase/migrations/0002_weekly_scores.sql); verified vs live DB |
 | 9 | Tighten mission anti-cheat beyond the heuristic bounds | ☐ |
 | 10 | Handle-editing UI (currently auto `chimp_<first4><last4>`) | ☐ |
 
