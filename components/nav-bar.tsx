@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { shortWallet } from "@/lib/format";
+import { TOKEN_SYMBOL } from "@/lib/game/economy";
 
 const LINKS = [
   { href: "/dashboard", label: "Mission Control" },
@@ -44,6 +45,12 @@ export function NavBar() {
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : player ? (
             <>
+              <span
+                className="mono hidden rounded-md bg-surface-2 px-2 py-1 text-xs text-muted sm:inline"
+                title={`Weekly ${TOKEN_SYMBOL} claims begin at token launch`}
+              >
+                0 {TOKEN_SYMBOL}
+              </span>
               <div className="hidden text-right sm:block">
                 <div className="text-sm font-semibold">{player.handle}</div>
                 <div className="mono text-xs text-muted">

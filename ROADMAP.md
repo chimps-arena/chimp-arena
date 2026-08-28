@@ -56,9 +56,9 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 22 | Reframe the XP bar → "This week: N CHIMP pending" | ☐ |
-| 23 | `$CHIMP` balance chip in `nav-bar.tsx` | ☐ |
-| 24 | Onboarding copy: "XP = rank, CHIMP = earn & spend" | ☐ |
+| 22 | Reframe the XP bar → "This week: N CHIMP pending" | ☑ dashboard "This week" stat + projected `$CHIMP`; `/api/me` returns `week` from `weekly_xp_live` |
+| 23 | `$CHIMP` balance chip in `nav-bar.tsx` | ☑ `0 CHIMP` chip (real balance lands at P2/G) |
+| 24 | Onboarding copy: "XP = rank, CHIMP = earn & spend" | ☑ line under the XP bar |
 
 ## F. Wallet integration refactor — 6
 

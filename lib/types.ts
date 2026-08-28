@@ -40,6 +40,13 @@ export interface MeResponse {
     }>;
     xpEarnedToday: number;
   };
+  /** Pre-launch $CHIMP projection (read-only; no token on chain yet). */
+  week: {
+    start: string; // Monday 00:00 UTC, YYYY-MM-DD
+    xp: number; // your XP earned this week
+    poolXp: number; // total XP earned this week across all players
+    projectedChimp: number; // your projected share of the weekly pool
+  };
 }
 
 export interface LeaderboardPlayer {

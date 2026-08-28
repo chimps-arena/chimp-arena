@@ -7,6 +7,7 @@ import { XpBar } from "@/components/xp-bar";
 import { CrewBadge } from "@/components/crew-badge";
 import { MissionCard } from "@/components/mission-card";
 import { shortWallet } from "@/lib/format";
+import { TOKEN_SYMBOL, WEEKLY_CHIMP_POOL } from "@/lib/game/economy";
 
 export default function DashboardPage() {
   const { me, loading } = useSession();
@@ -28,7 +29,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today } = me;
+  const { player, crew, today, week } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
 
   return (
@@ -45,18 +46,38 @@ export default function DashboardPage() {
               {new Date(player.createdAt).toLocaleDateString()}
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-xs uppercase tracking-wide text-muted">
-              XP earned today
+          <div className="flex gap-6 text-right">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted">
+                Today
+              </div>
+              <div className="text-2xl font-black text-accent">
+                +{today.xpEarnedToday}
+              </div>
+              <div className="text-[11px] text-muted">XP</div>
             </div>
-            <div className="text-2xl font-black text-accent">
-              +{today.xpEarnedToday}
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted">
+                This week
+              </div>
+              <div className="text-2xl font-black">
+                {week.xp.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-muted">
+                XP · ≈ {week.projectedChimp.toLocaleString()} {TOKEN_SYMBOL}{" "}
+                <span className="rounded bg-surface-2 px-1">projected</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="mt-5 max-w-md">
           <XpBar xp={player.xp} />
+          <p className="mt-2 text-xs text-muted">
+            XP is your all-time rank. Each week it converts to a share of the{" "}
+            {WEEKLY_CHIMP_POOL.toLocaleString()} {TOKEN_SYMBOL} pool — claims go
+            live at token launch.
+          </p>
         </div>
 
         {!crew && (
