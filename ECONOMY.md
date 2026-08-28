@@ -1,0 +1,218 @@
+# CHIMP Arena — token economy
+
+Status: **design locked, pre-implementation.** This document is the reference for
+the on-chain layer. The current shipped app ([ARCHITECTURE.md](ARCHITECTURE.md))
+has none of this yet — `$CHIMP` is a branding string and XP is the only currency.
+
+---
+
+## 1. Core model — one token
+
+| Thing | What it is | Transferable? |
+| --- | --- | --- |
+| **XP** | All-time rank / progression. Drives levels, crews, leaderboards, and the *size* of your weekly `$CHIMP` claim. Also the anti-cheat boundary. | **No.** Never leaves the database. |
+| **`$CHIMP`** | The only token. Earned via the weekly claim, spent on everything (NFTs, land, upgrades, tax, marketplace). | Yes — SPL token in the player's wallet. |
+
+There is **no second token** (`$ASTER` was considered and dropped). Asteroids are
+a premium *land tier* that yields more `$CHIMP`, not a separate currency.
+
+`$CHIMP` is **never minted per mission.** Gameplay accrues XP; XP converts to
+`$CHIMP` only through the gated weekly claim from a fixed pool. This is the single
+mechanism that keeps emission bounded and botting unprofitable (extra wallets
+only dilute the botter's own share).
+
+---
+
+## 2. `$CHIMP` mint parameters
+
+- **Classic SPL Token** (not Token-2022) — widest DEX / marketplace / wallet
+  compatibility. Fees are taken at the application layer, not via a transfer-fee
+  extension.
+- **Decimals:** 6 (USDC convention).
+- **Freeze authority:** `null` — the protocol must never be able to freeze holder
+  balances.
+- **Mint + treasury authority:** a **Squads multisig** from day one. Emission
+  happens by funding the distributor vault, never by minting per claim.
+
+---
+
+## 3. The weekly claim — the one recurring ritual
+
+Everything economic converges here. Once a week the player opens one screen and
+signs **one transaction**:
+
+```
+Claim 340 CHIMP   (120 play rewards + 220 land yield)
+Pay    12 CHIMP   property tax on 3 parcels        [x]
+─────────────────
+Net   +328 CHIMP                          [ Sign ]
+```
+
+### Play rewards
+1. Server freezes the week's `weekly_scores` (per-wallet XP earned that week).
+2. Splits a **fixed weekly `$CHIMP` pool** pro-rata by that XP.
+3. Builds a Merkle tree, publishes the root, funds the distributor vault from
+   treasury, exposes `GET /api/rewards/proof?wallet=`.
+4. Player calls `claim(index, amount, proof)` on the **Jito merkle-distributor**
+   (off-the-shelf, audited). A claim-status PDA prevents double claims.
+
+Unclaimed allocations stay claimable for **8 weeks**, then `clawback` to treasury.
+
+### Land yield + property tax
+Computed off-chain per epoch (see §6), settled **in the same claim transaction**
+via an extra transfer instruction. Address Lookup Table if the tx exceeds size
+limits; hard cap of 2 transactions.
+
+---
+
+## 4. Asset layers (Solana NFTs, non-custodial)
+
+| Asset | Standard | Role |
+| --- | --- | --- |
+| **Chimp** | Metaplex Core | Identity NFT. **You must hold one to own land.** Priced in `$CHIMP`. Supply-capped tiers. Unlocks a custom leaderboard avatar + cosmetic flair. |
+| **Land deed** — planet parcel or asteroid claim | Compressed NFT (Bubblegum) | On-chain proof of a map tile. Carries attributes: richness, hazard, adjacency bonus, tier. |
+| **Structure** — mining rig, habitat, refinery, turret | Off-chain state (P5), on-chain program state later | Placed on a deed; produces yield per epoch. |
+
+### Asteroids
+Named procedurally (`ASTER-4471`), each subdivided into a few claim slots.
+Rarer and richer than planet parcels — higher `$CHIMP` yield, higher tax, and
+exposure to crew claim battles.
+
+---
+
+## 5. Sale mechanics
+
+- **Chimp:** Metaplex **Core Candy Machine** with `tokenPayment` (pay in
+  `$CHIMP`), `mintLimit` (per-wallet cap), and `startDate` guards. Zero custom
+  code.
+- **Land deed:** server holds tree-delegate authority on the Bubblegum tree.
+  `POST /api/land/buy { x, y }` checks the Supabase registry that the parcel is
+  unsold, builds `[ transfer $CHIMP buyer→treasury, bubblegum mint ]`, partially
+  signs, returns it. Player signs once. A Helius DAS webhook confirms and flips
+  the registry row. Double-sell is blocked by a server-side row lock plus the
+  indexer being source of truth.
+
+---
+
+## 6. Yield & property tax (off-chain at launch)
+
+Kept in Supabase as game state — consistent with XP and anti-cheat already being
+server-trusted. The cNFT deed is the real on-chain ownership; yield is just added
+to the weekly claimable amount.
+
+- **Yield per epoch** = `f(structures, structure levels, parcel richness, tier)`,
+  paid from a vault the treasury tops up on schedule (same discipline as the
+  reward pool — the program never mints).
+- **Property tax per epoch** = `g(parcel count, tier)`. First month tax-free.
+  Surfaced as a checkbox inside the weekly claim, not a separate chore.
+- **Yield cap:** unclaimed yield stops accruing past N epochs (anti-idle-bot).
+- **Reclaim:** if tax is delinquent past a threshold, the deed returns to the
+  treasury tree (permissionless trigger).
+
+A custom `chimp-territory` Anchor program (~7 instructions) replaces this with a
+trustless version — **P6+ only**, gated on an audit.
+
+---
+
+## 7. Economic sustainability
+
+Net `$CHIMP` emission per week must be **≤** `$CHIMP` pulled back into sinks, or
+the token inflates toward zero.
+
+| Faucet | Sink |
+| --- | --- |
+| Fixed weekly reward pool (+ halving schedule) | Land sold from treasury (re-absorbs emitted `$CHIMP` — the primary sink) |
+| Land yield vault | Chimp mint fees |
+| | Structure place / upgrade burns |
+| | Per-claim fee |
+| | **Property tax** (also anti-hoarding, keeps the map liquid) |
+| | Marketplace fee — partially burned |
+
+**Action item:** a spreadsheet model (players × daily emission vs. sinks) before
+any mint code ships.
+
+---
+
+## 8. Anti-sybil
+
+- Fixed reward pool → botting dilutes the botter.
+- Per-wallet weekly claim cap.
+- Minimum weekly activity threshold before an allocation is generated.
+- Wallet-age check before first claim.
+- Capital barriers: Chimp NFT cost, property tax, per-Chimp land cap.
+- Crew vouching as a light proof-of-human.
+
+---
+
+## 9. On-chain surface — custom vs off-the-shelf
+
+| Capability | Mechanism | Custom code |
+| --- | --- | --- |
+| `$CHIMP` token | Classic SPL Token | none |
+| Weekly claim | Jito `merkle-distributor` | none |
+| Chimp sale | Core Candy Machine + guards | none |
+| Land deeds | Bubblegum + server-authorized mint | none |
+| Yield + tax | Off-chain (Supabase) | none |
+| Trustless yield/tax/structures | `chimp-territory` Anchor program, ~7 ix | **1 program — P6+** |
+
+**Launch has zero custom on-chain programs.** One program to audit, later, only
+if decentralization is worth it.
+
+Program upgrade authority (when the Anchor program exists): dev keypair during
+development → Squads multisig → timelock/immutable before mainnet.
+
+---
+
+## 10. Auth & wallet model
+
+> **OPEN DECISION (#68).** Not required until Group F of the roadmap.
+
+- **Option 1 — wallet-only (current).** Connecting a wallet + signing a message
+  *is* the account. No email, no signup step. Simplest; excludes users without a
+  wallet.
+- **Option 2 — auth + embedded-wallet provider (Privy or Dynamic).**
+  Email / Google / Apple / passkey login = signup/login. Non-crypto users get an
+  embedded wallet transparently; crypto users hit "link external wallet." Keep
+  the `chimp_session` JWT on top. **Recommended** for the adoption goal.
+
+Regardless of option, the transaction pattern is uniform:
+
+```
+client → POST /api/<action>        server builds unsigned VersionedTransaction,
+                                    fee payer set, server instructions + partial
+                                    signature attached, tx simulated
+client → wallet.signTransaction     one prompt
+client → sendRawTransaction → confirm
+indexer → reconciles Supabase from the confirmed tx
+```
+
+- **Fee-payer relay:** the treasury is the fee payer and co-signer; users never
+  need SOL. Devnet faucet button as the stopgap.
+- **RPC:** Helius (its DAS API is required to read compressed land NFTs anyway).
+- Server re-checks on every submit: wallet in the tx == wallet in the session.
+- The server's co-signing key is a **low-privilege minter** (can mint cNFTs into
+  the tree; cannot mint `$CHIMP`), stored route-handler-only like
+  `SUPABASE_SERVICE_ROLE_KEY`.
+
+---
+
+## 11. Swap & on-ramp
+
+- **Swap:** Jupiter integration for in-app `$CHIMP` ⇄ SOL / USDC, with
+  slippage / price-impact warnings. A `$CHIMP` liquidity pool (Raydium / Orca)
+  is seeded at P6.
+- **Fiat on-ramp (OPEN DECISION #76):** MoonPay / Transak / Coinbase Onramp so
+  non-crypto users can buy in, vs. earn-only. Not required until P6.
+
+---
+
+## 12. Risk / legal
+
+- Two-token + yield + paid "land" reads as a securities / gambling product in
+  many jurisdictions. Single-token with non-transferable XP is deliberately
+  lower-surface, but not zero.
+- Stay on **devnet with no fiat on-ramp** through the entire design/build phase.
+- Frame land yield as an in-game resource, never a return or dividend.
+- Legal counsel review is a hard gate before mainnet (roadmap #62).
+- cNFT "land" that costs money and produces tokens is the single riskiest
+  element — it ships last and stays optional.
