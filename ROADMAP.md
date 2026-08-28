@@ -50,10 +50,10 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 18 | Emission-vs-sinks spreadsheet model | ☐ |
-| 19 | Fixed weekly pool size + emission (halving) curve | ☐ |
-| 20 | All sink parameters (mint prices, tax %, upgrade costs, claim fee, burn %) | ☐ |
-| 21 | Anti-sybil parameters (per-wallet cap, min activity, wallet-age, crew vouch) | ☐ |
+| 18 | Emission-vs-sinks spreadsheet model | ☐ owner — validate the §13 draft numbers |
+| 19 | Fixed weekly pool size + emission (halving) curve | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
+| 20 | All sink parameters (mint prices, tax %, upgrade costs, claim fee, burn %) | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
+| 21 | Anti-sybil parameters (per-wallet cap, min activity, wallet-age, crew vouch) | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
 
 ## E. P1 — CHIMP appears (read-only UI) — 3
 

@@ -165,17 +165,12 @@ development → Squads multisig → timelock/immutable before mainnet.
 
 ## 10. Auth & wallet model
 
-> **OPEN DECISION (#68).** Not required until Group F of the roadmap.
+> **LOCKED (#68): wallet-only.** Connecting a wallet + signing a message *is*
+> the account — no email, no signup step, no embedded-wallet provider. Multiple
+> wallets are supported via `@solana/wallet-adapter-react` (#13): Phantom,
+> Solflare, Backpack and any Wallet Standard wallet, auto-detected.
 
-- **Option 1 — wallet-only (current).** Connecting a wallet + signing a message
-  *is* the account. No email, no signup step. Simplest; excludes users without a
-  wallet.
-- **Option 2 — auth + embedded-wallet provider (Privy or Dynamic).**
-  Email / Google / Apple / passkey login = signup/login. Non-crypto users get an
-  embedded wallet transparently; crypto users hit "link external wallet." Keep
-  the `chimp_session` JWT on top. **Recommended** for the adoption goal.
-
-Regardless of option, the transaction pattern is uniform:
+The transaction pattern is uniform:
 
 ```
 client → POST /api/<action>        server builds unsigned VersionedTransaction,
@@ -201,6 +196,9 @@ indexer → reconciles Supabase from the confirmed tx
 - **Swap:** Jupiter integration for in-app `$CHIMP` ⇄ SOL / USDC, with
   slippage / price-impact warnings. A `$CHIMP` liquidity pool (Raydium / Orca)
   is seeded at P6.
+- **Marketplace (#17): build a minimal in-app escrow program** for secondary
+  trading of Chimps / land / structures — not a third-party integration.
+  Custom Anchor program, needs an audit (roadmap #53, Group K).
 - **Fiat on-ramp (OPEN DECISION #76):** MoonPay / Transak / Coinbase Onramp so
   non-crypto users can buy in, vs. earn-only. Not required until P6.
 
@@ -216,3 +214,68 @@ indexer → reconciles Supabase from the confirmed tx
 - Legal counsel review is a hard gate before mainnet (roadmap #62).
 - cNFT "land" that costs money and produces tokens is the single riskiest
   element — it ships last and stays optional.
+
+---
+
+## 13. Parameters — Season 1 (DRAFT, needs sign-off)
+
+> Roadmap Group D (#18–21). These are **starting values for devnet**, all
+> tunable in code (`lib/game/economy.ts` + a future `lib/game/sinks.ts`).
+> Nothing here is final until the #18 emission-vs-sinks spreadsheet says the
+> weekly faucet ≤ weekly sink capacity.
+
+### Supply & allocation (#19)
+
+`$CHIMP` fixed max supply: **1,000,000,000** (1e9, 6 decimals).
+
+| Bucket | Share | Amount | Notes |
+| --- | --- | --- | --- |
+| Play-to-earn (weekly pools) | 15% | 150,000,000 | Season 1 = 52 weekly epochs |
+| Treasury (land sales re-absorb, ops) | 25% | 250,000,000 | primary sink sink-back |
+| Liquidity (P6 pool seed) | 10% | 100,000,000 | locked at mainnet |
+| Team | 15% | 150,000,000 | 12-month cliff, 36-month linear vest |
+| Community / marketing / partners | 20% | 200,000,000 | |
+| Reserve (Season 2+, contingencies) | 15% | 150,000,000 | multisig-held |
+
+### Weekly reward pool + emission curve (#19)
+
+Geometric taper, halving-ish every 13 weeks, summing to the 150M P2E budget:
+
+| Weeks | Weekly pool |
+| --- | --- |
+| 1–13 | 5,300,000 `$CHIMP` |
+| 14–26 | 3,180,000 |
+| 27–39 | 1,900,000 |
+| 40–52 | 1,150,000 |
+
+Each week's pool is split **pro-rata by XP earned that week** (`weekly_scores`).
+`lib/game/economy.ts::WEEKLY_CHIMP_POOL` currently hard-codes `250_000` as a
+placeholder — replace with a `weekOf(date)` lookup against this table at P2.
+
+### Sinks (#20)
+
+| Sink | Cost | Burn split |
+| --- | --- | --- |
+| Chimp mint — Common / Rare / Legendary | 5,000 / 25,000 / 100,000 | 100% → treasury |
+| Chimp supply caps | 10,000 / 2,000 / 200 | — |
+| Planet parcel | 2,000 × richness(1–3×) | 100% → treasury |
+| Asteroid claim slot | 15,000 base | 100% → treasury |
+| Structure — place (rig / habitat / refinery / turret) | 1,000 / 800 / 3,000 / 2,500 | 50% burn / 50% treasury |
+| Structure — upgrade to level L | base × 1.8^(L−1) | 50% burn / 50% treasury |
+| Weekly claim fee (only if land yield included) | flat 50 `$CHIMP` | 100% burn |
+| Property tax / week — planet / asteroid | 2% / 3% of purchase price | 100% → treasury |
+| Tax grace period | first 4 weeks after purchase | — |
+| Marketplace fee (seller) | 5% | 2% treasury / 2% burn / 1% crew treasury |
+| `$ASTER`-style conversions | n/a — single token | — |
+
+Reclaim: a parcel ≥ 6 weeks delinquent on tax returns to the treasury tree.
+
+### Anti-sybil (#21)
+
+| Control | Value |
+| --- | --- |
+| Per-wallet weekly claim cap | min(pro-rata share, 3% of that week's pool) |
+| Min activity for an allocation | ≥ 3 mission runs across ≥ 2 distinct UTC days that week |
+| Wallet-age gate (first claim only) | wallet's oldest signature ≥ 7 days old (relaxed on devnet) |
+| Land cap per Chimp | 5 planet parcels + 2 asteroid slots |
+| Crew join requirement | ≥ 100 XP, or a vouch from a member with > 500 XP |
