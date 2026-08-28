@@ -3,7 +3,8 @@
 Full path from the current MVP to a live on-chain economy. See
 [ECONOMY.md](ECONOMY.md) for the design rationale.
 
-**87 items — 9 decisions, ~78 build tasks.**
+**81 items** (6 dropped when #68 locked to wallet-only).
+Done: 17 · Decisions locked: 4 of 9 (#12, #13, #15, #68) · Build remaining: ~55.
 
 Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs external action)
 
@@ -33,15 +34,17 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 ## C. Decisions to lock — 7
 
-| # | Decision | Recommendation |
+| # | Decision | Locked |
 | --- | --- | --- |
-| 11 | Off-chain yield/tax at launch **vs** custom Anchor program from the start | Off-chain |
-| 12 | Fee-payer relay **vs** users bring their own SOL | Relay |
-| 13 | Multi-wallet via wallet-adapter **vs** Phantom-only | Multi-wallet |
-| 14 | Unclaimed rewards: 8-week clawback **vs** stack forever | 8-week window |
-| 15 | `$CHIMP` mint + treasury authority in a Squads multisig from day one | Yes |
-| 16 | Retroactive XP→CHIMP at P2 **vs** "Season 1 starts now" (+ founder grant?) | Season 1 starts now |
-| 17 | Marketplace: integrate Tensor/ME **vs** build escrow (P6) | Integrate |
+| 11 | Off-chain yield/tax at launch **vs** custom Anchor program | ☐ (recommend: off-chain) |
+| 12 | Fee-payer relay **vs** users bring their own SOL | ☑ **Fee-payer relay** (treasury pays gas) |
+| 13 | Multi-wallet via wallet-adapter **vs** Phantom-only | ☑ **Multi-wallet** (`@solana/wallet-adapter-react`) |
+| 14 | Unclaimed rewards: 8-week clawback **vs** stack forever | ☐ (recommend: 8-week window) |
+| 15 | `$CHIMP` mint + treasury authority in a Squads multisig from day one | ☑ **Squads from day one** |
+| 16 | Retroactive XP→CHIMP at P2 **vs** "Season 1 starts now" | ☐ (recommend: Season 1 starts now) |
+| 17 | Marketplace: integrate Tensor/ME **vs** build escrow (P6) | ☐ (recommend: integrate) |
+| 68 | Auth model | ☑ **Wallet-only** — no email/embedded wallet; Group M collapses to #73 + polish |
+| 76 | Fiat on-ramp **vs** earn-only | ☐ (P6 — defer) |
 
 ## D. Economic modeling — 4
 
@@ -140,20 +143,14 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | 66 | Update `ARCHITECTURE.md` with the on-chain layer | ☐ |
 | 67 | Update `SETUP.md` with wallet-adapter / Helius / Squads setup | ☐ |
 
-## M. Account & wallet onboarding — 1 decision + 7
+## M. Account & wallet onboarding — 1 (collapsed)
 
-> If #68 = wallet-only, this collapses to #73 + polish.
+> #68 locked = **wallet-only**. #69–72, #74–75 (embedded-wallet provider) are
+> dropped. Only the settings polish remains.
 
 | # | Item | Status |
 | --- | --- | --- |
-| 68 | **Decide:** wallet-only **vs** Privy/Dynamic embedded-wallet auth | ☐ decision |
-| 69 | Integrate the provider SDK (email / social / passkey login) | ☐ |
-| 70 | Embedded-wallet auto-provision for non-crypto users | ☐ |
-| 71 | "Link external wallet" flow (Phantom / Solflare / Backpack) | ☐ |
-| 72 | Keep the `chimp_session` JWT layer on top of provider auth | ☐ |
-| 73 | Account settings: linked wallets, primary wallet, unlink | ☐ |
-| 74 | Embedded-wallet key export / recovery flow | ☐ |
-| 75 | Migrate existing wallet-only players → accounts | ☐ |
+| 73 | Account settings: connected wallet, disconnect, (later) handle already covered by #10 | ☐ |
 
 ## N. Swap & on-ramp — 1 decision + 3
 
