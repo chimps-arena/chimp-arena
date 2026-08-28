@@ -16,7 +16,7 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | 1 | Create the Supabase project | ⊘ needs Supabase account (owner) |
 | 2 | Run DB setup — [`supabase/setup.sql`](supabase/setup.sql) (one-shot: schema + both migrations) | ⊘ after #1 |
 | 3 | Fill the 3 empty Supabase keys in `.env.local`, then `npm run verify:db` | ⊘ after #1 |
-| 4 | `git init` + first commit | ⊘ git not installed (`winget install --id Git.Git`) |
+| 4 | `git init` + first commit | ☑ Git 2.55 installed, repo on `main`, 2 commits, `.gitattributes` (LF), secrets excluded |
 | 5 | Fix the 3 `react-hooks/set-state-in-effect` lint errors | ☑ |
 | 6 | End-to-end smoke test: connect → play → XP → leaderboard | ☐ after #1–3 |
 
