@@ -28,8 +28,8 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | --- | --- | --- |
 | 7 | `add_player_xp()` atomic Postgres function (replaces read-modify-write) | ☑ [0001](supabase/migrations/0001_atomic_xp.sql) + submit route; verified vs live DB |
 | 8 | `weekly_scores` snapshot table + aggregation logic | ☑ [0002](supabase/migrations/0002_weekly_scores.sql); verified vs live DB |
-| 9 | Tighten mission anti-cheat beyond the heuristic bounds | ☐ |
-| 10 | Handle-editing UI (currently auto `chimp_<first4><last4>`) | ☐ |
+| 9 | Tighten mission anti-cheat beyond the heuristic bounds | ☑ elapsed caps on runner/dodge, 100ms reaction floor, 0–900s stale-token guard, 15m start token |
+| 10 | Handle-editing UI (currently auto `chimp_<first4><last4>`) | ☑ `PATCH /api/me` + inline `HandleEditor` on dashboard, case-insensitive uniqueness |
 
 ## C. Decisions to lock — 7
 

@@ -152,7 +152,8 @@ export const MISSION_RULES: Record<
     higherIsBetter: false,
     validate: (score, elapsed) =>
       Number.isFinite(score) &&
-      score >= 90 &&
+      // avg reaction below ~100ms is not humanly possible
+      score >= 100 &&
       score <= 2000 &&
       elapsed >= 3 &&
       elapsed <= 600,
@@ -178,6 +179,8 @@ export const MISSION_RULES: Record<
       Number.isFinite(score) &&
       score >= 0 &&
       elapsed >= 2 &&
+      // a single run can't plausibly last more than 10 minutes
+      elapsed <= 600 &&
       // runner advances at most ~55 distance units / second
       score <= elapsed * 55 + 50,
     xp: (score, baseXp) => baseXp + Math.min(400, Math.floor(score / 12)),
@@ -190,6 +193,7 @@ export const MISSION_RULES: Record<
       Number.isFinite(score) &&
       score >= 0 &&
       elapsed >= 2 &&
+      elapsed <= 600 &&
       // the belt scrolls at most ~80 distance units / second
       score <= elapsed * 80 + 50,
     xp: (score, baseXp) => baseXp + Math.min(400, Math.floor(score / 10)),
@@ -198,3 +202,28 @@ export const MISSION_RULES: Record<
 
 export const DEFAULT_HANDLE = (wallet: string) =>
   `chimp_${wallet.slice(0, 4)}${wallet.slice(-4)}`;
+
+export const HANDLE_RULES = { min: 3, max: 20 } as const;
+
+/**
+ * Validate + normalise a user-supplied handle. Used by the edit UI (instant
+ * feedback) and re-checked server-side in PATCH /api/me.
+ * Rules: 3-20 chars; letters, digits, `-` and `_` only; no separator at the
+ * start or end.
+ */
+export function validateHandle(
+  raw: string,
+): { ok: true; handle: string } | { ok: false; error: string } {
+  const handle = raw.trim();
+  if (handle.length < HANDLE_RULES.min || handle.length > HANDLE_RULES.max)
+    return {
+      ok: false,
+      error: `Handle must be ${HANDLE_RULES.min}-${HANDLE_RULES.max} characters.`,
+    };
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9]$/.test(handle))
+    return {
+      ok: false,
+      error: "Letters, digits, - and _ only (not at the start or end).",
+    };
+  return { ok: true, handle };
+}

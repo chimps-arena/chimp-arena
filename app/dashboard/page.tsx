@@ -5,12 +5,13 @@ import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { XpBar } from "@/components/xp-bar";
 import { CrewBadge } from "@/components/crew-badge";
+import { HandleEditor } from "@/components/handle-editor";
 import { MissionCard } from "@/components/mission-card";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL, WEEKLY_CHIMP_POOL } from "@/lib/game/economy";
 
 export default function DashboardPage() {
-  const { me, loading } = useSession();
+  const { me, loading, refresh } = useSession();
 
   if (loading) return <Loading />;
 
@@ -37,8 +38,8 @@ export default function DashboardPage() {
       <section className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black">{player.handle}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <HandleEditor current={player.handle} onSaved={refresh} />
               <CrewBadge crew={crew} />
             </div>
             <p className="mono mt-1 text-xs text-muted">

@@ -25,7 +25,8 @@ function deriveScore(
   if (type === "reaction") {
     const r = body.rounds;
     if (!Array.isArray(r) || r.length !== 5) return { error: "expected 5 rounds" };
-    if (!r.every((n) => typeof n === "number" && n >= 20 && n <= 5000))
+    // 100ms is the human reaction-time floor; 5000ms is a slow but valid round.
+    if (!r.every((n) => typeof n === "number" && n >= 100 && n <= 5000))
       return { error: "round out of range" };
     return { score: Math.round(r.reduce((a, b) => a + b, 0) / r.length) };
   }
@@ -82,6 +83,16 @@ export async function POST(
   }
 
   const elapsedSec = Math.floor(Date.now() / 1000) - claims.sat;
+  // Defence in depth: no mission takes 15 minutes. Rejects stale-token abuse
+  // (holding a start token to inflate the time-based score ceilings) and
+  // clock-skew nonsense, independent of each mission's own bounds.
+  if (elapsedSec < 0 || elapsedSec > 900) {
+    return NextResponse.json(
+      { error: "stale start token - restart the mission" },
+      { status: 422 },
+    );
+  }
+
   const derived = deriveScore(mission.type, body, claims);
   if ("error" in derived)
     return NextResponse.json({ error: derived.error }, { status: 400 });

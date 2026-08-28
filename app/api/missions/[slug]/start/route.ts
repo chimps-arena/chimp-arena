@@ -44,7 +44,7 @@ export async function POST(
         data: { key: picked.map((q) => q.answer), ids: picked.map((q) => q.id) },
       },
       START_AUD,
-      "20m",
+      "15m",
     );
     return NextResponse.json({
       startToken,
@@ -55,7 +55,7 @@ export async function POST(
   const startToken = await signShortLived(
     { wallet: session.wallet, slug, sat },
     START_AUD,
-    "20m",
+    "15m",
   );
   return NextResponse.json({ startToken });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { crewBySlug } from "@/lib/game/config";
+import { crewBySlug, validateHandle } from "@/lib/game/config";
 import { todayStatus } from "@/lib/game/status";
 import { currentWeekStart, projectedWeeklyChimp } from "@/lib/game/economy";
 import type { MeResponse } from "@/lib/types";
@@ -58,4 +58,55 @@ export async function GET() {
     },
   };
   return NextResponse.json(payload);
+}
+
+/**
+ * PATCH { handle } -> { ok, handle }
+ * Rename the current player. Case-insensitive uniqueness is enforced here
+ * (no DB constraint yet; a citext unique index is the future hardening).
+ */
+export async function PATCH(req: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  let rawHandle: unknown;
+  try {
+    ({ handle: rawHandle } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "invalid json" }, { status: 400 });
+  }
+  if (typeof rawHandle !== "string") {
+    return NextResponse.json({ error: "handle required" }, { status: 400 });
+  }
+
+  const v = validateHandle(rawHandle);
+  if (!v.ok) {
+    return NextResponse.json({ error: v.error }, { status: 400 });
+  }
+
+  const db = supabaseAdmin();
+  const { data: clash } = await db
+    .from("players")
+    .select("wallet")
+    .ilike("handle", v.handle)
+    .neq("wallet", session.wallet)
+    .limit(1);
+  if (clash && clash.length > 0) {
+    return NextResponse.json({ error: "That handle is taken." }, { status: 409 });
+  }
+
+  const { error } = await db
+    .from("players")
+    .update({ handle: v.handle })
+    .eq("wallet", session.wallet);
+  if (error) {
+    return NextResponse.json(
+      { error: "db error", detail: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ ok: true, handle: v.handle });
 }

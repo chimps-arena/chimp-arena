@@ -74,18 +74,22 @@ is in the database.
 
 Every mini-game run is bracketed by two server calls:
 
-- `POST /api/missions/[slug]/start` → a short-lived signed **start token** that
-  pins `{ wallet, slug, sat }` (`sat` = start time). For **trivia** the token
-  also carries the answer key, so the client is never sent correct answers.
+- `POST /api/missions/[slug]/start` → a **15-minute** signed **start token**
+  that pins `{ wallet, slug, sat }` (`sat` = start time). For **trivia** the
+  token also carries the answer key, so the client is never sent correct
+  answers.
 - `POST /api/missions/[slug]/submit` → verifies the token, checks
-  `wallet`/`slug` match, computes `elapsedSec = now - sat`, and runs the
-  mission's `validate(score, elapsedSec)` from `MISSION_RULES`:
-  - **reaction** — 5 rounds, each 90–2000 ms, run ≥ 3 s.
-  - **trivia** — 0–5 correct, scored server-side against the token's key.
-  - **astro-run** — `score ≤ elapsedSec * 55 + 50` (bounds the runner's max
-    distance rate).
-  - **debris-field** — `score ≤ elapsedSec * 80 + 50` (bounds the belt's max
-    scroll rate).
+  `wallet`/`slug` match, computes `elapsedSec = now - sat`, rejects
+  `elapsedSec` outside `0…900 s` (stale-token / clock-skew guard), and runs
+  the mission's `validate(score, elapsedSec)` from `MISSION_RULES`:
+  - **reaction** — 5 rounds, each 100–5000 ms, average 100–2000 ms,
+    3 s ≤ run ≤ 600 s.
+  - **trivia** — 0–5 correct, scored server-side against the token's key,
+    run ≤ 600 s.
+  - **astro-run** — `2 s ≤ elapsedSec ≤ 600 s` and
+    `score ≤ elapsedSec * 55 + 50` (bounds the runner's max distance rate).
+  - **debris-field** — `2 s ≤ elapsedSec ≤ 600 s` and
+    `score ≤ elapsedSec * 80 + 50` (bounds the belt's max scroll rate).
 - Accepted score → `MISSION_RULES[slug].xp(...)` → inserted into `mission_runs`.
   The `unique (wallet, mission_slug, day)` index is the **one-reward-per-UTC-day**
   gate: a duplicate insert (`23505`) returns `xpAwarded: 0` but still lets the
@@ -100,14 +104,19 @@ Live/Polling pill reflects which is active.
 
 ## Known limitations (MVP)
 
-- **XP update is read-modify-write** in the submit handler. Fine for one player
-  at a time; under heavy concurrency from a single wallet a write could be lost.
-  Move to a Postgres `add_player_xp(wallet, amount)` function for atomicity.
 - **Anti-cheat is heuristic**, not proof. A determined user scripting the submit
   endpoint within the plausibility bounds can inflate scores. Acceptable for an
-  adoption-phase MVP with no monetary stakes; tighten before rewards attach.
+  adoption-phase MVP with no monetary stakes; tighten further before rewards
+  attach.
 - **Crew changes are locked** after the first pick (by design, to keep crew
   scores meaningful). Add a cooldown in `app/api/crew/route.ts` if you want
   switching.
-- **No handle editing UI** yet — handles default to `chimp_<first4><last4>`.
 - Session JWT can't be revoked before its 30-day expiry (stateless).
+
+### Resolved
+
+- **XP update is now atomic** — `add_player_xp()` (`supabase/migrations/0001`),
+  called by the submit handler instead of a read-modify-write.
+- **Handles are editable** — `PATCH /api/me` + the inline editor on the
+  dashboard, with case-insensitive uniqueness (default is still
+  `chimp_<first4><last4>`).
