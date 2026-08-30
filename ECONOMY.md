@@ -217,12 +217,13 @@ indexer → reconciles Supabase from the confirmed tx
 
 ---
 
-## 13. Parameters — Season 1 (DRAFT, needs sign-off)
+## 13. Parameters — Season 1 (APPROVED 2026-08-30)
 
-> Roadmap Group D (#18–21). These are **starting values for devnet**, all
-> tunable in code (`lib/game/economy.ts` + a future `lib/game/sinks.ts`).
-> Nothing here is final until the #18 emission-vs-sinks spreadsheet says the
-> weekly faucet ≤ weekly sink capacity.
+> Roadmap Group D (#19–21). Live in code: `lib/game/economy.ts` (supply,
+> emission curve, anti-sybil) + `lib/game/sinks.ts` (mint / land / structure
+> / marketplace costs). All tunable — devnet values.
+> **Still open: #18** — an emission-vs-sinks spreadsheet to confirm the weekly
+> faucet ≤ weekly sink capacity before mainnet.
 
 ### Supply & allocation (#19)
 

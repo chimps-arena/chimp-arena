@@ -4,7 +4,8 @@ Full path from the current MVP to a live on-chain economy. See
 [ECONOMY.md](ECONOMY.md) for the design rationale.
 
 **81 items** (6 dropped when #68 locked to wallet-only).
-Done: 30 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~40.
+Done: 33 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~37.
+Repo: github.com/chimps-arena/chimp-arena
 
 Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs external action)
 
@@ -50,10 +51,10 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 18 | Emission-vs-sinks spreadsheet model | ☐ owner — validate the §13 draft numbers |
-| 19 | Fixed weekly pool size + emission (halving) curve | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
-| 20 | All sink parameters (mint prices, tax %, upgrade costs, claim fee, burn %) | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
-| 21 | Anti-sybil parameters (per-wallet cap, min activity, wallet-age, crew vouch) | ◐ draft in [ECONOMY.md §13](ECONOMY.md) — needs sign-off |
+| 18 | Emission-vs-sinks spreadsheet model | ☐ owner — validate before mainnet |
+| 19 | Fixed weekly pool size + emission curve | ☑ approved; `weeklyPool()` + `ALLOCATION` in `economy.ts` |
+| 20 | All sink parameters (mint prices, tax %, upgrade costs, claim fee, burn %) | ☑ approved; `lib/game/sinks.ts` |
+| 21 | Anti-sybil parameters (per-wallet cap, min activity, wallet-age, crew vouch) | ☑ approved; constants in `economy.ts` (enforcement wiring is part of #34) |
 
 ## E. P1 — CHIMP appears (read-only UI) — 3
 
