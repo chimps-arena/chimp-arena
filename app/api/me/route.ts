@@ -28,17 +28,31 @@ export async function GET() {
   }
 
   const today = await todayStatus(session.wallet);
+  const db = supabaseAdmin();
 
-  // Pre-launch weekly $CHIMP projection. Small table for now; at P2 this
-  // aggregation moves into the distributor cron (ROADMAP.md #34).
+  // This week's live XP split, for the "projected CHIMP" figure.
   const weekStart = currentWeekStart();
-  const { data: weekRows } = await supabaseAdmin()
+  const { data: weekRows } = await db
     .from("weekly_xp_live")
     .select("wallet, xp_earned")
     .eq("week_start", weekStart);
   const rows = weekRows ?? [];
   const poolXp = rows.reduce((s, r) => s + (r.xp_earned ?? 0), 0);
   const myWeekXp = rows.find((r) => r.wallet === session.wallet)?.xp_earned ?? 0;
+
+  // Frozen, unclaimed allocations from past weeks (ROADMAP.md #34-36).
+  const { data: allocRows } = await db
+    .from("weekly_allocations")
+    .select("week_start, chimp_amount")
+    .eq("wallet", session.wallet)
+    .is("claimed_at", null);
+  const claimableWeeks = (allocRows ?? []).map((r) => ({
+    weekStart: r.week_start as string,
+    chimpBaseUnits: String(r.chimp_amount),
+  }));
+  const claimableTotal = claimableWeeks
+    .reduce((s, w) => s + BigInt(w.chimpBaseUnits), 0n)
+    .toString();
 
   const payload: MeResponse = {
     player: {
@@ -54,7 +68,11 @@ export async function GET() {
       start: weekStart,
       xp: myWeekXp,
       poolXp,
-      projectedChimp: projectedWeeklyChimp(myWeekXp, poolXp),
+      projectedChimp: projectedWeeklyChimp(myWeekXp, poolXp, weekStart),
+    },
+    rewards: {
+      claimableBaseUnits: claimableTotal,
+      weeks: claimableWeeks,
     },
   };
   return NextResponse.json(payload);

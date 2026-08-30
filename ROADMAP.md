@@ -4,7 +4,7 @@ Full path from the current MVP to a live on-chain economy. See
 [ECONOMY.md](ECONOMY.md) for the design rationale.
 
 **81 items** (6 dropped when #68 locked to wallet-only).
-Done: 27 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~48.
+Done: 30 · Decisions locked: 8 of 9 (only #76 open, deferred to P6) · Build remaining: ~40.
 
 Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs external action)
 
@@ -78,13 +78,13 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority) | ☐ |
-| 32 | Set up Squads multisig, assign mint + treasury authorities | ☐ |
+| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority) | ☐ owner — needs Squads (#32) |
+| 32 | Set up Squads multisig, assign mint + treasury authorities | ☐ owner — create on devnet.squads.so |
 | 33 | Deploy Jito `merkle-distributor` (devnet) | ☐ |
-| 34 | Weekly cron: freeze scores → build Merkle tree → create + fund distributor | ☐ |
-| 35 | `GET /api/rewards/proof` endpoint | ☐ |
-| 36 | `claim-button` component + dashboard wiring | ☐ |
-| 37 | `lib/chain/` — mint address, Helius connection, distributor client | ☐ |
+| 34 | Weekly freeze → allocations → (Merkle tree) → fund distributor | ◐ off-chain half done: [0003](supabase/migrations/0003_weekly_rewards.sql), `POST /api/rewards/freeze`, `allocationFor()` + §13 curve in `economy.ts`. Tree + funding pending #33. **User must run migration 0003.** |
+| 35 | `GET /api/rewards/proof` endpoint | ☑ returns frozen allocations + index; `proof` null until the tree exists |
+| 36 | `claim-button` component + dashboard wiring | ◐ "Claimable N CHIMP" panel + disabled "Claim (soon)" on the dashboard; `/api/me` returns `rewards`. Live claim needs #33. |
+| 37 | `lib/chain/` — mint address, Helius connection, distributor client | ◐ `connection.ts` + `tx.ts` done (Group F); mint address + distributor client pending #31/#33 |
 
 ## H. P3 — Chimp NFT — 4
 

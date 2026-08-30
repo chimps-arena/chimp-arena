@@ -172,3 +172,43 @@ create policy "weekly_scores readable by anyone"
   using (true);
 
 revoke all on function public.freeze_week(date) from public, anon, authenticated;
+
+
+-- ============  migrations/0003_weekly_rewards.sql  ========================
+
+create table if not exists public.weekly_pools (
+  week_start   date primary key,
+  week_index   integer not null,
+  pool_amount  bigint  not null,
+  total_xp     bigint  not null,
+  merkle_root  text,
+  distributor  text,
+  frozen_at    timestamptz not null default now()
+);
+
+create table if not exists public.weekly_allocations (
+  wallet       text    not null references public.players (wallet) on delete cascade,
+  week_start   date    not null references public.weekly_pools (week_start) on delete cascade,
+  xp_earned    integer not null,
+  chimp_amount bigint  not null default 0,
+  merkle_index integer,
+  claimed_at   timestamptz,
+  created_at   timestamptz not null default now(),
+  primary key (wallet, week_start)
+);
+
+create index if not exists weekly_allocations_wallet_idx
+  on public.weekly_allocations (wallet) where claimed_at is null;
+create index if not exists weekly_allocations_week_idx
+  on public.weekly_allocations (week_start);
+
+alter table public.weekly_pools       enable row level security;
+alter table public.weekly_allocations enable row level security;
+
+drop policy if exists "weekly_pools readable by anyone" on public.weekly_pools;
+create policy "weekly_pools readable by anyone"
+  on public.weekly_pools for select using (true);
+
+drop policy if exists "weekly_allocations readable by anyone" on public.weekly_allocations;
+create policy "weekly_allocations readable by anyone"
+  on public.weekly_allocations for select using (true);

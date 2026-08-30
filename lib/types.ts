@@ -47,6 +47,11 @@ export interface MeResponse {
     poolXp: number; // total XP earned this week across all players
     projectedChimp: number; // your projected share of the weekly pool
   };
+  /** Frozen, unclaimed weekly allocations. Base units are strings (bigint). */
+  rewards: {
+    claimableBaseUnits: string;
+    weeks: Array<{ weekStart: string; chimpBaseUnits: string }>;
+  };
 }
 
 export interface LeaderboardPlayer {

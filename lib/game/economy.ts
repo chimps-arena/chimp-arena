@@ -1,20 +1,61 @@
 /**
- * $CHIMP economy constants and pre-launch projections.
+ * $CHIMP economy constants, the Season 1 emission curve, and reward math.
  *
- * READ-ONLY / PRE-LAUNCH. No token exists on chain yet (see ROADMAP.md
- * Group G). These values drive the P1 "CHIMP appears" UI only — nothing
- * here moves real value.
+ * Numbers come from ECONOMY.md §13 (DRAFT — pending sign-off). No token exists
+ * on chain yet (ROADMAP.md Group G); the freeze pipeline computes owed amounts
+ * off-chain and the on-chain Merkle claim is bolted on once the distributor
+ * is deployed.
  */
 import { PUBLIC_ENV } from "@/lib/env";
 
 export const TOKEN_SYMBOL = PUBLIC_ENV.tokenSymbol; // "CHIMP"
 
+export const CHIMP_DECIMALS = 6;
+
+/** Whole CHIMP -> base units (bigint). */
+export function toBaseUnits(whole: number): bigint {
+  return BigInt(Math.round(whole * 10 ** CHIMP_DECIMALS));
+}
+
+/** Base units -> whole CHIMP (number; for display only). */
+export function toWhole(base: bigint): number {
+  return Number(base) / 10 ** CHIMP_DECIMALS;
+}
+
+/* --------------------------- Season 1 emission --------------------------- */
+
 /**
- * PROVISIONAL — pending decision #19 (pool size + emission curve).
- * The weekly $CHIMP pool is split pro-rata across all players by XP earned
- * that week. This number is a placeholder for the projection UI.
+ * First Monday of Season 1 (UTC). TODO: confirm at launch — this gates
+ * `weekIndexOf` and therefore every pool size.
  */
-export const WEEKLY_CHIMP_POOL = 250_000;
+export const SEASON_1_START = "2026-09-01";
+
+/** 1-based Season 1 week index for a Monday `YYYY-MM-DD`. */
+export function weekIndexOf(weekStart: string): number {
+  const a = Date.parse(`${SEASON_1_START}T00:00:00Z`);
+  const b = Date.parse(`${weekStart}T00:00:00Z`);
+  return Math.floor((b - a) / (7 * 86_400_000)) + 1;
+}
+
+/**
+ * Weekly pool in whole CHIMP by Season 1 week index (ECONOMY.md §13).
+ * Geometric taper; sums to the 150M play-to-earn budget over 52 weeks.
+ * Weeks < 1 are clamped to week 1 so the pre-launch projection is meaningful;
+ * after week 52 the season is over (0).
+ */
+export function weeklyPool(weekIndex: number): number {
+  const w = weekIndex < 1 ? 1 : weekIndex;
+  if (w <= 13) return 5_300_000;
+  if (w <= 26) return 3_180_000;
+  if (w <= 39) return 1_900_000;
+  if (w <= 52) return 1_150_000;
+  return 0;
+}
+
+/** Per-wallet ceiling: no wallet may take more than this fraction of a pool (§21). */
+export const PER_WALLET_CAP_FRACTION = 0.03;
+
+/* ----------------------------- week helpers ---------------------------- */
 
 /**
  * Monday 00:00 UTC of the week containing `now`, as `YYYY-MM-DD`.
@@ -30,11 +71,43 @@ export function currentWeekStart(now: Date = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** The Monday before `weekStart` — i.e. the most recently completed week. */
+export function previousWeekStart(weekStart: string): string {
+  const d = new Date(`${weekStart}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 7);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ------------------------------ reward math --------------------------- */
+
 /**
- * Your projected share of this week's pool, floored.
- * Returns 0 until the week has recorded XP.
+ * One wallet's CHIMP for a week: pro-rata by XP, floored, then capped at
+ * `PER_WALLET_CAP_FRACTION` of the pool. Amounts capped away are simply not
+ * emitted (they roll back to the treasury via the unclaimed clawback).
  */
-export function projectedWeeklyChimp(myWeekXp: number, poolXp: number): number {
+export function allocationFor(
+  myXp: number,
+  totalXp: number,
+  poolBaseUnits: bigint,
+): bigint {
+  if (myXp <= 0 || totalXp <= 0) return 0n;
+  const raw = (poolBaseUnits * BigInt(myXp)) / BigInt(totalXp);
+  const cap =
+    (poolBaseUnits * BigInt(Math.round(PER_WALLET_CAP_FRACTION * 1e6))) /
+    1_000_000n;
+  return raw < cap ? raw : cap;
+}
+
+/**
+ * Pre-freeze projection for the "This week" UI: your share of the current
+ * week's pool at today's XP split, in whole CHIMP.
+ */
+export function projectedWeeklyChimp(
+  myWeekXp: number,
+  poolXp: number,
+  weekStart: string = currentWeekStart(),
+): number {
   if (poolXp <= 0 || myWeekXp <= 0) return 0;
-  return Math.floor((WEEKLY_CHIMP_POOL * myWeekXp) / poolXp);
+  const pool = weeklyPool(weekIndexOf(weekStart));
+  return Math.floor((pool * myWeekXp) / poolXp);
 }

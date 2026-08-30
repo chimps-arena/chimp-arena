@@ -9,7 +9,7 @@ import { HandleEditor } from "@/components/handle-editor";
 import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
 import { shortWallet } from "@/lib/format";
-import { TOKEN_SYMBOL, WEEKLY_CHIMP_POOL } from "@/lib/game/economy";
+import { TOKEN_SYMBOL, toWhole } from "@/lib/game/economy";
 
 export default function DashboardPage() {
   const { me, loading, refresh } = useSession();
@@ -31,8 +31,9 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today, week } = me;
+  const { player, crew, today, week, rewards } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
+  const claimable = BigInt(rewards?.claimableBaseUnits ?? "0");
 
   return (
     <div className="flex flex-col gap-8">
@@ -79,11 +80,30 @@ export default function DashboardPage() {
         <div className="mt-5 max-w-md">
           <XpBar xp={player.xp} />
           <p className="mt-2 text-xs text-muted">
-            XP is your all-time rank. Each week it converts to a share of the{" "}
-            {WEEKLY_CHIMP_POOL.toLocaleString()} {TOKEN_SYMBOL} pool — claims go
-            live at token launch.
+            XP is your all-time rank. Each week it converts to a share of the
+            weekly {TOKEN_SYMBOL} pool — claims go live at token launch.
           </p>
         </div>
+
+        {claimable > 0n && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted">
+                Claimable
+              </div>
+              <div className="text-xl font-black text-accent">
+                {toWhole(claimable).toLocaleString()} {TOKEN_SYMBOL}
+              </div>
+            </div>
+            <button
+              className="btn btn-primary ml-auto text-sm"
+              disabled
+              title="On-chain claim opens when the token launches"
+            >
+              Claim (soon)
+            </button>
+          </div>
+        )}
 
         {!crew && (
           <div className="mt-5 rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">

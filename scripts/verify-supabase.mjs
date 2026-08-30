@@ -64,6 +64,8 @@ const tableExists = (t) => async () => {
 await check("table: players", tableExists("players"));
 await check("table: mission_runs", tableExists("mission_runs"));
 await check("table: weekly_scores", tableExists("weekly_scores"));
+await check("table: weekly_pools", tableExists("weekly_pools"));
+await check("table: weekly_allocations", tableExists("weekly_allocations"));
 await check("view: crew_totals", tableExists("crew_totals"));
 await check("view: weekly_xp_live", tableExists("weekly_xp_live"));
 
