@@ -13,10 +13,15 @@ export function XpBar({ xp, compact = false }: { xp: number; compact?: boolean }
           </span>
         )}
       </div>
-      <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+      <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full border border-border/60 bg-surface-2">
         <div
-          className="h-full rounded-full bg-accent transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{
+            width: `${pct}%`,
+            background:
+              "linear-gradient(90deg, var(--accent-2), var(--accent-3))",
+            boxShadow: "0 0 16px -2px color-mix(in srgb, var(--accent-3) 70%, transparent)",
+          }}
         />
       </div>
       {!compact && (

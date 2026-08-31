@@ -18,8 +18,10 @@ export default function DashboardPage() {
 
   if (!me?.player) {
     return (
-      <div className="card mx-auto mt-10 max-w-md p-8 text-center">
-        <div className="text-4xl">🐵</div>
+      <div className="card card-glow mx-auto mt-10 max-w-md p-8 text-center">
+        <div className="float-y text-5xl drop-shadow-[0_0_24px_rgba(34,211,238,0.5)]">
+          🐵
+        </div>
         <h1 className="mt-3 text-xl font-bold">Connect to enter the Arena</h1>
         <p className="mt-2 text-sm text-muted">
           Mission Control needs a connected wallet.
@@ -37,7 +39,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="card p-6">
+      <section className="card card-featured p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -52,26 +54,29 @@ export default function DashboardPage() {
               <DevnetFaucet />
             </div>
           </div>
-          <div className="flex gap-6 text-right">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted">
+          <div className="flex gap-3">
+            <div className="stat-tile text-right">
+              <div className="text-[11px] uppercase tracking-wide text-muted">
                 Today
               </div>
-              <div className="text-2xl font-black text-accent">
+              <div className="text-2xl font-bold text-accent">
                 +{today.xpEarnedToday}
               </div>
               <div className="text-[11px] text-muted">XP</div>
             </div>
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted">
+            <div className="stat-tile text-right">
+              <div className="text-[11px] uppercase tracking-wide text-muted">
                 This week
               </div>
-              <div className="text-2xl font-black">
+              <div className="text-2xl font-bold">
                 {week.xp.toLocaleString()}
               </div>
               <div className="text-[11px] text-muted">
-                XP · ≈ {week.projectedChimp.toLocaleString()} {TOKEN_SYMBOL}{" "}
-                <span className="rounded bg-surface-2 px-1">projected</span>
+                ≈{" "}
+                <span className="text-accent-2">
+                  {week.projectedChimp.toLocaleString()} {TOKEN_SYMBOL}
+                </span>{" "}
+                <span className="chip px-1.5 py-0">projected</span>
               </div>
             </div>
           </div>
@@ -86,12 +91,18 @@ export default function DashboardPage() {
         </div>
 
         {claimable > 0n && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+          <div
+            className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border p-4"
+            style={{
+              borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)",
+              background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+            }}
+          >
             <div>
               <div className="text-xs uppercase tracking-wide text-muted">
                 Claimable
               </div>
-              <div className="text-xl font-black text-accent">
+              <div className="text-xl font-bold text-accent">
                 {toWhole(claimable).toLocaleString()} {TOKEN_SYMBOL}
               </div>
             </div>
@@ -106,10 +117,16 @@ export default function DashboardPage() {
         )}
 
         {!crew && (
-          <div className="mt-5 rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">
+          <div
+            className="mt-5 rounded-xl border p-4 text-sm"
+            style={{
+              borderColor: "color-mix(in srgb, var(--accent-3) 40%, transparent)",
+              background: "color-mix(in srgb, var(--accent-3) 8%, transparent)",
+            }}
+          >
             You haven&apos;t joined a crew. Your XP won&apos;t count toward any
             crew score until you do.{" "}
-            <Link href="/crews" className="font-semibold text-accent underline">
+            <Link href="/crews" className="font-semibold text-accent-3 underline">
               Pick a crew →
             </Link>
           </div>
@@ -131,13 +148,19 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <Link href="/leaderboard" className="card p-5 hover:border-accent/50">
+        <Link
+          href="/leaderboard"
+          className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
+        >
           <div className="text-lg font-bold">🏆 Leaderboards</div>
           <p className="mt-1 text-sm text-muted">
             See where you and your crew rank globally. Updates live.
           </p>
         </Link>
-        <Link href="/crews" className="card p-5 hover:border-accent/50">
+        <Link
+          href="/crews"
+          className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
+        >
           <div className="text-lg font-bold">🤝 Crews</div>
           <p className="mt-1 text-sm text-muted">
             {crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry."}

@@ -90,11 +90,11 @@ export function GameShell({
         <Link href="/dashboard" className="text-sm text-muted hover:text-foreground">
           ← Mission Control
         </Link>
-        <h1 className="mt-2 text-2xl font-black">{title}</h1>
+        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{title}</h1>
         <p className="text-muted">{subtitle}</p>
       </div>
 
-      <div className="card p-6">
+      <div className="card card-glow p-6">
         {phase === "intro" && (
           <div className="flex flex-col gap-4">
             <div className="text-sm text-muted">{instructions}</div>
@@ -154,7 +154,10 @@ function ResultView({
           00:00 UTC. Your best score was updated if you beat it.
         </p>
       ) : (
-        <div className="text-2xl font-black text-accent">
+        <div
+          className="text-3xl font-bold text-accent"
+          style={{ textShadow: "0 0 24px color-mix(in srgb, var(--accent) 60%, transparent)" }}
+        >
           +{result.xpAwarded} XP
         </div>
       )}

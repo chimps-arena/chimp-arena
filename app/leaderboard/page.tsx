@@ -8,7 +8,9 @@ export default function LeaderboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-black">Leaderboards</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">
+          <span className="text-gradient">Leaderboards</span>
+        </h1>
         <p className="mt-1 text-muted">
           Crew standings are the whole game. Individual XP is the fuel.
         </p>

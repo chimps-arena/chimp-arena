@@ -30,36 +30,59 @@ export function NavBar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-          <span className="text-xl">🐵</span>
-          <span>CHIMP Arena</span>
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-[15px] font-bold tracking-tight"
+          style={{ fontFamily: "var(--font-display), sans-serif" }}
+        >
+          <span className="text-xl drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]">🐵</span>
+          <span>
+            CHIMP <span className="text-gradient">Arena</span>
+          </span>
         </Link>
 
         <nav className="ml-4 hidden gap-1 sm:flex">
-          {LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`rounded-lg px-3 py-1.5 text-sm ${
-                pathname === l.href || pathname.startsWith(l.href + "/")
-                  ? "bg-surface-2 text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {LINKS.map((l) => {
+            const active =
+              pathname === l.href || pathname.startsWith(l.href + "/");
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                  active
+                    ? "bg-surface-2 text-foreground"
+                    : "text-muted hover:text-foreground"
+                }`}
+                style={
+                  active
+                    ? {
+                        boxShadow:
+                          "inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent)",
+                      }
+                    : undefined
+                }
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : player ? (
             <>
               <span
-                className="mono hidden rounded-md bg-surface-2 px-2 py-1 text-xs text-muted sm:inline"
+                className="chip mono hidden text-accent sm:inline-flex"
+                style={{
+                  borderColor:
+                    "color-mix(in srgb, var(--accent) 40%, transparent)",
+                }}
                 title={`Weekly ${TOKEN_SYMBOL} claims begin at token launch`}
               >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
                 0 {TOKEN_SYMBOL}
               </span>
               <div className="hidden text-right sm:block">

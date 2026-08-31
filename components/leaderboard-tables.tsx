@@ -8,6 +8,18 @@ import type { LeaderboardResponse } from "@/lib/types";
 
 type Tab = "players" | "crews";
 
+const RANK_COLOR: Record<number, string> = {
+  1: "#ffd23f",
+  2: "#cbd5e1",
+  3: "#e0894f",
+};
+function rankStyle(rank: number) {
+  const c = RANK_COLOR[rank];
+  return c
+    ? { color: c, textShadow: `0 0 12px color-mix(in srgb, ${c} 60%, transparent)` }
+    : undefined;
+}
+
 export function LeaderboardTables({
   initial,
   highlightWallet,
@@ -78,9 +90,18 @@ export function LeaderboardTables({
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize ${
-                tab === t ? "bg-accent text-[#1a1400]" : "text-muted"
+              className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${
+                tab === t ? "text-[#241a00]" : "text-muted hover:text-foreground"
               }`}
+              style={
+                tab === t
+                  ? {
+                      background:
+                        "linear-gradient(180deg, #ffde6b, var(--accent))",
+                      boxShadow: "var(--glow-yellow)",
+                    }
+                  : undefined
+              }
             >
               {t}
             </button>
@@ -107,7 +128,10 @@ export function LeaderboardTables({
         <div className="card divide-y divide-border/60">
           {data.crews.map((c) => (
             <div key={c.slug} className="flex items-center gap-4 p-4">
-              <span className="mono w-8 text-center text-lg font-black text-muted">
+              <span
+                className="mono w-8 text-center text-lg font-black text-muted"
+                style={rankStyle(c.rank)}
+              >
                 {c.rank}
               </span>
               <span className="text-2xl">{c.emoji}</span>
@@ -139,17 +163,30 @@ export function LeaderboardTables({
             return (
               <div
                 key={p.wallet}
-                className={`flex items-center gap-4 p-3.5 ${
-                  isMe ? "bg-accent/10" : ""
-                }`}
+                className="flex items-center gap-4 p-3.5"
+                style={
+                  isMe
+                    ? {
+                        background:
+                          "color-mix(in srgb, var(--accent-2) 10%, transparent)",
+                        boxShadow:
+                          "inset 3px 0 0 0 var(--accent-2)",
+                      }
+                    : undefined
+                }
               >
-                <span className="mono w-8 text-center font-black text-muted">
+                <span
+                  className="mono w-8 text-center font-black text-muted"
+                  style={rankStyle(p.rank)}
+                >
                   {p.rank}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">
                     {p.handle}
-                    {isMe && <span className="ml-2 text-xs text-accent">you</span>}
+                    {isMe && (
+                      <span className="ml-2 text-xs text-accent-2">you</span>
+                    )}
                   </div>
                   <div className="mono text-xs text-muted">
                     {shortWallet(p.wallet)}

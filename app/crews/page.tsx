@@ -49,10 +49,12 @@ export default function CrewsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-black">Crews</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">
+          Pick your <span className="text-gradient">crew</span>
+        </h1>
         <p className="mt-1 text-muted">
-          Your XP is added to your crew&apos;s total. Choose once — for the MVP,
-          crew changes are locked to keep the rivalry honest.
+          Your XP is added to your crew&apos;s total. Choose once — crew changes
+          are locked to keep the rivalry honest.
         </p>
       </div>
 
@@ -69,11 +71,24 @@ export default function CrewsPage() {
           return (
             <div
               key={c.slug}
-              className="card flex flex-col gap-3 p-6"
-              style={{ borderColor: mine ? c.color : `${c.color}33` }}
+              className="card flex flex-col gap-3 p-6 transition duration-200 hover:-translate-y-1"
+              style={{
+                borderColor: mine
+                  ? c.color
+                  : `color-mix(in srgb, ${c.color} 35%, transparent)`,
+                boxShadow: mine ? `0 0 40px -12px ${c.color}` : undefined,
+              }}
             >
               <div className="flex items-center justify-between">
-                <div className="text-4xl">{c.emoji}</div>
+                <div
+                  className="grid h-14 w-14 place-items-center rounded-2xl text-3xl"
+                  style={{
+                    background: `color-mix(in srgb, ${c.color} 16%, transparent)`,
+                    boxShadow: `0 0 28px -10px ${c.color}`,
+                  }}
+                >
+                  {c.emoji}
+                </div>
                 {t && (
                   <div className="text-right">
                     <div className="mono text-lg font-bold" style={{ color: c.color }}>

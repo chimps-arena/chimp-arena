@@ -10,21 +10,40 @@ const TYPE_ART: Record<string, string> = {
   dodge: "☄️",
 };
 
+const TYPE_COLOR: Record<string, string> = {
+  reaction: "var(--accent)",
+  trivia: "var(--accent-2)",
+  "astro-run": "var(--accent-3)",
+  dodge: "var(--accent-4)",
+};
+
 export function MissionCard({ status }: { status: MissionStatus }) {
   const { def, completed, bestScore, xpEarned, higherIsBetter } = status;
+  const color = TYPE_COLOR[def.type] ?? "var(--accent-2)";
+
   return (
     <Link
       href={def.href}
-      className="card group flex flex-col gap-3 p-5 transition hover:border-accent/50"
+      className="card group flex flex-col gap-3 p-5 transition duration-200 hover:-translate-y-1"
+      style={{ borderColor: `color-mix(in srgb, ${color} 30%, transparent)` }}
     >
       <div className="flex items-start justify-between">
-        <span className="text-3xl">{TYPE_ART[def.type] ?? "🎮"}</span>
+        <span
+          className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition group-hover:scale-110"
+          style={{
+            background: `color-mix(in srgb, ${color} 15%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+            boxShadow: `0 0 24px -10px ${color}`,
+          }}
+        >
+          {TYPE_ART[def.type] ?? "🎮"}
+        </span>
         {completed ? (
-          <span className="rounded-full bg-good/15 px-2.5 py-1 text-xs font-semibold text-good">
+          <span className="chip text-good" style={{ borderColor: "color-mix(in srgb, var(--good) 40%, transparent)" }}>
             +{xpEarned} XP today
           </span>
         ) : (
-          <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent">
+          <span className="chip" style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)` }}>
             up to +{def.baseXp}+ XP
           </span>
         )}
@@ -43,7 +62,10 @@ export function MissionCard({ status }: { status: MissionStatus }) {
               ? "Higher score is better"
               : "Faster is better"}
         </span>
-        <span className="font-semibold text-accent group-hover:underline">
+        <span
+          className="font-semibold transition group-hover:translate-x-0.5"
+          style={{ color }}
+        >
           {completed ? "Play again →" : "Start →"}
         </span>
       </div>
