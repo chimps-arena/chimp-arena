@@ -37,10 +37,8 @@ export function NavBar() {
           className="flex items-center gap-2 text-[15px] font-bold tracking-tight"
           style={{ fontFamily: "var(--font-display), sans-serif" }}
         >
-          <span className="text-xl drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]">🐵</span>
-          <span>
-            CHIMP <span className="text-gradient">Arena</span>
-          </span>
+          <span className="text-xl">🐵</span>
+          <span>CHIMP Arena</span>
         </Link>
 
         <nav className="ml-4 hidden gap-1 sm:flex">

@@ -54,7 +54,7 @@ export function GameShell({
     async (payload: Record<string, unknown>) => {
       const startToken = start?.startToken as string | undefined;
       if (!startToken) {
-        setError("Missing start token — restart the mission.");
+        setError("Missing start token. Restart the mission.");
         setPhase("error");
         return;
       }
@@ -150,8 +150,8 @@ function ResultView({
       </div>
       {result.alreadyClaimedToday ? (
         <p className="text-sm text-muted">
-          You already claimed this mission today — no XP this run. Come back after
-          00:00 UTC. Your best score was updated if you beat it.
+          You already claimed this mission today, so no XP this run. Come back
+          after 00:00 UTC. Your best score was updated if you beat it.
         </p>
       ) : (
         <div

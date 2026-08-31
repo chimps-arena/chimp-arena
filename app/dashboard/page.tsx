@@ -56,18 +56,14 @@ export default function DashboardPage() {
           </div>
           <div className="flex gap-3">
             <div className="stat-tile text-right">
-              <div className="text-[11px] uppercase tracking-wide text-muted">
-                Today
-              </div>
+              <div className="text-xs text-muted">Today</div>
               <div className="text-2xl font-bold text-accent">
                 +{today.xpEarnedToday}
               </div>
               <div className="text-[11px] text-muted">XP</div>
             </div>
             <div className="stat-tile text-right">
-              <div className="text-[11px] uppercase tracking-wide text-muted">
-                This week
-              </div>
+              <div className="text-xs text-muted">This week</div>
               <div className="text-2xl font-bold">
                 {week.xp.toLocaleString()}
               </div>
@@ -86,7 +82,7 @@ export default function DashboardPage() {
           <XpBar xp={player.xp} />
           <p className="mt-2 text-xs text-muted">
             XP is your all-time rank. Each week it converts to a share of the
-            weekly {TOKEN_SYMBOL} pool — claims go live at token launch.
+            weekly {TOKEN_SYMBOL} pool. Claims go live at token launch.
           </p>
         </div>
 
@@ -99,9 +95,7 @@ export default function DashboardPage() {
             }}
           >
             <div>
-              <div className="text-xs uppercase tracking-wide text-muted">
-                Claimable
-              </div>
+              <div className="text-xs text-muted">Claimable</div>
               <div className="text-xl font-bold text-accent">
                 {toWhole(claimable).toLocaleString()} {TOKEN_SYMBOL}
               </div>

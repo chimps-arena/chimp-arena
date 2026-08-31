@@ -49,11 +49,9 @@ export default function CrewsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">
-          Pick your <span className="text-gradient">crew</span>
-        </h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Pick your crew</h1>
         <p className="mt-1 text-muted">
-          Your XP is added to your crew&apos;s total. Choose once — crew changes
+          Your XP is added to your crew&apos;s total. Choose once. Crew changes
           are locked to keep the rivalry honest.
         </p>
       </div>
@@ -113,7 +111,7 @@ export default function CrewsPage() {
                   </span>
                 ) : current ? (
                   <span className="text-xs text-muted">
-                    Locked — you already rep another crew.
+                    Locked. You already rep another crew.
                   </span>
                 ) : (
                   <button

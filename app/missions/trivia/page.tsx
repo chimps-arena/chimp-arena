@@ -12,7 +12,7 @@ export default function TriviaMissionPage() {
       instructions={
         <ul className="list-disc space-y-1 pl-5">
           <li>Five multiple-choice questions, drawn fresh each day.</li>
-          <li>15 seconds per question — no answer counts as wrong.</li>
+          <li>15 seconds per question. No answer counts as wrong.</li>
           <li>Answers lock the moment you tap them.</li>
           <li>XP scales with how many you get right.</li>
         </ul>

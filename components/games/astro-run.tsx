@@ -169,7 +169,7 @@ export function AstroRun({ complete }: GameContext) {
       />
       {phase === "idle" && (
         <button className="btn btn-primary" onClick={run}>
-          Launch — Space / tap to jump
+          Launch. Space or tap to jump
         </button>
       )}
       {phase === "running" && (
@@ -177,7 +177,7 @@ export function AstroRun({ complete }: GameContext) {
       )}
       {phase === "dead" && (
         <p className="text-lg font-bold text-bad">
-          Crashed! Distance {score} — banking…
+          Crashed! Distance {score}. Banking…
         </p>
       )}
     </div>

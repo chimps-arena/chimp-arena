@@ -77,7 +77,7 @@ export function ReactionGame({ complete }: GameContext) {
           ? "CLICK!"
           : state.kind === "tooSoon"
             ? "Too soon! Click to retry the round"
-            : `${state.ms} ms — click for next`;
+            : `${state.ms} ms · click for next`;
 
   const avg = times.length
     ? Math.round(times.reduce((a, b) => a + b, 0) / times.length)
@@ -103,7 +103,7 @@ export function ReactionGame({ complete }: GameContext) {
             key={i}
             className="flex-1 rounded bg-surface-2 py-1 text-center"
           >
-            {times[i] != null ? `${times[i]}ms` : "—"}
+            {times[i] != null ? `${times[i]}ms` : "·"}
           </span>
         ))}
       </div>

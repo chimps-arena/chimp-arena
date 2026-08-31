@@ -218,7 +218,7 @@ export function DebrisField({ complete }: GameContext) {
       />
       {phase === "idle" && (
         <button className="btn btn-primary" onClick={run}>
-          Launch — ← → / A · D / drag to steer
+          Launch. Arrow keys, A / D, or drag to steer
         </button>
       )}
       {phase === "running" && (
@@ -228,7 +228,7 @@ export function DebrisField({ complete }: GameContext) {
       )}
       {phase === "dead" && (
         <p className="text-lg font-bold text-bad">
-          Hit! Distance {score} — banking…
+          Hit! Distance {score}. Banking…
         </p>
       )}
     </div>

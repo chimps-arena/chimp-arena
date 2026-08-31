@@ -38,10 +38,6 @@ export default function RootLayout({
             <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
               {children}
             </main>
-            <footer className="border-t border-border/60 py-6 text-center text-xs text-muted">
-              CHIMP Arena — community MVP. Not financial advice. XP has no
-              monetary value.
-            </footer>
           </SessionProvider>
         </SolanaProvider>
       </body>

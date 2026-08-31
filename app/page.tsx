@@ -42,21 +42,22 @@ export default function Home() {
           <h1 className="text-4xl font-bold leading-[1.05] sm:text-6xl">
             Run missions.<br />
             Rep your crew.<br />
-            <span className="text-gradient">Own the jungle.</span>
+            <span className="text-accent-2">Own the jungle.</span>
           </h1>
           <p className="max-w-prose text-muted">
-            CHIMP Arena turns daily mini-games into XP, XP into crew power, and —
-            soon — play into a share of the weekly <span className="text-foreground">$CHIMP</span> pool.
-            Connect a wallet, pick a side, climb.
+            CHIMP Arena turns daily mini-games into XP, and XP into crew power.
+            Soon, playing also earns a share of the weekly{" "}
+            <span className="text-foreground">$CHIMP</span> pool. Connect a
+            wallet, pick a side, and climb.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <WalletConnect redirectTo="/dashboard" />
             <Link href="/leaderboard" className="btn btn-neon">
-              View leaderboards →
+              View leaderboards
             </Link>
           </div>
           <p className="text-xs text-muted">
-            Sign-in is a free, gasless signature — no transaction, no approval.
+            Sign-in is a free, gasless signature. No transaction, no approval.
           </p>
         </div>
 
@@ -71,7 +72,7 @@ export default function Home() {
             🐵
           </div>
           <div className="card card-featured p-5">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+            <h2 className="text-sm font-semibold text-muted">
               Today&apos;s missions
             </h2>
             <ul className="mt-4 flex flex-col gap-3">
@@ -140,9 +141,9 @@ export default function Home() {
       {/* ---------- how it works ---------- */}
       <section className="grid gap-4 sm:grid-cols-3">
         {[
-          ["01", "Connect", "One wallet, one signature. That's your identity — no passwords.", "var(--accent-2)"],
+          ["01", "Connect", "One wallet, one signature. That's your identity. No passwords.", "var(--accent-2)"],
           ["02", "Compete", "Clear daily mini-games for XP. One reward per mission per UTC day.", "var(--accent-3)"],
-          ["03", "Conquer", "Your XP lifts your crew up the global board — and earns $CHIMP weekly.", "var(--accent)"],
+          ["03", "Conquer", "Your XP lifts your crew up the global board, and earns $CHIMP weekly.", "var(--accent)"],
         ].map(([n, h, p, color]) => (
           <div key={h} className="card p-5">
             <div

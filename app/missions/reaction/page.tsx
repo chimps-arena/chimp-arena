@@ -8,12 +8,12 @@ export default function ReactionMissionPage() {
     <GameShell
       slug="reaction"
       title="Reflex Check"
-      subtitle="Five rounds. The screen turns green — click as fast as you can."
+      subtitle="Five rounds. The screen turns green, then click as fast as you can."
       instructions={
         <ul className="list-disc space-y-1 pl-5">
           <li>Click the panel to arm each round.</li>
           <li>Wait for green, then click instantly.</li>
-          <li>Clicking early fails the round — retry it, no penalty.</li>
+          <li>Clicking early fails the round. Retry it, no penalty.</li>
           <li>Your score is the average of all 5 reaction times. Lower is better.</li>
         </ul>
       }
