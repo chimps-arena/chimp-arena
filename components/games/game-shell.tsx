@@ -161,6 +161,20 @@ function ResultView({
           +{result.xpAwarded} XP
         </div>
       )}
+      {result.streak && (
+        <div
+          className="chip mono"
+          style={{
+            color: "var(--accent)",
+            borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)",
+          }}
+        >
+          🔥 {result.streak.count}-day streak
+          {result.streak.bonusXp > 0 && ` · +${result.streak.bonusXp} bonus`}
+          {result.streak.milestoneXp > 0 &&
+            ` · +${result.streak.milestoneXp} milestone`}
+        </div>
+      )}
       <div className="mono text-sm text-muted">
         Total XP: {result.totalXp.toLocaleString()}
       </div>

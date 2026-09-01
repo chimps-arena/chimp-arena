@@ -8,6 +8,7 @@ import { CrewBadge } from "@/components/crew-badge";
 import { HandleEditor } from "@/components/handle-editor";
 import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
+import { StreakCard } from "@/components/streak-card";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL, toWhole } from "@/lib/game/economy";
 
@@ -33,7 +34,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today, week, rewards } = me;
+  const { player, crew, today, week, rewards, streak } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
   const claimable = BigInt(rewards?.claimableBaseUnits ?? "0");
 
@@ -126,6 +127,22 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,20rem)_1fr]">
+        <StreakCard streak={streak} crewName={crew?.name} />
+        <div className="card flex flex-col justify-center gap-1 p-5">
+          <div className="text-xs text-muted">This week for your crew</div>
+          <div className="text-2xl font-bold">
+            {week.xp.toLocaleString()}{" "}
+            <span className="text-base font-normal text-muted">XP added</span>
+          </div>
+          <p className="text-xs text-muted">
+            {crew
+              ? `Every mission and streak day you clear lifts ${crew.name} on the board.`
+              : "Join a crew so this counts for something."}
+          </p>
+        </div>
+      </div>
 
       <section>
         <div className="flex items-baseline justify-between">

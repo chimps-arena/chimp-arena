@@ -66,6 +66,7 @@ await check("table: mission_runs", tableExists("mission_runs"));
 await check("table: weekly_scores", tableExists("weekly_scores"));
 await check("table: weekly_pools", tableExists("weekly_pools"));
 await check("table: weekly_allocations", tableExists("weekly_allocations"));
+await check("table: daily_bonuses", tableExists("daily_bonuses"));
 await check("view: crew_totals", tableExists("crew_totals"));
 await check("view: weekly_xp_live", tableExists("weekly_xp_live"));
 
@@ -84,6 +85,17 @@ await check("function: freeze_week", async () => {
   const { data, error } = await db.rpc("freeze_week", { p_week_start: "1970-01-05" });
   if (error) return error.message;
   if (typeof data !== "number") return `expected a number, got ${JSON.stringify(data)}`;
+  return null;
+});
+
+await check("function: bump_streak", async () => {
+  const { data, error } = await db
+    .rpc("bump_streak", { p_wallet: "__verify_nonexistent__", p_today: "1970-01-05" })
+    .maybeSingle();
+  if (error) return error.message;
+  if (!data || data.streak_count !== 0) {
+    return `expected {streak_count:0} for unknown wallet, got ${JSON.stringify(data)}`;
+  }
   return null;
 });
 

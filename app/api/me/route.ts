@@ -3,7 +3,12 @@ import { getSession } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { crewBySlug, validateHandle } from "@/lib/game/config";
 import { todayStatus } from "@/lib/game/status";
-import { currentWeekStart, projectedWeeklyChimp } from "@/lib/game/economy";
+import {
+  currentWeekStart,
+  projectedWeeklyChimp,
+  nextStreakMilestone,
+} from "@/lib/game/economy";
+import { utcDay } from "@/lib/game/config";
 import type { MeResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -19,7 +24,9 @@ export async function GET() {
 
   const { data: row } = await supabaseAdmin()
     .from("players")
-    .select("wallet, handle, crew_slug, xp, created_at")
+    .select(
+      "wallet, handle, crew_slug, xp, created_at, streak_count, streak_best, last_active_day",
+    )
     .eq("wallet", session.wallet)
     .maybeSingle();
 
@@ -74,6 +81,17 @@ export async function GET() {
       claimableBaseUnits: claimableTotal,
       weeks: claimableWeeks,
     },
+    streak: (() => {
+      const count = row.streak_count ?? 0;
+      const playedToday = row.last_active_day === utcDay();
+      return {
+        count,
+        best: row.streak_best ?? 0,
+        playedToday,
+        atRisk: count > 0 && !playedToday,
+        nextMilestone: nextStreakMilestone(count),
+      };
+    })(),
   };
   return NextResponse.json(payload);
 }

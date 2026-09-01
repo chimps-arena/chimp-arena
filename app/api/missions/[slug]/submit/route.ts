@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { verifyShortLived } from "@/lib/auth/jwt";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { missionBySlug, MISSION_RULES, utcDay } from "@/lib/game/config";
+import { streakMultiplier, STREAK_MILESTONES } from "@/lib/game/economy";
 import type { StartTokenClaims, SubmitResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -165,10 +166,42 @@ export async function POST(
   }
 
   void inserted;
+
+  // Daily streak: advances on the first mission completed this UTC day.
+  let streakInfo: SubmitResult["streak"];
+  let streakXp = 0;
+  const { data: bump } = await db
+    .rpc("bump_streak", { p_wallet: session.wallet, p_today: day })
+    .maybeSingle<{ streak_count: number; advanced: boolean }>();
+  const streakCount = bump?.streak_count ?? 0;
+  if (bump?.advanced && streakCount > 0) {
+    const bonusXp = Math.round(xpForRun * streakMultiplier(streakCount));
+    const milestoneXp = STREAK_MILESTONES[streakCount] ?? 0;
+    streakXp = bonusXp + milestoneXp;
+    if (streakXp > 0) {
+      const rows = [
+        { wallet: session.wallet, day, kind: "streak", xp: bonusXp, streak_day: streakCount },
+      ];
+      if (milestoneXp > 0)
+        rows.push({
+          wallet: session.wallet,
+          day,
+          kind: "milestone",
+          xp: milestoneXp,
+          streak_day: streakCount,
+        });
+      await db.from("daily_bonuses").upsert(rows, {
+        onConflict: "wallet,day,kind",
+        ignoreDuplicates: true,
+      });
+    }
+    streakInfo = { count: streakCount, bonusXp, milestoneXp };
+  }
+
   // Atomic increment - cannot lose a concurrent write from the same wallet.
   const { data: newXp, error: updErr } = await db.rpc("add_player_xp", {
     p_wallet: session.wallet,
-    p_amount: xpForRun,
+    p_amount: xpForRun + streakXp,
   });
   if (updErr || typeof newXp !== "number") {
     return NextResponse.json(
@@ -179,10 +212,11 @@ export async function POST(
 
   const result: SubmitResult = {
     ok: true,
-    xpAwarded: xpForRun,
+    xpAwarded: xpForRun + streakXp,
     totalXp: newXp,
     alreadyClaimedToday: false,
     scoreAccepted: score,
+    streak: streakInfo,
   };
   return NextResponse.json(result);
 }

@@ -52,6 +52,13 @@ export interface MeResponse {
     claimableBaseUnits: string;
     weeks: Array<{ weekStart: string; chimpBaseUnits: string }>;
   };
+  streak: {
+    count: number; // current consecutive-day streak
+    best: number; // longest streak ever
+    playedToday: boolean; // a mission completed this UTC day
+    atRisk: boolean; // count > 0 and not played today
+    nextMilestone: number | null; // next milestone day, or null past the top
+  };
 }
 
 export interface LeaderboardPlayer {
@@ -60,6 +67,7 @@ export interface LeaderboardPlayer {
   handle: string;
   crewSlug: string | null;
   xp: number;
+  streak: number;
 }
 
 export interface LeaderboardCrew {
@@ -94,4 +102,10 @@ export interface SubmitResult {
   totalXp: number;
   alreadyClaimedToday: boolean;
   scoreAccepted: number;
+  /** Present when this run advanced the daily streak. */
+  streak?: {
+    count: number;
+    bonusXp: number; // streak % bonus on this run
+    milestoneXp: number; // flat milestone bonus, 0 if none
+  };
 }

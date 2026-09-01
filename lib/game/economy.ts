@@ -51,6 +51,34 @@ export const ASTEROID_SLOT_CAP_PER_CHIMP = 2;
 export const CREW_JOIN_MIN_XP = 100;
 export const CREW_VOUCH_MIN_XP = 500;
 
+/* ------------------------------- daily streaks ----------------------- */
+
+/** Bonus XP rate from a streak: +3% per day, capped at +30% (day 11+).
+ *  Applied to the XP of the run that advances the streak that day. */
+export const STREAK_BONUS_PER_DAY = 0.03;
+export const STREAK_BONUS_CAP = 0.3;
+
+export function streakMultiplier(streakDay: number): number {
+  if (streakDay <= 1) return 0;
+  return Math.min(STREAK_BONUS_CAP, (streakDay - 1) * STREAK_BONUS_PER_DAY);
+}
+
+/** Flat one-off XP when a streak reaches a milestone day. */
+export const STREAK_MILESTONES: Record<number, number> = {
+  3: 50,
+  7: 150,
+  14: 400,
+  30: 1200,
+};
+
+/** The next milestone day at or after the current streak, or null past the top. */
+export function nextStreakMilestone(streakDay: number): number | null {
+  const days = Object.keys(STREAK_MILESTONES)
+    .map(Number)
+    .sort((a, b) => a - b);
+  return days.find((d) => d > streakDay) ?? null;
+}
+
 /** Whole CHIMP -> base units (bigint). */
 export function toBaseUnits(whole: number): bigint {
   return BigInt(Math.round(whole * 10 ** CHIMP_DECIMALS));

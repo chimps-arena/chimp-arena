@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data: players } = await db
     .from("players")
-    .select("wallet, handle, crew_slug, xp")
+    .select("wallet, handle, crew_slug, xp, streak_count")
     .order("xp", { ascending: false })
     .limit(TOP_N);
 
@@ -27,6 +27,7 @@ export async function GET() {
     handle: p.handle,
     crewSlug: p.crew_slug,
     xp: p.xp,
+    streak: p.streak_count ?? 0,
   }));
 
   // Crew totals across ALL members (not just the top 100).

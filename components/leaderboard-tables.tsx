@@ -184,6 +184,15 @@ export function LeaderboardTables({
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">
                     {p.handle}
+                    {p.streak >= 2 && (
+                      <span
+                        className="mono ml-2 text-xs"
+                        style={{ color: "var(--accent)" }}
+                        title={`${p.streak}-day streak`}
+                      >
+                        🔥{p.streak}
+                      </span>
+                    )}
                     {isMe && (
                       <span className="ml-2 text-xs text-accent-2">you</span>
                     )}

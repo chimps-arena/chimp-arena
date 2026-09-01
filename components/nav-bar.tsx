@@ -72,6 +72,24 @@ export function NavBar() {
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : player ? (
             <>
+              {me && me.streak.count >= 2 && (
+                <span
+                  className="chip mono hidden sm:inline-flex"
+                  style={{
+                    color: "var(--accent)",
+                    borderColor: me.streak.atRisk
+                      ? "color-mix(in srgb, var(--accent) 65%, transparent)"
+                      : "color-mix(in srgb, var(--accent) 30%, transparent)",
+                  }}
+                  title={
+                    me.streak.atRisk
+                      ? "Play today to keep your streak"
+                      : `${me.streak.count}-day streak`
+                  }
+                >
+                  🔥 {me.streak.count}
+                </span>
+              )}
               <span
                 className="chip mono hidden text-accent sm:inline-flex"
                 style={{
