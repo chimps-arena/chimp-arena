@@ -75,17 +75,24 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | 29 | Devnet SOL faucet button (stopgap) | ☑ `DevnetFaucet` on the dashboard (devnet only) |
 | 30 | Tx simulation, blockhash rebuild-retry, session-wallet == JWT-wallet check | ☑ sim + retry in `signAndSend`; `WalletSessionGuard` banner on mismatch |
 
-## G. P2 — CHIMP on devnet + weekly claim — 7
+## G. P2 — CHIMP as a spend-only currency — 5
+
+> Reworked per [TOKEN-POLICY.md](TOKEN-POLICY.md): v1 is **spend-only**. No
+> weekly claim, no emission, no distributor. CHIMP is bought (swap) and spent.
 
 | # | Item | Status |
 | --- | --- | --- |
-| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority) | ☐ owner — needs Squads (#32) |
-| 32 | Set up Squads multisig, assign mint + treasury authorities | ☐ owner — create on devnet.squads.so |
-| 33 | Deploy Jito `merkle-distributor` (devnet) | ☐ |
-| 34 | Weekly freeze → allocations → (Merkle tree) → fund distributor | ◐ off-chain half done: [0003](supabase/migrations/0003_weekly_rewards.sql), `POST /api/rewards/freeze`, `allocationFor()` + §13 curve in `economy.ts`. Tree + funding pending #33. **User must run migration 0003.** |
-| 35 | `GET /api/rewards/proof` endpoint | ☑ returns frozen allocations + index; `proof` null until the tree exists |
-| 36 | `claim-button` component + dashboard wiring | ◐ "Claimable N CHIMP" panel + disabled "Claim (soon)" on the dashboard; `/api/me` returns `rewards`. Live claim needs #33. |
-| 37 | `lib/chain/` — mint address, Helius connection, distributor client | ◐ `connection.ts` + `tx.ts` done (Group F); mint address + distributor client pending #31/#33 |
+| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority), full supply pre-minted to treasury | ☐ owner — pick: server keypair now, or Squads |
+| 32 | Mint + treasury authority to a keypair (devnet) → Squads before mainnet | ☐ owner |
+| 33 | `lib/chain/` — mint address, Helius connection, token balance reads | ◐ `connection.ts` + `tx.ts` done (Group F); mint address pending #31 |
+| 34 | In-app **swap widget** — Jupiter SOL/USDC → `$CHIMP`, slippage/impact UI, balance refresh | ☐ |
+| 35 | Real `$CHIMP` balance in nav chip + a wallet/inventory view | ☐ |
+
+### G-parked — future rewards season (do not build)
+Migration [0003](supabase/migrations/0003_weekly_rewards.sql), `POST /api/rewards/freeze`,
+`GET /api/rewards/proof`, `weeklyPool()`/`allocationFor()` in `economy.ts`,
+`daily_bonuses` → `weekly_xp_live` fold-in — all retained, inert, gated on a
+sink-discipline review + founder sign-off.
 
 ## H. P3 — Chimp NFT — 4
 
@@ -105,7 +112,7 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | 44 | `app/api/land/buy` — unsold check + transfer+mint tx + co-sign | ☐ |
 | 45 | Supabase parcel registry + attribute model (richness, hazard, adjacency, tier) | ☐ |
 | 46 | Helius DAS indexer / webhook → ownership reconcile | ☐ |
-| 47 | Property tax: first month free, then checkbox inside the weekly claim | ☐ |
+| 47 | Property tax: first month free, then a standalone pay-tax tx (no weekly claim in v1) | ☐ |
 
 ## J. P5 — Structures & yield — 5
 
@@ -114,7 +121,7 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | 48 | Structure config (types, costs, yield rates) in `lib/game/` | ☐ |
 | 49 | Structure place/upgrade UI (`app/map/[deed]/`) | ☐ |
 | 50 | Off-chain per-epoch yield accrual | ☐ |
-| 51 | Fold rewards + yield + tax into one weekly transaction (ALT if oversized) | ☐ |
+| 51 | *(parked with rewards season)* fold rewards + yield + tax into one weekly tx | ☐ parked |
 | 52 | Yield cap + tax-delinquent parcel reclaim | ☐ |
 
 ## K. P6 — Open economy + mainnet — 11
@@ -122,7 +129,7 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 | # | Item | Status |
 | --- | --- | --- |
 | 53 | Minimal in-app escrow marketplace program (custom, per decision #17) + audit | ☐ |
-| 54 | `$CHIMP` liquidity pool (Raydium / Orca) | ☐ |
+| 54 | `$CHIMP` liquidity pool (Raydium / Orca) + protocol-owned-liquidity policy (ECONOMY.md §11b) | ☐ |
 | 55 | Crew treasury feature | ☐ |
 | 56 | Territory + treasury leaderboard boards | ☐ |
 | 57 | *(if decentralizing)* `chimp-territory` Anchor program, ~7 instructions | ☐ |

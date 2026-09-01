@@ -10,7 +10,6 @@ import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
 import { StreakCard } from "@/components/streak-card";
 import { shortWallet } from "@/lib/format";
-import { TOKEN_SYMBOL, toWhole } from "@/lib/game/economy";
 
 export default function DashboardPage() {
   const { me, loading, refresh } = useSession();
@@ -34,9 +33,8 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today, week, rewards, streak } = me;
+  const { player, crew, today, week, streak } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
-  const claimable = BigInt(rewards?.claimableBaseUnits ?? "0");
 
   return (
     <div className="flex flex-col gap-8">
@@ -68,13 +66,7 @@ export default function DashboardPage() {
               <div className="text-2xl font-bold">
                 {week.xp.toLocaleString()}
               </div>
-              <div className="text-[11px] text-muted">
-                ≈{" "}
-                <span className="text-accent-2">
-                  {week.projectedChimp.toLocaleString()} {TOKEN_SYMBOL}
-                </span>{" "}
-                <span className="chip px-1.5 py-0">projected</span>
-              </div>
+              <div className="text-[11px] text-muted">XP</div>
             </div>
           </div>
         </div>
@@ -82,34 +74,10 @@ export default function DashboardPage() {
         <div className="mt-5 max-w-md">
           <XpBar xp={player.xp} />
           <p className="mt-2 text-xs text-muted">
-            XP is your all-time rank. Each week it converts to a share of the
-            weekly {TOKEN_SYMBOL} pool. Claims go live at token launch.
+            XP is your all-time rank. It drives your level, your crew&apos;s
+            score, and your daily streak. It doesn&apos;t convert to a token.
           </p>
         </div>
-
-        {claimable > 0n && (
-          <div
-            className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border p-4"
-            style={{
-              borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)",
-              background: "color-mix(in srgb, var(--accent) 8%, transparent)",
-            }}
-          >
-            <div>
-              <div className="text-xs text-muted">Claimable</div>
-              <div className="text-xl font-bold text-accent">
-                {toWhole(claimable).toLocaleString()} {TOKEN_SYMBOL}
-              </div>
-            </div>
-            <button
-              className="btn btn-primary ml-auto text-sm"
-              disabled
-              title="On-chain claim opens when the token launches"
-            >
-              Claim (soon)
-            </button>
-          </div>
-        )}
 
         {!crew && (
           <div

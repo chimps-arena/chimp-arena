@@ -1,25 +1,30 @@
 # CHIMP Arena — token economy
 
-Status: **design locked, pre-implementation.** This document is the reference for
-the on-chain layer. The current shipped app ([ARCHITECTURE.md](ARCHITECTURE.md))
-has none of this yet — `$CHIMP` is a branding string and XP is the only currency.
+Status: **v1 model locked — see [TOKEN-POLICY.md](TOKEN-POLICY.md).** That file
+is the authority; this one details mechanics within it. The shipped app
+([ARCHITECTURE.md](ARCHITECTURE.md)) has none of the on-chain layer yet.
+
+> **v1 is spend-only.** Players acquire `$CHIMP` by swapping SOL/USDC and spend
+> it on Chimps / land / items. **There is no play-to-earn in v1.** Every section
+> below about a *weekly claim*, *emission curve* or *reward pool* (§3, parts of
+> §6–8, §13's curve) is **PARKED** for a possible future rewards season — kept
+> for reference, not built.
 
 ---
 
-## 1. Core model — one token
+## 1. Core model — one token, spend-only
 
 | Thing | What it is | Transferable? |
 | --- | --- | --- |
-| **XP** | All-time rank / progression. Drives levels, crews, leaderboards, and the *size* of your weekly `$CHIMP` claim. Also the anti-cheat boundary. | **No.** Never leaves the database. |
-| **`$CHIMP`** | The only token. Earned via the weekly claim, spent on everything (NFTs, land, upgrades, tax, marketplace). | Yes — SPL token in the player's wallet. |
+| **XP** | All-time rank / progression. Drives levels, crews, leaderboards, streaks. The anti-cheat boundary. **Does not convert to anything.** | **No.** Never leaves the database. |
+| **`$CHIMP`** | The only token. A **spend-only utility currency** — acquired by swapping SOL/USDC, spent on NFTs, land, items, marketplace fees. | Yes — SPL token in the player's wallet. |
 
-There is **no second token** (`$ASTER` was considered and dropped). Asteroids are
-a premium *land tier* that yields more `$CHIMP`, not a separate currency.
+There is **no second token**. Asteroids are a premium *land tier*, not a currency.
 
-`$CHIMP` is **never minted per mission.** Gameplay accrues XP; XP converts to
-`$CHIMP` only through the gated weekly claim from a fixed pool. This is the single
-mechanism that keeps emission bounded and botting unprofitable (extra wallets
-only dilute the botter's own share).
+`$CHIMP` is **never minted for players.** The full supply is pre-minted and
+allocated (see §13 / TOKEN-POLICY.md). Players get `$CHIMP` only by buying it.
+This removes emission risk entirely: sinks can't be outrun by a faucet that
+doesn't exist.
 
 ---
 
@@ -36,10 +41,23 @@ only dilute the botter's own share).
 
 ---
 
-## 3. The weekly claim — the one recurring ritual
+## 3. Acquiring `$CHIMP` (v1)
 
-Everything economic converges here. Once a week the player opens one screen and
-signs **one transaction**:
+Players buy `$CHIMP` with an **in-app swap** (Jupiter): SOL or USDC → `$CHIMP`,
+with slippage / price-impact warnings and a post-swap balance refresh. A link
+out to a DEX is the fallback. No claim, no faucet.
+
+Depth for that swap comes from the pool — see §"Liquidity". Because the pool is
+the on-ramp, its depth is a launch-blocking concern, not a nice-to-have.
+
+---
+
+## 3b. PARKED — the weekly claim (future rewards season only)
+
+> Not built in v1. Retained so a future season doesn't start from a blank page.
+
+Everything economic would converge here. Once a week the player opens one screen
+and signs **one transaction**:
 
 ```
 Claim 340 CHIMP   (120 play rewards + 220 land yield)
@@ -116,20 +134,21 @@ trustless version — **P6+ only**, gated on an audit.
 
 ## 7. Economic sustainability
 
-Net `$CHIMP` emission per week must be **≤** `$CHIMP` pulled back into sinks, or
-the token inflates toward zero.
+**v1: net-spend-positive by construction.** There is no faucet, so no
+emission-vs-sink balancing problem. Every `$CHIMP` a player holds was bought;
+every sink (mint fees, land, structures, tax, marketplace fee) removes it from
+their wallet toward treasury / burn. The health metric is simply *treasury and
+burn accrual over time*.
 
-| Faucet | Sink |
-| --- | --- |
-| Fixed weekly reward pool (+ halving schedule) | Land sold from treasury (re-absorbs emitted `$CHIMP` — the primary sink) |
-| Land yield vault | Chimp mint fees |
-| | Structure place / upgrade burns |
-| | Per-claim fee |
-| | **Property tax** (also anti-hoarding, keeps the map liquid) |
-| | Marketplace fee — partially burned |
+**Revenue** (funds the project — TOKEN-POLICY.md):
+- **Primary sales** — Chimp mints, land, asteroid slots, structures. Main early
+  revenue.
+- **3% in-app secondary-trade fee** → 2% Astro Corp · 0.5% burn · 0.5% crew.
+- Nothing from selling emitted tokens.
 
-**Action item:** a spreadsheet model (players × daily emission vs. sinks) before
-any mint code ships.
+The parked reward-season model (§3b) *would* reintroduce a faucet, and *then* a
+spreadsheet model (players × daily emission vs. sinks) is a hard gate before it
+ships. Not before.
 
 ---
 
@@ -194,26 +213,50 @@ indexer → reconciles Supabase from the confirmed tx
 ## 11. Swap & on-ramp
 
 - **Swap:** Jupiter integration for in-app `$CHIMP` ⇄ SOL / USDC, with
-  slippage / price-impact warnings. A `$CHIMP` liquidity pool (Raydium / Orca)
-  is seeded at P6.
+  slippage / price-impact warnings. This is the **primary way players get
+  `$CHIMP`** in v1, not a convenience.
 - **Marketplace (#17): build a minimal in-app escrow program** for secondary
-  trading of Chimps / land / structures — not a third-party integration.
-  Custom Anchor program, needs an audit (roadmap #53, Group K).
-- **Fiat on-ramp (OPEN DECISION #76):** MoonPay / Transak / Coinbase Onramp so
-  non-crypto users can buy in, vs. earn-only. Not required until P6.
+  trading of Chimps / land / structures. The in-app market **must be the best
+  venue** or the 3% fee earns nothing — back it with Metaplex Core enforced
+  royalties and the deepest liquidity for Chimps / land. Custom Anchor program,
+  needs an audit (roadmap #53).
+- **Fiat on-ramp (OPEN — TOKEN-POLICY.md):** MoonPay / Transak, or SOL-only.
+  Not required before mainnet.
+
+---
+
+## 11b. Liquidity policy
+
+The pool is the on-ramp for `$CHIMP`, so its depth is central.
+
+- **Initial seed:** 10% of supply (100M `$CHIMP`) + paired SOL/USDC. This is a
+  **floor, not a cap.**
+- **Protocol-owned liquidity:** a slice of primary-sale revenue (SOL/USDC from
+  Chimp mints, land, asteroid slots) plus treasury `$CHIMP` is added to the pool
+  as **permanently locked LP**. Liquidity deepens as the game earns and can't be
+  pulled.
+- **Depth target:** treasury tops up toward **pool depth ≥ 15% of circulating
+  supply** at all times (`TARGET_POOL_DEPTH_OF_CIRCULATING` in `economy.ts`).
+- **Unlock sequencing:** founder vest, treasury LP adds, community and
+  partnership distributions are scheduled so no single month floods circulating
+  supply. No cliff stacking. Every bucket publishes its schedule before TGE.
 
 ---
 
 ## 12. Risk / legal
 
-- Two-token + yield + paid "land" reads as a securities / gambling product in
-  many jurisdictions. Single-token with non-transferable XP is deliberately
-  lower-surface, but not zero.
-- Stay on **devnet with no fiat on-ramp** through the entire design/build phase.
-- Frame land yield as an in-game resource, never a return or dividend.
+- **`$CHIMP` is a spend-only utility currency, not an investment.** All public
+  copy says so — no yield language, no "number go up". This is the single
+  biggest reduction in regulatory and reputational surface vs. a P2E model.
+- A company (Astro Corp) taking a cut of user-to-user trades has
+  money-transmission implications in some jurisdictions — on the counsel list.
+- Stay on **devnet with no fiat on-ramp** through the build phase.
+- Frame any future land yield as an in-game resource, never a return or dividend.
 - Legal counsel review is a hard gate before mainnet (roadmap #62).
-- cNFT "land" that costs money and produces tokens is the single riskiest
-  element — it ships last and stays optional.
+- cNFT "land" that costs money is still the riskiest asset — it ships last and
+  stays optional. Any *yield* on it is parked with the reward season.
+- **Model stability is itself a risk.** The v1 model is locked in
+  TOKEN-POLICY.md and does not reopen without a dated founder sign-off.
 
 ---
 
@@ -225,22 +268,27 @@ indexer → reconciles Supabase from the confirmed tx
 > **Still open: #18** — an emission-vs-sinks spreadsheet to confirm the weekly
 > faucet ≤ weekly sink capacity before mainnet.
 
-### Supply & allocation (#19)
+### Supply & allocation (founder plan, 2026-09-01 — TOKEN-POLICY.md)
 
-`$CHIMP` fixed max supply: **1,000,000,000** (1e9, 6 decimals).
+`$CHIMP` fixed max supply: **1,000,000,000** (1e9, 6 decimals). Full supply
+pre-minted; no player emission in v1.
 
-| Bucket | Share | Amount | Notes |
+| Bucket | Share | Amount | Terms |
 | --- | --- | --- | --- |
-| Play-to-earn (weekly pools) | 15% | 150,000,000 | Season 1 = 52 weekly epochs |
-| Treasury (land sales re-absorb, ops) | 25% | 250,000,000 | primary sink sink-back |
-| Liquidity (P6 pool seed) | 10% | 100,000,000 | locked at mainnet |
-| Team | 15% | 150,000,000 | 12-month cliff, 36-month linear vest |
-| Community / marketing / partners | 20% | 200,000,000 | |
-| Reserve (Season 2+, contingencies) | 15% | 150,000,000 | multisig-held |
+| Founders / team | 20% | 200,000,000 | 12-mo cliff, 36-mo linear vest |
+| Treasury | 25% | 250,000,000 | ops + progressive POL; published schedule |
+| Ecosystem rewards | 20% | 200,000,000 | **PARKED** — no job under spend-only; founder decision pending |
+| Community & partnerships | 15% | 150,000,000 | scheduled distribution |
+| Liquidity | 10% | 100,000,000 | initial seed; LP locked; POL (§11b) |
+| Corporation reserve / operations | 10% | 100,000,000 | legal, dev, marketing, infrastructure |
 
-### Weekly reward pool + emission curve (#19)
+### PARKED — weekly reward pool + emission curve
 
-Geometric taper, halving-ish every 13 weeks, summing to the 150M P2E budget:
+> Future rewards season only. Not built in v1. Sized to a 150M budget; if the
+> parked 200M "Ecosystem rewards" bucket funds a season, the curve is re-sized
+> then.
+
+Geometric taper, halving-ish every 13 weeks:
 
 | Weeks | Weekly pool |
 | --- | --- |
@@ -266,8 +314,7 @@ placeholder — replace with a `weekOf(date)` lookup against this table at P2.
 | Weekly claim fee (only if land yield included) | flat 50 `$CHIMP` | 100% burn |
 | Property tax / week — planet / asteroid | 2% / 3% of purchase price | 100% → treasury |
 | Tax grace period | first 4 weeks after purchase | — |
-| Marketplace fee (seller) | 5% | 2% treasury / 2% burn / 1% crew treasury |
-| `$ASTER`-style conversions | n/a — single token | — |
+| Marketplace fee (seller) | **3%** | 2% Astro Corp / 0.5% burn / 0.5% crew treasury |
 
 Reclaim: a parcel ≥ 6 weeks delinquent on tax returns to the treasury tree.
 

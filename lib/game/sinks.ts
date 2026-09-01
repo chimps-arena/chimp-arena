@@ -47,8 +47,9 @@ export function upgradeCost(kind: StructureKind, level: number): number {
 /** Flat fee, charged only when land yield is bundled into the weekly claim. */
 export const CLAIM_FEE = 50;
 
+/** Secondary-trade fee (TOKEN-POLICY.md). Split sums to feeRate.
+ *  `astroCorp` is company revenue; the rest stays in the economy. */
 export const MARKETPLACE = {
-  feeRate: 0.05,
-  /** split of the sale price (must sum to feeRate) */
-  split: { treasury: 0.02, burn: 0.02, crew: 0.01 },
+  feeRate: 0.03,
+  split: { astroCorp: 0.02, burn: 0.005, crew: 0.005 },
 } as const;

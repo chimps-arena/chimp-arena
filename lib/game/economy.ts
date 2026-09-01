@@ -1,10 +1,13 @@
 /**
- * $CHIMP economy constants, the Season 1 emission curve, and reward math.
+ * $CHIMP economy constants.
  *
- * Numbers come from ECONOMY.md §13 (APPROVED 2026-08-30). No token exists on
- * chain yet (ROADMAP.md Group G); the freeze pipeline computes owed amounts
- * off-chain and the on-chain Merkle claim is bolted on once the distributor
- * is deployed.
+ * v1 model (TOKEN-POLICY.md): CHIMP is a SPEND-ONLY utility currency. Players
+ * acquire it by swapping SOL/USDC -> CHIMP and spend it on Chimps / land /
+ * items. There is NO play-to-earn in v1.
+ *
+ * The emission curve, weekly-pool and Merkle-claim helpers below are PARKED
+ * for a possible future rewards season - kept, not deleted, and not wired
+ * into any production path.
  */
 import { PUBLIC_ENV } from "@/lib/env";
 
@@ -12,35 +15,28 @@ export const TOKEN_SYMBOL = PUBLIC_ENV.tokenSymbol; // "CHIMP"
 
 export const CHIMP_DECIMALS = 6;
 
-/* ----------------------------- tokenomics (§13) ------------------------ */
+/* ----------------------------- tokenomics ---------------------------- */
 
 export const TOKEN_MAX_SUPPLY = 1_000_000_000;
 
-/** Fractions of max supply. Sums to 1.0. */
+/** Fractions of max supply (founder plan, 2026-09-01 - TOKEN-POLICY.md).
+ *  `ecosystemRewards` is PARKED pending a founder decision. Sums to 1.0. */
 export const ALLOCATION = {
-  playToEarn: 0.15,
-  treasury: 0.25,
-  liquidity: 0.1,
-  team: 0.15, // 12-month cliff, then 36-month linear vest
-  community: 0.2,
-  reserve: 0.15,
+  founders: 0.2, // 12-mo cliff, 36-mo linear vest
+  treasury: 0.25, // ops + progressive protocol-owned liquidity
+  ecosystemRewards: 0.2, // PARKED - no play-to-earn in v1
+  community: 0.15, // + partnerships; scheduled distribution
+  liquidity: 0.1, // initial seed; LP locked, POL
+  corpReserve: 0.1, // legal, development, marketing, infrastructure
 } as const;
 
-/* ----------------------------- anti-sybil (§13) ----------------------- */
+/** Liquidity policy: treasury tops up the pool toward this share of
+ *  circulating supply (TOKEN-POLICY.md guardrail 3). */
+export const TARGET_POOL_DEPTH_OF_CIRCULATING = 0.15;
 
-/** A wallet needs this many mission runs, across this many distinct UTC days,
- *  in a week to receive that week's allocation.
- *  TODO(#34): enforce in the freeze/claim path (needs a distinct-days view). */
-export const MIN_WEEKLY_RUNS = 3;
-export const MIN_WEEKLY_ACTIVE_DAYS = 2;
-
-export function meetsWeeklyActivity(runs: number, activeDays: number): boolean {
-  return runs >= MIN_WEEKLY_RUNS && activeDays >= MIN_WEEKLY_ACTIVE_DAYS;
-}
-
-/** The wallet's oldest on-chain signature must be at least this old before its
- *  first claim. Relaxed on devnet. */
-export const FIRST_CLAIM_WALLET_AGE_DAYS = 7;
+/* ------------------------- PARKED: rewards season ------------------- */
+/* Everything from here to "daily streaks" is inert in v1. Do not import
+ * into a production route without a TOKEN-POLICY.md sign-off. */
 
 /** Per-Chimp land holdings ceiling. */
 export const LAND_CAP_PER_CHIMP = 5;
