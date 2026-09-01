@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletReadyState } from "@solana/wallet-adapter-base";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
+
+const PHANTOM_INSTALL = "https://phantom.com/download";
 
 type Status = "idle" | "signing" | "verifying" | "error";
 
@@ -25,8 +28,14 @@ export function WalletConnect({
 }) {
   const { refresh, me } = useSession();
   const router = useRouter();
-  const { publicKey, connected, connecting, signMessage } = useWallet();
+  const { publicKey, connected, connecting, signMessage, wallets } = useWallet();
   const { setVisible } = useWalletModal();
+
+  const hasWallet = wallets.some(
+    (w) =>
+      w.readyState === WalletReadyState.Installed ||
+      w.readyState === WalletReadyState.Loadable,
+  );
 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -102,12 +111,18 @@ export function WalletConnect({
         onClick={() => {
           setError(null);
           if (connected) void authenticate();
-          else setVisible(true);
+          else if (hasWallet) setVisible(true);
+          else window.open(PHANTOM_INSTALL, "_blank", "noopener,noreferrer");
         }}
       >
         {busy && <Spinner />}
-        {text}
+        {connected || hasWallet ? text : "Get a Solana wallet"}
       </button>
+      {!connected && !hasWallet && (
+        <p className="mt-2 text-xs text-muted">
+          No wallet detected. Install Phantom, then reload this page.
+        </p>
+      )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
     </div>
   );
