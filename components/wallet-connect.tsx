@@ -3,12 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletReadyState } from "@solana/wallet-adapter-base";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
-
-const PHANTOM_INSTALL = "https://phantom.com/download";
 
 type Status = "idle" | "signing" | "verifying" | "error";
 
@@ -16,6 +13,11 @@ type Status = "idle" | "signing" | "verifying" | "error";
  * Connect a Solana wallet (via the wallet-adapter modal) then run the
  * sign-in-with-signature challenge against /api/auth/*. The wallet address is
  * the identity; signing is gasless and only proves ownership.
+ *
+ * Flow: click -> wallet picker -> wallet connects -> we auto-run the signature
+ * challenge. If the wallet is already connected (e.g. autoConnect on reload)
+ * but there's no session yet, the button becomes an explicit "Sign in" so the
+ * signature prompt is always tied to a user click.
  */
 export function WalletConnect({
   redirectTo,
@@ -28,18 +30,13 @@ export function WalletConnect({
 }) {
   const { refresh, me } = useSession();
   const router = useRouter();
-  const { publicKey, connected, connecting, signMessage, wallets } = useWallet();
+  const { publicKey, connected, connecting, signMessage } = useWallet();
   const { setVisible } = useWalletModal();
-
-  const hasWallet = wallets.some(
-    (w) =>
-      w.readyState === WalletReadyState.Installed ||
-      w.readyState === WalletReadyState.Loadable,
-  );
 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const autoTried = useRef<string | null>(null);
 
   const authenticate = useCallback(async () => {
     if (!publicKey || !signMessage || inFlight.current) return;
@@ -80,28 +77,37 @@ export function WalletConnect({
       setStatus("idle");
     } catch (e) {
       setStatus("error");
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(
+        e instanceof Error ? e.message : "Something went wrong signing in",
+      );
     } finally {
       inFlight.current = false;
     }
   }, [publicKey, signMessage, me, refresh, redirectTo, router]);
 
-  // As soon as a wallet is connected and no player session exists, sign in.
+  // Best-effort auto sign-in right after a wallet connects. Runs at most once
+  // per address; the button is the reliable manual path if a wallet suppresses
+  // the prompt outside a click.
   useEffect(() => {
-    // authenticate() is the intended reaction to a wallet connecting.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (connected && publicKey && !me?.player) void authenticate();
+    if (!connected || !publicKey || me?.player) return;
+    const addr = publicKey.toBase58();
+    if (autoTried.current === addr) return;
+    autoTried.current = addr;
+    void authenticate();
   }, [connected, publicKey, me, authenticate]);
 
-  const busy =
-    connecting || status === "signing" || status === "verifying";
+  const busy = connecting || status === "signing" || status === "verifying";
+  const needsSignIn = connected && !!publicKey && !me?.player;
+
   const text = connecting
     ? "Connecting…"
     : status === "signing"
-      ? "Sign the message…"
+      ? "Approve in your wallet…"
       : status === "verifying"
         ? "Verifying…"
-        : label;
+        : needsSignIn
+          ? "Sign in with wallet"
+          : label;
 
   return (
     <div className={className}>
@@ -110,17 +116,26 @@ export function WalletConnect({
         disabled={busy}
         onClick={() => {
           setError(null);
-          if (connected) void authenticate();
-          else if (hasWallet) setVisible(true);
-          else window.open(PHANTOM_INSTALL, "_blank", "noopener,noreferrer");
+          if (needsSignIn) void authenticate();
+          else if (connected) void authenticate();
+          else setVisible(true);
         }}
       >
         {busy && <Spinner />}
-        {connected || hasWallet ? text : "Get a Solana wallet"}
+        {text}
       </button>
-      {!connected && !hasWallet && (
+      {!connected && !busy && (
         <p className="mt-2 text-xs text-muted">
-          No wallet detected. Install Phantom, then reload this page.
+          No wallet?{" "}
+          <a
+            href="https://phantom.com/download"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Get Phantom
+          </a>
+          , then reload.
         </p>
       )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
