@@ -3,20 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { PhantomWalletName } from "@solana/wallet-adapter-phantom";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
 
-type Status = "idle" | "signing" | "verifying" | "error";
+type Status = "idle" | "connecting" | "signing" | "verifying" | "error";
 
 /**
- * Connect a Solana wallet, then run the sign-in-with-signature challenge
- * against /api/auth/*. The wallet address is the identity; signing is gasless.
- *
- * Deliberately click-first: connecting and signing are always reachable from
- * the button so a suppressed auto-prompt can never dead-end the user. A single
- * best-effort auto sign-in runs when a wallet connects, and re-arms on
- * disconnect / address change.
+ * Connect Phantom directly through the adapter (no modal — it was swallowing
+ * clicks), then run the sign-in-with-signature challenge against /api/auth/*.
+ * The session is a 30-day cookie; the wallet is only needed here at sign-in.
  */
 export function WalletConnect({
   redirectTo,
@@ -29,13 +25,13 @@ export function WalletConnect({
 }) {
   const { refresh, me } = useSession();
   const router = useRouter();
-  const { publicKey, connected, connecting, signMessage, disconnect } =
+  const { publicKey, connected, wallet, select, connect, signMessage, disconnect } =
     useWallet();
-  const { setVisible } = useWalletModal();
 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const pendingConnect = useRef(false);
   const autoTriedFor = useRef<string | null>(null);
 
   const address = publicKey?.toBase58() ?? null;
@@ -79,26 +75,52 @@ export function WalletConnect({
       router.refresh();
       setStatus("idle");
     } catch (e) {
-      setStatus("error");
-      const msg =
-        e instanceof Error ? e.message : "Something went wrong signing in";
-      // A user-rejected signature isn't an error worth shouting about.
-      setError(/reject|denied|cancel/i.test(msg) ? null : msg);
-      if (/reject|denied|cancel/i.test(msg)) setStatus("idle");
+      const msg = e instanceof Error ? e.message : "Sign-in failed";
+      if (/reject|denied|cancel/i.test(msg)) {
+        setStatus("idle");
+        setError(null);
+      } else {
+        setStatus("error");
+        setError(msg);
+      }
     } finally {
       inFlight.current = false;
     }
   }, [publicKey, signMessage, me, refresh, redirectTo, router]);
 
-  // Re-arm the one-shot auto sign-in whenever the connected address changes
-  // (including going back to null on disconnect).
+  // Step 1 of connect: once `select(Phantom)` has taken effect, call connect().
+  // status was already set to "connecting" in onClick before select().
+  useEffect(() => {
+    if (!pendingConnect.current) return;
+    if (wallet?.adapter.name !== PhantomWalletName) return; // wait for select
+    pendingConnect.current = false;
+    if (connected) return;
+    connect()
+      .then(() => setStatus("idle"))
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : "Could not connect Phantom";
+        if (/reject|denied|cancel/i.test(msg)) {
+          setStatus("idle");
+          setError(null);
+        } else {
+          setStatus("error");
+          setError(
+            /not.*(detect|install)/i.test(msg)
+              ? "Phantom not detected. Install it, then reload."
+              : msg,
+          );
+        }
+      });
+  }, [wallet, connected, connect]);
+
+  // Re-arm auto sign-in when the address changes (incl. -> null on disconnect).
   useEffect(() => {
     if (autoTriedFor.current && autoTriedFor.current !== address) {
       autoTriedFor.current = null;
     }
   }, [address]);
 
-  // Best-effort auto sign-in once per address, only once signMessage is ready.
+  // Auto sign-in once per address as soon as signing is available.
   useEffect(() => {
     if (!connected || !address || !signMessage || signedIn) return;
     if (autoTriedFor.current === address) return;
@@ -106,33 +128,31 @@ export function WalletConnect({
     void authenticate();
   }, [connected, address, signMessage, signedIn, authenticate]);
 
-  const busy = connecting || status === "signing" || status === "verifying";
+  const busy =
+    status === "connecting" || status === "signing" || status === "verifying";
   const needsSignIn = connected && !!address && !signedIn;
-  const brokenAdapter = connected && !!address && !signMessage;
 
-  const text = connecting
-    ? "Connecting…"
-    : status === "signing"
-      ? "Approve in your wallet…"
-      : status === "verifying"
-        ? "Verifying…"
-        : brokenAdapter
-          ? "Reconnect wallet"
+  const text =
+    status === "connecting"
+      ? "Opening Phantom…"
+      : status === "signing"
+        ? "Approve in Phantom…"
+        : status === "verifying"
+          ? "Verifying…"
           : needsSignIn
             ? "Sign in with wallet"
             : label;
 
   const onClick = () => {
     setError(null);
-    if (brokenAdapter) {
-      void disconnect().finally(() => setVisible(true));
-    } else if (needsSignIn) {
+    if (needsSignIn || connected) {
       void authenticate();
-    } else if (connected) {
-      void authenticate();
-    } else {
-      setVisible(true);
+      return;
     }
+    // fresh connect
+    pendingConnect.current = true;
+    setStatus("connecting");
+    select(PhantomWalletName);
   };
 
   return (
@@ -149,6 +169,14 @@ export function WalletConnect({
         <p className="mt-2 text-xs text-muted">
           Wallet connected. One signature to sign in — free, no transaction.
         </p>
+      )}
+      {connected && !!address && !signMessage && (
+        <button
+          className="mt-2 text-xs text-muted underline"
+          onClick={() => void disconnect()}
+        >
+          Reset wallet connection
+        </button>
       )}
       {!connected && !busy && (
         <p className="mt-2 text-xs text-muted">
