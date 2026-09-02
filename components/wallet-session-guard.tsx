@@ -1,51 +1,68 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
 import { shortWallet } from "@/lib/format";
+import {
+  getPhantom,
+  onPhantomAccountChange,
+  phantomAddress,
+} from "@/lib/phantom";
 
 /**
- * Thin banner shown when the connected wallet no longer matches the logged-in
- * player (user switched accounts in their wallet). Offers a one-click re-auth
- * to the now-connected wallet, or logout.
+ * Banner shown when the Phantom account currently selected differs from the
+ * logged-in player (user switched accounts in Phantom). One-click re-auth to
+ * the now-selected account, or log out.
  */
 export function WalletSessionGuard() {
   const { me, refresh, logout } = useSession();
-  const { publicKey, connected, signMessage } = useWallet();
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  useEffect(() => {
+    // Initial sync of the injected-provider address into React state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConnectedWallet(phantomAddress());
+    const off = onPhantomAccountChange(setConnectedWallet);
+    const onFocus = () => setConnectedWallet(phantomAddress());
+    window.addEventListener("focus", onFocus);
+    return () => {
+      off();
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
   const sessionWallet = me?.player?.wallet ?? null;
-  const connectedWallet = connected && publicKey ? publicKey.toBase58() : null;
   const mismatch =
-    sessionWallet != null &&
-    connectedWallet != null &&
-    sessionWallet !== connectedWallet;
+    !!sessionWallet && !!connectedWallet && sessionWallet !== connectedWallet;
 
   const reauth = useCallback(async () => {
-    if (!publicKey || !signMessage || inFlight.current) return;
+    const p = getPhantom();
+    if (!p || !connectedWallet || inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
-      const address = publicKey.toBase58();
       const nonceRes = await fetch("/api/auth/nonce", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: address }),
+        body: JSON.stringify({ wallet: connectedWallet }),
       });
       if (!nonceRes.ok) throw new Error("Could not start sign-in");
       const { message, challengeToken } = await nonceRes.json();
-      const sig = await signMessage(new TextEncoder().encode(message));
+      const { signature } = await p.signMessage(
+        new TextEncoder().encode(message),
+        "utf8",
+      );
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          wallet: address,
-          signature: bs58.encode(sig),
+          wallet: connectedWallet,
+          signature: bs58.encode(signature),
           challengeToken,
         }),
       });
@@ -60,7 +77,7 @@ export function WalletSessionGuard() {
       setBusy(false);
       inFlight.current = false;
     }
-  }, [publicKey, signMessage, refresh]);
+  }, [connectedWallet, refresh]);
 
   if (!mismatch) return null;
 
@@ -71,14 +88,14 @@ export function WalletSessionGuard() {
           Signed in as{" "}
           <span className="mono">{shortWallet(sessionWallet!)}</span> but{" "}
           <span className="mono">{shortWallet(connectedWallet!)}</span> is
-          connected.
+          selected in Phantom.
         </span>
         <button
           onClick={reauth}
           disabled={busy}
           className="btn btn-primary px-3 py-1 text-xs"
         >
-          {busy ? "Signing…" : "Switch to connected wallet"}
+          {busy ? "Signing…" : "Switch to selected wallet"}
         </button>
         <button
           onClick={() => logout()}

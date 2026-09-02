@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { shortWallet } from "@/lib/format";
+import { disconnectPhantom } from "@/lib/phantom";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
 
 const LINKS = [
@@ -16,17 +16,12 @@ const LINKS = [
 
 export function NavBar() {
   const { me, loading, logout } = useSession();
-  const { disconnect } = useWallet();
   const pathname = usePathname();
   const player = me?.player ?? null;
 
   async function fullDisconnect() {
     await logout();
-    try {
-      await disconnect();
-    } catch {
-      /* wallet already disconnected */
-    }
+    await disconnectPhantom();
   }
 
   return (

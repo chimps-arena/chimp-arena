@@ -1,34 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { SOLANA_CLUSTER } from "@/lib/chain/connection";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { SOLANA_CLUSTER, chainEndpoint } from "@/lib/chain/connection";
+import { connectPhantom, phantomAddress, phantomInstalled } from "@/lib/phantom";
 
 /**
- * Stopgap until the fee-payer relay (roadmap #28) lands: lets a connected
- * wallet pull devnet SOL so it can pay transaction fees. Renders nothing on
- * testnet/mainnet.
+ * Stopgap until the fee-payer relay (roadmap #28) lands: pulls devnet SOL to
+ * the connected Phantom wallet so it can pay transaction fees. Devnet only.
  */
 export function DevnetFaucet() {
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
     "idle",
   );
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (SOLANA_CLUSTER !== "devnet" || !publicKey) return null;
+  if (SOLANA_CLUSTER !== "devnet" || !phantomInstalled()) return null;
 
   async function drip() {
-    if (!publicKey) return;
     setStatus("loading");
     setMsg(null);
     try {
-      const sig = await connection.requestAirdrop(publicKey, LAMPORTS_PER_SOL);
+      const addr = phantomAddress() ?? (await connectPhantom());
+      const owner = new PublicKey(addr);
+      const connection = new Connection(chainEndpoint(), "confirmed");
+      const sig = await connection.requestAirdrop(owner, LAMPORTS_PER_SOL);
       const bh = await connection.getLatestBlockhash();
       await connection.confirmTransaction(
-        { signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+        {
+          signature: sig,
+          blockhash: bh.blockhash,
+          lastValidBlockHeight: bh.lastValidBlockHeight,
+        },
         "confirmed",
       );
       setStatus("done");
@@ -53,9 +56,7 @@ export function DevnetFaucet() {
         {status === "loading" ? "Requesting…" : "Get devnet SOL"}
       </button>
       {msg && (
-        <span
-          className={`ml-2 ${status === "error" ? "text-bad" : "text-good"}`}
-        >
+        <span className={`ml-2 ${status === "error" ? "text-bad" : "text-good"}`}>
           {msg}
         </span>
       )}

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { SolanaProvider } from "@/components/solana-provider";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
 import { NavBar } from "@/components/nav-bar";
@@ -31,15 +30,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SolanaProvider>
-          <SessionProvider>
-            <WalletSessionGuard />
-            <NavBar />
-            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              {children}
-            </main>
-          </SessionProvider>
-        </SolanaProvider>
+        <SessionProvider>
+          <WalletSessionGuard />
+          <NavBar />
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            {children}
+          </main>
+        </SessionProvider>
       </body>
     </html>
   );

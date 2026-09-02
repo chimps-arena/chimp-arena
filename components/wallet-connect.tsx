@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { PhantomWalletName } from "@solana/wallet-adapter-phantom";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
+import {
+  connectPhantom,
+  getPhantom,
+  phantomInstalled,
+  PHANTOM_INSTALL_URL,
+} from "@/lib/phantom";
 
 type Status = "idle" | "connecting" | "signing" | "verifying" | "error";
 
 /**
- * Connect Phantom directly through the adapter (no modal — it was swallowing
- * clicks), then run the sign-in-with-signature challenge against /api/auth/*.
- * The session is a 30-day cookie; the wallet is only needed here at sign-in.
+ * Connect Phantom directly (window.phantom.solana) and run the
+ * sign-in-with-signature challenge against /api/auth/*. The session is a
+ * 30-day cookie; the wallet is only touched here.
  */
 export function WalletConnect({
   redirectTo,
@@ -23,46 +27,52 @@ export function WalletConnect({
   className?: string;
   label?: string;
 }) {
-  const { refresh, me } = useSession();
+  const { refresh } = useSession();
   const router = useRouter();
-  const { publicKey, connected, wallet, select, connect, signMessage, disconnect } =
-    useWallet();
-
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const pendingConnect = useRef(false);
-  const autoTriedFor = useRef<string | null>(null);
 
-  const address = publicKey?.toBase58() ?? null;
-  const signedIn = !!address && me?.player?.wallet === address;
+  const run = useCallback(async () => {
+    if (inFlight.current) return;
 
-  const authenticate = useCallback(async () => {
-    if (!publicKey || !signMessage || inFlight.current) return;
-    const addr = publicKey.toBase58();
-    if (me?.player?.wallet === addr) return;
+    if (!phantomInstalled()) {
+      window.open(PHANTOM_INSTALL_URL, "_blank", "noopener,noreferrer");
+      return;
+    }
 
     inFlight.current = true;
     setError(null);
     try {
+      setStatus("connecting");
+      const address = await connectPhantom();
+
       setStatus("verifying");
       const nonceRes = await fetch("/api/auth/nonce", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: addr }),
+        body: JSON.stringify({ wallet: address }),
       });
       if (!nonceRes.ok) throw new Error("Could not start sign-in");
       const { message, challengeToken } = await nonceRes.json();
 
       setStatus("signing");
-      const sig = await signMessage(new TextEncoder().encode(message));
-      const signature = bs58.encode(sig);
+      const provider = getPhantom();
+      if (!provider) throw new Error("Phantom not detected");
+      const { signature } = await provider.signMessage(
+        new TextEncoder().encode(message),
+        "utf8",
+      );
 
       setStatus("verifying");
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: addr, signature, challengeToken }),
+        body: JSON.stringify({
+          wallet: address,
+          signature: bs58.encode(signature),
+          challengeToken,
+        }),
       });
       if (!verifyRes.ok) {
         const { error: msg } = await verifyRes.json().catch(() => ({}));
@@ -76,7 +86,7 @@ export function WalletConnect({
       setStatus("idle");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Sign-in failed";
-      if (/reject|denied|cancel/i.test(msg)) {
+      if (/reject|denied|cancel|user rejected/i.test(msg)) {
         setStatus("idle");
         setError(null);
       } else {
@@ -86,52 +96,10 @@ export function WalletConnect({
     } finally {
       inFlight.current = false;
     }
-  }, [publicKey, signMessage, me, refresh, redirectTo, router]);
-
-  // Step 1 of connect: once `select(Phantom)` has taken effect, call connect().
-  // status was already set to "connecting" in onClick before select().
-  useEffect(() => {
-    if (!pendingConnect.current) return;
-    if (wallet?.adapter.name !== PhantomWalletName) return; // wait for select
-    pendingConnect.current = false;
-    if (connected) return;
-    connect()
-      .then(() => setStatus("idle"))
-      .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : "Could not connect Phantom";
-        if (/reject|denied|cancel/i.test(msg)) {
-          setStatus("idle");
-          setError(null);
-        } else {
-          setStatus("error");
-          setError(
-            /not.*(detect|install)/i.test(msg)
-              ? "Phantom not detected. Install it, then reload."
-              : msg,
-          );
-        }
-      });
-  }, [wallet, connected, connect]);
-
-  // Re-arm auto sign-in when the address changes (incl. -> null on disconnect).
-  useEffect(() => {
-    if (autoTriedFor.current && autoTriedFor.current !== address) {
-      autoTriedFor.current = null;
-    }
-  }, [address]);
-
-  // Auto sign-in once per address as soon as signing is available.
-  useEffect(() => {
-    if (!connected || !address || !signMessage || signedIn) return;
-    if (autoTriedFor.current === address) return;
-    autoTriedFor.current = address;
-    void authenticate();
-  }, [connected, address, signMessage, signedIn, authenticate]);
+  }, [refresh, redirectTo, router]);
 
   const busy =
     status === "connecting" || status === "signing" || status === "verifying";
-  const needsSignIn = connected && !!address && !signedIn;
-
   const text =
     status === "connecting"
       ? "Opening Phantom…"
@@ -139,57 +107,36 @@ export function WalletConnect({
         ? "Approve in Phantom…"
         : status === "verifying"
           ? "Verifying…"
-          : needsSignIn
-            ? "Sign in with wallet"
-            : label;
-
-  const onClick = () => {
-    setError(null);
-    if (needsSignIn || connected) {
-      void authenticate();
-      return;
-    }
-    // fresh connect
-    pendingConnect.current = true;
-    setStatus("connecting");
-    select(PhantomWalletName);
-  };
+          : label;
 
   return (
     <div className={className}>
       <button
         className="btn btn-primary w-full sm:w-auto"
         disabled={busy}
-        onClick={onClick}
+        onClick={() => void run()}
       >
         {busy && <Spinner />}
         {text}
       </button>
-      {needsSignIn && !busy && !error && (
+      {!busy && (
         <p className="mt-2 text-xs text-muted">
-          Wallet connected. One signature to sign in — free, no transaction.
-        </p>
-      )}
-      {connected && !!address && !signMessage && (
-        <button
-          className="mt-2 text-xs text-muted underline"
-          onClick={() => void disconnect()}
-        >
-          Reset wallet connection
-        </button>
-      )}
-      {!connected && !busy && (
-        <p className="mt-2 text-xs text-muted">
-          No wallet?{" "}
-          <a
-            href="https://phantom.com/download"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Get Phantom
-          </a>
-          , then reload.
+          {phantomInstalled() ? (
+            "One free signature to sign in — no transaction."
+          ) : (
+            <>
+              No wallet?{" "}
+              <a
+                href={PHANTOM_INSTALL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Get Phantom
+              </a>
+              , then reload.
+            </>
+          )}
         </p>
       )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
