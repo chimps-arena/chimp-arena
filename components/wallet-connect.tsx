@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import bs58 from "bs58";
 import { useSession } from "@/components/session-provider";
@@ -10,6 +10,7 @@ import {
   phantomInstalled,
   PHANTOM_INSTALL_URL,
 } from "@/lib/phantom";
+import { needsDeeplink, startConnect } from "@/lib/phantom-deeplink";
 
 type Status = "idle" | "connecting" | "signing" | "verifying" | "error";
 
@@ -31,7 +32,15 @@ export function WalletConnect({
   const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [mobile, setMobile] = useState(false);
   const inFlight = useRef(false);
+
+  // Detect the "mobile browser, no extension" case after mount (avoids a
+  // hydration mismatch).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMobile(needsDeeplink());
+  }, []);
 
   const run = useCallback(async () => {
     if (inFlight.current) return;
@@ -110,23 +119,37 @@ export function WalletConnect({
         ? "Approve in Phantom…"
         : status === "verifying"
           ? "Verifying…"
-          : label;
+          : mobile
+            ? "Open in Phantom"
+            : label;
+
+  const onClick = () => {
+    if (mobile) {
+      setError(null);
+      startConnect(redirectTo); // leaves the page for the Phantom app
+      return;
+    }
+    void run();
+  };
 
   return (
     <div className={className}>
       <button
         className="btn btn-primary w-full sm:w-auto"
         disabled={busy}
-        onClick={() => void run()}
+        onClick={onClick}
       >
         {busy && <Spinner />}
         {text}
       </button>
       {!busy && (
         <p className="mt-2 text-xs text-muted">
-          {phantomInstalled() ? (
-            "One free signature to sign in — no transaction."
-          ) : (
+          {mobile
+            ? "Opens the Phantom app to approve, then returns here."
+            : phantomInstalled()
+              ? "One free signature to sign in — no transaction."
+              : null}
+          {!mobile && !phantomInstalled() && (
             <>
               No wallet?{" "}
               <a
@@ -143,9 +166,6 @@ export function WalletConnect({
         </p>
       )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
-      <p className="mono mt-2 text-[10px] text-muted/70">
-        phantom detected: {String(phantomInstalled())} · state: {status}
-      </p>
     </div>
   );
 }
