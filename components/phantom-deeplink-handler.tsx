@@ -24,9 +24,15 @@ export function PhantomDeeplinkHandler() {
 
   useEffect(() => {
     if (ran.current) return;
+    const path = window.location.pathname;
+    const phase =
+      path === "/phantom/connect"
+        ? "connect"
+        : path === "/phantom/sign"
+          ? "sign"
+          : null;
+    if (!phase) return;
     const sp = new URLSearchParams(window.location.search);
-    const phase = sp.get("pd");
-    if (phase !== "connect" && phase !== "sign") return;
     ran.current = true;
 
     (async () => {
@@ -58,16 +64,15 @@ export function PhantomDeeplinkHandler() {
           throw new Error(msg || "Verification failed");
         }
         clearDeeplinkState();
-        window.history.replaceState({}, "", window.location.pathname);
         await refresh();
         router.replace(redirectTo);
         router.refresh();
       } catch (e) {
         clearDeeplinkState();
-        window.history.replaceState({}, "", window.location.pathname);
         setError(
           e instanceof Error ? e.message : "Phantom sign-in failed — try again",
         );
+        router.replace("/");
       }
     })();
   }, [refresh, router]);

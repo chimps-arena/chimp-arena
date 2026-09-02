@@ -41,12 +41,9 @@ export function needsDeeplink(): boolean {
   return mobile && !hasInjectedPhantom();
 }
 
+/** Clean path with no query string — Phantom appends its response params to it. */
 function redirectLink(phase: "connect" | "sign"): string {
-  const u = new URL(window.location.href);
-  u.search = "";
-  u.hash = "";
-  u.searchParams.set("pd", phase);
-  return u.toString();
+  return `${window.location.origin}/phantom/${phase}`;
 }
 
 /** Step 1 — leave for the Phantom app to approve a connection. */
