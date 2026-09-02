@@ -9,6 +9,7 @@ import { HandleEditor } from "@/components/handle-editor";
 import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
 import { StreakCard } from "@/components/streak-card";
+import { GuestButton } from "@/components/guest-button";
 import { shortWallet } from "@/lib/format";
 
 export default function DashboardPage() {
@@ -22,12 +23,13 @@ export default function DashboardPage() {
         <div className="float-y text-5xl drop-shadow-[0_0_24px_rgba(34,211,238,0.5)]">
           🐵
         </div>
-        <h1 className="mt-3 text-xl font-bold">Connect to enter the Arena</h1>
+        <h1 className="mt-3 text-xl font-bold">Enter the Arena</h1>
         <p className="mt-2 text-sm text-muted">
-          Mission Control needs a connected wallet.
+          Connect a wallet, or jump in as a guest.
         </p>
-        <div className="mt-5 flex justify-center">
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
           <WalletConnect redirectTo="/dashboard" />
+          <GuestButton redirectTo="/dashboard" />
         </div>
       </div>
     );

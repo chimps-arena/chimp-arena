@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
+import { GuestButton } from "@/components/guest-button";
 import { CREWS, MISSION_DEFS } from "@/lib/game/config";
 import type { MissionType } from "@/lib/types";
 
@@ -52,12 +53,14 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <WalletConnect redirectTo="/dashboard" />
+            <GuestButton redirectTo="/dashboard" />
             <Link href="/leaderboard" className="btn btn-neon">
               View leaderboards
             </Link>
           </div>
           <p className="text-xs text-muted">
-            Sign-in is a free, gasless signature. No transaction, no approval.
+            Wallet sign-in is a free, gasless signature. Or jump straight in as a
+            guest.
           </p>
         </div>
 
