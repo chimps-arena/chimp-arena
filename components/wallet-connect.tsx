@@ -37,7 +37,10 @@ export function WalletConnect({
     if (inFlight.current) return;
 
     if (!phantomInstalled()) {
-      window.open(PHANTOM_INSTALL_URL, "_blank", "noopener,noreferrer");
+      setStatus("error");
+      setError(
+        "Phantom not detected on this page. Open chrome://extensions, make sure Phantom is enabled with site access 'On all sites', unlock it, then reload. (Not an incognito window.)",
+      );
       return;
     }
 
@@ -140,6 +143,9 @@ export function WalletConnect({
         </p>
       )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
+      <p className="mono mt-2 text-[10px] text-muted/70">
+        phantom detected: {String(phantomInstalled())} · state: {status}
+      </p>
     </div>
   );
 }
