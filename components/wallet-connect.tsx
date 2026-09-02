@@ -10,14 +10,13 @@ import { useSession } from "@/components/session-provider";
 type Status = "idle" | "signing" | "verifying" | "error";
 
 /**
- * Connect a Solana wallet (via the wallet-adapter modal) then run the
- * sign-in-with-signature challenge against /api/auth/*. The wallet address is
- * the identity; signing is gasless and only proves ownership.
+ * Connect a Solana wallet, then run the sign-in-with-signature challenge
+ * against /api/auth/*. The wallet address is the identity; signing is gasless.
  *
- * Flow: click -> wallet picker -> wallet connects -> we auto-run the signature
- * challenge. If the wallet is already connected (e.g. autoConnect on reload)
- * but there's no session yet, the button becomes an explicit "Sign in" so the
- * signature prompt is always tied to a user click.
+ * Deliberately click-first: connecting and signing are always reachable from
+ * the button so a suppressed auto-prompt can never dead-end the user. A single
+ * best-effort auto sign-in runs when a wallet connects, and re-arms on
+ * disconnect / address change.
  */
 export function WalletConnect({
   redirectTo,
@@ -30,18 +29,22 @@ export function WalletConnect({
 }) {
   const { refresh, me } = useSession();
   const router = useRouter();
-  const { publicKey, connected, connecting, signMessage } = useWallet();
+  const { publicKey, connected, connecting, signMessage, disconnect } =
+    useWallet();
   const { setVisible } = useWalletModal();
 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const autoTried = useRef<string | null>(null);
+  const autoTriedFor = useRef<string | null>(null);
+
+  const address = publicKey?.toBase58() ?? null;
+  const signedIn = !!address && me?.player?.wallet === address;
 
   const authenticate = useCallback(async () => {
     if (!publicKey || !signMessage || inFlight.current) return;
-    const address = publicKey.toBase58();
-    if (me?.player?.wallet === address) return; // already signed in on this wallet
+    const addr = publicKey.toBase58();
+    if (me?.player?.wallet === addr) return;
 
     inFlight.current = true;
     setError(null);
@@ -50,7 +53,7 @@ export function WalletConnect({
       const nonceRes = await fetch("/api/auth/nonce", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: address }),
+        body: JSON.stringify({ wallet: addr }),
       });
       if (!nonceRes.ok) throw new Error("Could not start sign-in");
       const { message, challengeToken } = await nonceRes.json();
@@ -63,7 +66,7 @@ export function WalletConnect({
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: address, signature, challengeToken }),
+        body: JSON.stringify({ wallet: addr, signature, challengeToken }),
       });
       if (!verifyRes.ok) {
         const { error: msg } = await verifyRes.json().catch(() => ({}));
@@ -77,27 +80,35 @@ export function WalletConnect({
       setStatus("idle");
     } catch (e) {
       setStatus("error");
-      setError(
-        e instanceof Error ? e.message : "Something went wrong signing in",
-      );
+      const msg =
+        e instanceof Error ? e.message : "Something went wrong signing in";
+      // A user-rejected signature isn't an error worth shouting about.
+      setError(/reject|denied|cancel/i.test(msg) ? null : msg);
+      if (/reject|denied|cancel/i.test(msg)) setStatus("idle");
     } finally {
       inFlight.current = false;
     }
   }, [publicKey, signMessage, me, refresh, redirectTo, router]);
 
-  // Best-effort auto sign-in right after a wallet connects. Runs at most once
-  // per address; the button is the reliable manual path if a wallet suppresses
-  // the prompt outside a click.
+  // Re-arm the one-shot auto sign-in whenever the connected address changes
+  // (including going back to null on disconnect).
   useEffect(() => {
-    if (!connected || !publicKey || me?.player) return;
-    const addr = publicKey.toBase58();
-    if (autoTried.current === addr) return;
-    autoTried.current = addr;
+    if (autoTriedFor.current && autoTriedFor.current !== address) {
+      autoTriedFor.current = null;
+    }
+  }, [address]);
+
+  // Best-effort auto sign-in once per address, only once signMessage is ready.
+  useEffect(() => {
+    if (!connected || !address || !signMessage || signedIn) return;
+    if (autoTriedFor.current === address) return;
+    autoTriedFor.current = address;
     void authenticate();
-  }, [connected, publicKey, me, authenticate]);
+  }, [connected, address, signMessage, signedIn, authenticate]);
 
   const busy = connecting || status === "signing" || status === "verifying";
-  const needsSignIn = connected && !!publicKey && !me?.player;
+  const needsSignIn = connected && !!address && !signedIn;
+  const brokenAdapter = connected && !!address && !signMessage;
 
   const text = connecting
     ? "Connecting…"
@@ -105,25 +116,40 @@ export function WalletConnect({
       ? "Approve in your wallet…"
       : status === "verifying"
         ? "Verifying…"
-        : needsSignIn
-          ? "Sign in with wallet"
-          : label;
+        : brokenAdapter
+          ? "Reconnect wallet"
+          : needsSignIn
+            ? "Sign in with wallet"
+            : label;
+
+  const onClick = () => {
+    setError(null);
+    if (brokenAdapter) {
+      void disconnect().finally(() => setVisible(true));
+    } else if (needsSignIn) {
+      void authenticate();
+    } else if (connected) {
+      void authenticate();
+    } else {
+      setVisible(true);
+    }
+  };
 
   return (
     <div className={className}>
       <button
         className="btn btn-primary w-full sm:w-auto"
         disabled={busy}
-        onClick={() => {
-          setError(null);
-          if (needsSignIn) void authenticate();
-          else if (connected) void authenticate();
-          else setVisible(true);
-        }}
+        onClick={onClick}
       >
         {busy && <Spinner />}
         {text}
       </button>
+      {needsSignIn && !busy && !error && (
+        <p className="mt-2 text-xs text-muted">
+          Wallet connected. One signature to sign in — free, no transaction.
+        </p>
+      )}
       {!connected && !busy && (
         <p className="mt-2 text-xs text-muted">
           No wallet?{" "}
