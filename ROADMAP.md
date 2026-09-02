@@ -179,6 +179,7 @@ sink-discipline review + founder sign-off.
 | 85 | Mobile: Mobile Wallet Adapter + Phantom deeplink | ☐ |
 | 86 | Portfolio page: `$CHIMP`, Chimps, land, pending claim, accrued yield | ☐ |
 | 87 | Session-expiry → silent re-auth prompt | ☐ |
+| 88 | Add Solflare + Backpack adapters explicitly, re-test the picker (Wallet Standard covers them today only if installed) — pre-mainnet | ☐ |
 
 ---
 
@@ -196,3 +197,21 @@ sink-discipline review + founder sign-off.
 - Install Git (#4).
 - Lock decisions #11–#17 (recommendations in the table above).
 - Answer #68 and #76 before Group F / M / N.
+
+---
+
+## Founder roadmap crosswalk
+
+The founders' public 4-phase roadmap, mapped to the groups above.
+
+| Founder phase | = groups here | Notes / discrepancies to resolve |
+| --- | --- | --- |
+| **P1 · Token Launch** — "$CHIMP live on Solana, Raydium liquidity, community forms" (shown **COMPLETE**) | Group G (mint + swap) + #54 (Raydium pool) | **Not actually done.** We are devnet, no mint deployed, no Raydium pool. Either (a) a mainnet `$CHIMP` token already exists that this build must *integrate* rather than create — need the mint address — or (b) the public roadmap is aspirational and should be reworded. Blocks all of G either way. |
+| **P2 · NFT Characters** — "Astrochimp NFTs: tradable, upgradeable, on-chain stats" (**IN PROGRESS**) | Group H (Chimp NFT) + parts of J (upgradeable / stats) | "Upgradeable + on-chain stats" is more than H's identity NFT — pulls forward some structure/stat mechanics. Scope with founders. |
+| **P3 · Astroworld** — "social hub, player interaction, on-chain trading" | Group K #53 (in-app marketplace) + **new: social layer** (profiles, chat, presence) | Social hub is not in this roadmap yet. Needs its own group if confirmed. |
+| **P4 · Full Game Universe** — "galactic exploration, Gold, Raids, Territory defence" | Groups I + J (land, structures, asteroid claim battles) + **new: PvE/PvP combat** | **"Gold"** — is this a second in-game currency (conflicts with the single-token lock in TOKEN-POLICY.md) or a non-token resource? Raids / territory defence are a combat layer not yet scoped. |
+
+### Open questions for the founders
+1. Does a **mainnet `$CHIMP` token already exist**? If yes, paste the mint address — the plan changes from "create" to "integrate", and the public "Phase 1 complete" claim is accurate. If no, the public roadmap needs rewording before it reaches investors.
+2. **"Gold"** in P4 — second currency or in-game resource? (Single-token model is locked; a second *spendable token* would reopen TOKEN-POLICY.md.)
+3. Confirm scope for **Astroworld** (social features) and **Raids / Territory defence** (combat) — these are new groups, currently unscoped.
