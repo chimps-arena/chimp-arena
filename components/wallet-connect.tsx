@@ -10,7 +10,7 @@ import {
   phantomInstalled,
   PHANTOM_INSTALL_URL,
 } from "@/lib/phantom";
-import { needsDeeplink, startConnect } from "@/lib/phantom-deeplink";
+import { needsDeeplink, openInPhantomBrowser } from "@/lib/phantom-deeplink";
 
 type Status = "idle" | "connecting" | "signing" | "verifying" | "error";
 
@@ -126,7 +126,7 @@ export function WalletConnect({
   const onClick = () => {
     if (mobile) {
       setError(null);
-      startConnect(redirectTo); // leaves the page for the Phantom app
+      openInPhantomBrowser(); // reopens this page inside Phantom's browser
       return;
     }
     void run();
@@ -145,7 +145,7 @@ export function WalletConnect({
       {!busy && (
         <p className="mt-2 text-xs text-muted">
           {mobile
-            ? "Opens the Phantom app to approve, then returns here."
+            ? "Reopens this page inside the Phantom app, then connect there."
             : phantomInstalled()
               ? "One free signature to sign in — no transaction."
               : null}

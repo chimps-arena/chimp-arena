@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
-import { PhantomDeeplinkHandler } from "@/components/phantom-deeplink-handler";
 import { NavBar } from "@/components/nav-bar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -32,7 +31,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SessionProvider>
-          <PhantomDeeplinkHandler />
           <WalletSessionGuard />
           <NavBar />
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
