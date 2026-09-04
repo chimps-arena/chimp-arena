@@ -82,11 +82,12 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ⊘ blocked (needs extern
 
 | # | Item | Status |
 | --- | --- | --- |
-| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority), full supply pre-minted to treasury | ☐ owner — pick: server keypair now, or Squads |
-| 32 | Mint + treasury authority to a keypair (devnet) → Squads before mainnet | ☐ owner |
-| 33 | `lib/chain/` — mint address, Helius connection, token balance reads | ◐ `connection.ts` + `tx.ts` done (Group F); mint address pending #31 |
+| 31 | Deploy `$CHIMP` SPL mint (devnet, 6 decimals, no freeze authority), full supply pre-minted to treasury | ☐ authority resolved (#32) — mint itself not yet deployed |
+| 32 | Mint + treasury authority | ☑ devnet keypair generated ([scripts/gen-mint-authority.mjs](scripts/gen-mint-authority.mjs)), secret in `.env.local` (`CHIMP_MINT_AUTHORITY_SECRET`). Public address: `FDQGkgAyRHqidTGCfegoApyTw5s4TcvBqZfYDMRzri9s`. **Move to a Squads vault before mainnet.** |
+| 33 | `lib/chain/` — mint address, Helius connection, token balance reads | ◐ `connection.ts` done (Group F); `tx.ts` removed with the wallet-adapter revert, rebuild when the mint/claim tx needs it; mint address pending #31 |
 | 34 | In-app **swap widget** — Jupiter SOL/USDC → `$CHIMP`, slippage/impact UI, balance refresh | ☐ |
 | 35 | Real `$CHIMP` balance in nav chip + a wallet/inventory view | ☐ |
+| 35b | Basic NFT mint test — pay 1,000 `$CHIMP` → NFT to buyer, 1,000 `$CHIMP` → Astro Corp wallet (founder request) | ☐ needs: #31 (mint deployed), Astro Corp wallet address, placeholder art ok |
 
 ### G-parked — future rewards season (do not build)
 Migration [0003](supabase/migrations/0003_weekly_rewards.sql), `POST /api/rewards/freeze`,
