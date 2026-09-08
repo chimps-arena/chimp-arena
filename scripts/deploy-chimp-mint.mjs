@@ -19,7 +19,9 @@ import bs58 from "bs58";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
 const ENV_PATH = new URL("../.env.local", import.meta.url);
-const DECIMALS = 6;
+// Match the real mainnet $CHIMP mint exactly:
+//   21ZDgkJ9ULqLoGyHMskAfwVwrx6oixWzxxENu59HHoBV - 9 decimals, 1B fixed supply.
+const DECIMALS = 9;
 const MAX_SUPPLY = 1_000_000_000n; // whole tokens - TOKEN-POLICY.md
 
 function loadEnv() {
