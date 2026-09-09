@@ -27,6 +27,9 @@ export const PUBLIC_ENV = {
   solanaRpc: process.env.NEXT_PUBLIC_SOLANA_RPC ?? "",
   tokenSymbol: process.env.NEXT_PUBLIC_TOKEN_SYMBOL ?? "CHIMP",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "CHIMP Arena",
+  // Live mainnet $CHIMP mint + the Astro Corp revenue wallet.
+  chimpMint: process.env.NEXT_PUBLIC_CHIMP_MINT_ADDRESS ?? "",
+  astroCorpWallet: process.env.NEXT_PUBLIC_ASTRO_CORP_WALLET ?? "",
 };
 
 export function assertPublicEnv() {

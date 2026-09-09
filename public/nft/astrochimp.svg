@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#12202f"/>
+      <stop offset="100%" stop-color="#070a12"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffb020"/>
+      <stop offset="100%" stop-color="#4fd1e0"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#bg)"/>
+  <g fill="#e8ecf4" opacity="0.9">
+    <circle cx="90" cy="110" r="2"/><circle cx="150" cy="60" r="1.4"/><circle cx="500" cy="90" r="2.2"/>
+    <circle cx="540" cy="180" r="1.5"/><circle cx="70" cy="300" r="1.6"/><circle cx="520" cy="430" r="2"/>
+    <circle cx="120" cy="500" r="1.5"/><circle cx="470" cy="520" r="1.7"/><circle cx="300" cy="70" r="1.4"/>
+  </g>
+  <circle cx="300" cy="300" r="190" fill="none" stroke="url(#ring)" stroke-width="3" opacity="0.7"/>
+  <ellipse cx="300" cy="300" rx="250" ry="70" fill="none" stroke="#4fd1e0" stroke-width="2" opacity="0.35" transform="rotate(-18 300 300)"/>
+  <g transform="translate(300 312)">
+    <ellipse cx="0" cy="8" rx="118" ry="120" fill="#2a2118"/>
+    <ellipse cx="0" cy="24" rx="88" ry="92" fill="#f2c48a"/>
+    <circle cx="-104" cy="-6" r="30" fill="#2a2118"/><circle cx="104" cy="-6" r="30" fill="#2a2118"/>
+    <circle cx="-38" cy="6" r="17" fill="#0b0f16"/><circle cx="38" cy="6" r="17" fill="#0b0f16"/>
+    <circle cx="-32" cy="0" r="5" fill="#ffffff"/><circle cx="44" cy="0" r="5" fill="#ffffff"/>
+    <path d="M-26 62 Q0 82 26 62" stroke="#0b0f16" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M-120 -70 Q0 -140 120 -70" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text x="300" y="556" text-anchor="middle" font-family="Menlo,monospace" font-size="24" letter-spacing="6" fill="#8a93a6">ASTROCHIMP</text>
+</svg>
