@@ -14,6 +14,9 @@ const display = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  ),
   title: "CHIMP Arena",
   description:
     "Missions, rivalry and crew competition for the $CHIMP community. Adoption first.",
