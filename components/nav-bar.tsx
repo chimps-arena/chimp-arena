@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
@@ -32,7 +33,14 @@ export function NavBar() {
           className="flex items-center gap-2 text-[15px] font-bold tracking-tight"
           style={{ fontFamily: "var(--font-display), sans-serif" }}
         >
-          <span className="text-xl">🐵</span>
+          <Image
+            src="/brand/chimp-logo.png"
+            alt=""
+            width={28}
+            height={28}
+            className="rounded-full"
+            priority
+          />
           <span>CHIMP Arena</span>
         </Link>
 

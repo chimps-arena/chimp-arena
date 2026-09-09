@@ -11,11 +11,11 @@ export default function MintPage() {
     <div className="mx-auto flex max-w-md flex-col gap-6 py-6">
       <div className="text-center">
         <Image
-          src="/nft/astrochimp.svg"
+          src="/characters/astrochimp.png"
           alt="Astrochimp"
-          width={180}
-          height={180}
-          className="mx-auto rounded-2xl border border-border"
+          width={200}
+          height={200}
+          className="mx-auto"
           priority
         />
         <h1 className="mt-4 text-2xl font-black">Mint an Astrochimp</h1>
