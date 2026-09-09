@@ -18,6 +18,7 @@
  * fixed-size assets above.
  */
 import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 let sharp;
 try {
@@ -27,23 +28,22 @@ try {
   process.exit(1);
 }
 
-const B = new URL("../public/", import.meta.url);
-const logo = new URL("brand/chimp-logo.png", B);
-const char = new URL("characters/astrochimp.png", B);
+const p = (rel) => fileURLToPath(new URL(`../public/${rel}`, import.meta.url));
+const logo = p("brand/chimp-logo.png");
+const char = p("characters/astrochimp.png");
 
-for (const [label, p] of [["logo", logo], ["character", char]]) {
-  if (!existsSync(p)) {
-    console.error(`Missing ${label}: ${p.pathname} — drop the PNG there first.`);
+for (const [label, f] of [["logo", logo], ["character", char]]) {
+  if (!existsSync(f)) {
+    console.error(`Missing ${label}: ${f} — drop the PNG there first.`);
     process.exit(1);
   }
 }
 
-await sharp(logo).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-  .png({ quality: 90 }).toFile(new URL("brand/chimp-logo-512.png", B).pathname);
-await sharp(logo).resize(256, 256).png({ quality: 90 })
-  .toFile(new URL("icon.png", B).pathname);
-await sharp(char).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-  .png({ quality: 90 }).toFile(new URL("characters/astrochimp-512.png", B).pathname);
+const clear = { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } };
+
+await sharp(logo).resize(512, 512, clear).png({ quality: 90 }).toFile(p("brand/chimp-logo-512.png"));
+await sharp(logo).resize(256, 256).png({ quality: 90 }).toFile(p("icon.png"));
+await sharp(char).resize(512, 512, clear).png({ quality: 90 }).toFile(p("characters/astrochimp-512.png"));
 
 // OG card: logo centred on the void-navy ground.
 await sharp({
@@ -51,6 +51,6 @@ await sharp({
 })
   .composite([{ input: await sharp(logo).resize(360, 360).png().toBuffer(), gravity: "centre" }])
   .png()
-  .toFile(new URL("og.png", B).pathname);
+  .toFile(p("og.png"));
 
 console.log("Wrote chimp-logo-512.png, icon.png, astrochimp-512.png, og.png");

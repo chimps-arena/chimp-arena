@@ -16,7 +16,7 @@ export function GET(req: Request) {
       symbol: NFT_SYMBOL,
       description:
         "A test Astrochimp from the Astrochimpz mint. Placeholder art — the real character drops later.",
-      image: `${origin}/characters/astrochimp.png`,
+      image: `${origin}/characters/astrochimp-512.png`,
       external_url: origin,
       attributes: [
         { trait_type: "Collection", value: COLLECTION_NAME },
@@ -24,7 +24,7 @@ export function GET(req: Request) {
       ],
       properties: {
         files: [
-          { uri: `${origin}/characters/astrochimp.png`, type: "image/png" },
+          { uri: `${origin}/characters/astrochimp-512.png`, type: "image/png" },
         ],
         category: "image",
       },

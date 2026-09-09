@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   title: "CHIMP Arena",
   description:
     "Missions, rivalry and crew competition for the $CHIMP community. Adoption first.",
+  openGraph: {
+    title: "CHIMP Arena",
+    description:
+      "Missions, rivalry and crew competition for the $CHIMP community.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
