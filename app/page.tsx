@@ -33,18 +33,17 @@ export default function Home() {
         <div className="flex flex-col gap-5">
           <span className="chip w-fit text-accent-2" style={{ borderColor: "color-mix(in srgb, var(--accent-2) 40%, transparent)" }}>
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-2" />
-            $CHIMP community MVP · devnet
+            $CHIMP · live on Solana
           </span>
-          <h1 className="text-4xl font-bold leading-[1.05] sm:text-6xl">
+          <h1 className="text-[1.85rem] font-bold leading-[1.08] sm:text-6xl">
             Run missions.<br />
             Rep your crew.<br />
             <span className="text-accent-2">Own the jungle.</span>
           </h1>
           <p className="max-w-prose text-muted">
             CHIMP Arena turns daily mini-games into XP, and XP into crew power.
-            Soon, playing also earns a share of the weekly{" "}
-            <span className="text-foreground">$CHIMP</span> pool. Connect a
-            wallet, pick a side, and climb.
+            Spend <span className="text-foreground">$CHIMP</span> on Astrochimps
+            and gear. Connect a wallet, pick a side, and climb.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <WalletConnect redirectTo="/dashboard" />
@@ -143,7 +142,7 @@ export default function Home() {
         {[
           ["01", "Connect", "One wallet, one signature. That's your identity. No passwords.", "var(--accent-2)"],
           ["02", "Compete", "Clear daily mini-games for XP. One reward per mission per UTC day.", "var(--accent-3)"],
-          ["03", "Conquer", "Your XP lifts your crew up the global board, and earns $CHIMP weekly.", "var(--accent)"],
+          ["03", "Conquer", "Your XP lifts your crew up the global board. Spend $CHIMP on what comes next.", "var(--accent)"],
         ].map(([n, h, p, color]) => (
           <div key={h} className="card p-5">
             <div

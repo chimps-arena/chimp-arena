@@ -21,6 +21,10 @@ export function NavBar() {
   const { me, loading, logout } = useSession();
   const pathname = usePathname();
   const player = me?.player ?? null;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   const realWallet =
     player?.wallet && !player.wallet.startsWith("guest_") ? player.wallet : null;
@@ -137,17 +141,99 @@ export function NavBar() {
                 </div>
               </div>
               <button
-                className="btn btn-ghost text-sm"
+                className="btn btn-ghost hidden text-sm sm:inline-flex"
                 onClick={() => fullDisconnect()}
               >
                 Disconnect
               </button>
             </>
           ) : (
-            <WalletConnect label="Connect" />
+            <div className="hidden sm:block">
+              <WalletConnect label="Connect" />
+            </div>
           )}
+
+          {/* mobile menu toggle */}
+          <button
+            type="button"
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-2 sm:hidden"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+              {menuOpen ? (
+                <>
+                  <path d="M3 3l10 10" />
+                  <path d="M13 3L3 13" />
+                </>
+              ) : (
+                <>
+                  <path d="M2 4h12" />
+                  <path d="M2 8h12" />
+                  <path d="M2 12h12" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* mobile dropdown */}
+      {menuOpen && (
+        <div className="border-t border-border/60 bg-background/95 px-4 py-3 sm:hidden">
+          <nav className="flex flex-col gap-1">
+            {LINKS.map((l) => {
+              const active =
+                pathname === l.href || pathname.startsWith(l.href + "/");
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    active
+                      ? "bg-surface-2 text-foreground"
+                      : "text-muted"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3">
+            {player ? (
+              <>
+                <div className="text-sm">
+                  <div className="font-semibold">{player.handle}</div>
+                  <div className="mono text-xs text-muted">
+                    {player.xp.toLocaleString()} XP
+                    {realWallet && chimp != null && (
+                      <>
+                        {" · "}
+                        <span className="text-accent">
+                          {chimp.toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          {TOKEN_SYMBOL}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-ghost text-sm"
+                  onClick={() => fullDisconnect()}
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : (
+              <WalletConnect label="Connect" />
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -98,6 +98,33 @@ h1 {
   text-shadow: 0 0 32px color-mix(in srgb, var(--accent-2) 30%, transparent);
 }
 
+/* Unbounded runs wide — rein it in on phones so headings + CTAs don't overflow */
+@media (max-width: 640px) {
+  h1,
+  h2 {
+    letter-spacing: -0.045em;
+    line-height: 1.06;
+    overflow-wrap: break-word;
+  }
+  .btn {
+    letter-spacing: 0.015em;
+    font-size: 0.78rem;
+    padding: 0.6rem 0.9rem;
+  }
+  /* keep scene backgrounds subtle on tall phone viewports */
+  .scene-img {
+    opacity: 0.35 !important;
+  }
+  .scene-scrim {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 55%, transparent) 0%,
+      color-mix(in srgb, var(--background) 82%, transparent) 40%,
+      var(--background) 80%
+    ) !important;
+  }
+}
+
 /* ---------- surfaces ---------- */
 .card {
   background: color-mix(in srgb, var(--surface) 72%, transparent);

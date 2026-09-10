@@ -26,11 +26,11 @@ export function SceneBg({
         fill
         priority
         sizes="100vw"
-        className="object-cover"
+        className="scene-img object-cover"
         style={{ objectPosition, opacity }}
       />
       <div
-        className="absolute inset-0"
+        className="scene-scrim absolute inset-0"
         style={{
           background:
             "linear-gradient(180deg," +
