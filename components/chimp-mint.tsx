@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import bs58 from "bs58";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -33,10 +33,15 @@ interface Result {
 
 export function ChimpMint() {
   const wallet = useWallet();
+  const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+
+  // Wallet UI only renders post-hydration: WalletMultiButton renders
+  // different markup on server vs client and would trip a hydration mismatch.
+  useEffect(() => setMounted(true), []);
 
   const walletKey = wallet.publicKey?.toBase58() ?? null;
   const umi = useMemo(() => {
@@ -122,6 +127,10 @@ export function ChimpMint() {
       setError(e instanceof Error ? e.message : "Mint failed");
       setPhase("error");
     }
+  }
+
+  if (!mounted) {
+    return <div className="card h-40 animate-pulse p-6" />;
   }
 
   if (!connected) {
