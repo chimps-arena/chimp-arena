@@ -144,7 +144,6 @@ function ResultView({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 py-4 text-center">
-      <div className="text-5xl">{result.xpAwarded > 0 ? "🎉" : "✅"}</div>
       <div className="text-lg font-bold">
         Score: <span className="mono">{result.scoreAccepted}</span>
       </div>

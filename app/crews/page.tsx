@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
+import { CrewMark } from "@/components/glyphs";
 import { CREWS } from "@/lib/game/config";
 import type { LeaderboardCrew } from "@/lib/types";
 
@@ -78,15 +79,7 @@ export default function CrewsPage() {
               }}
             >
               <div className="flex items-center justify-between">
-                <div
-                  className="grid h-14 w-14 place-items-center rounded-2xl text-3xl"
-                  style={{
-                    background: `color-mix(in srgb, ${c.color} 16%, transparent)`,
-                    boxShadow: `0 0 28px -10px ${c.color}`,
-                  }}
-                >
-                  {c.emoji}
-                </div>
+                <CrewMark name={c.name} color={c.color} size={56} />
                 {t && (
                   <div className="text-right">
                     <div className="mono text-lg font-bold" style={{ color: c.color }}>

@@ -1,14 +1,8 @@
 import Link from "next/link";
+import { MissionGlyph } from "@/components/glyphs";
 import type { MeResponse } from "@/lib/types";
 
 type MissionStatus = MeResponse["today"]["missions"][number];
-
-const TYPE_ART: Record<string, string> = {
-  reaction: "⚡",
-  trivia: "🧠",
-  "astro-run": "🚀",
-  dodge: "☄️",
-};
 
 const TYPE_COLOR: Record<string, string> = {
   reaction: "var(--accent)",
@@ -29,14 +23,15 @@ export function MissionCard({ status }: { status: MissionStatus }) {
     >
       <div className="flex items-start justify-between">
         <span
-          className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition group-hover:scale-110"
+          className="grid h-11 w-11 place-items-center rounded-xl transition group-hover:scale-110"
           style={{
             background: `color-mix(in srgb, ${color} 15%, transparent)`,
             border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
             boxShadow: `0 0 24px -10px ${color}`,
+            color,
           }}
         >
-          {TYPE_ART[def.type] ?? "🎮"}
+          <MissionGlyph type={def.type} className="h-5 w-5" />
         </span>
         {completed ? (
           <span className="chip text-good" style={{ borderColor: "color-mix(in srgb, var(--good) 40%, transparent)" }}>

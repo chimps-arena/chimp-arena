@@ -134,8 +134,16 @@ export function AstroRun({ complete }: GameContext) {
       ctx.lineTo(W, GROUND_Y + 2);
       ctx.stroke();
 
-      ctx.font = "24px system-ui";
-      ctx.fillText("🐵", px - 2, playerY);
+      // player pod
+      ctx.fillStyle = "#22d3ee";
+      ctx.strokeStyle = "#0b0f16";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(px - 12, playerY - 22, 22, 24, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#0b0f16";
+      ctx.fillRect(px - 6, playerY - 16, 10, 5);
 
       for (const o of obstacles) {
         ctx.fillStyle = o.kind === "rock" ? "#8b5cf6" : "#ef4444";

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { XpBar } from "@/components/xp-bar";
@@ -21,8 +22,15 @@ export default function DashboardPage() {
   if (!me?.player) {
     return (
       <div className="card card-glow mx-auto mt-10 max-w-md p-8 text-center">
-        <div className="float-y text-5xl drop-shadow-[0_0_24px_rgba(34,211,238,0.5)]">
-          🐵
+        <div className="float-y flex justify-center">
+          <Image
+            src="/brand/chimp-logo.png"
+            alt=""
+            width={72}
+            height={72}
+            priority
+            className="rounded-full drop-shadow-[0_0_24px_rgba(34,211,238,0.45)]"
+          />
         </div>
         <h1 className="mt-3 text-xl font-bold">Enter the Arena</h1>
         <p className="mt-2 text-sm text-muted">
@@ -134,7 +142,7 @@ export default function DashboardPage() {
           href="/leaderboard"
           className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
         >
-          <div className="text-lg font-bold">🏆 Leaderboards</div>
+          <div className="text-lg font-bold">Leaderboards</div>
           <p className="mt-1 text-sm text-muted">
             See where you and your crew rank globally. Updates live.
           </p>
@@ -143,7 +151,7 @@ export default function DashboardPage() {
           href="/crews"
           className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
         >
-          <div className="text-lg font-bold">🤝 Crews</div>
+          <div className="text-lg font-bold">Crews</div>
           <p className="mt-1 text-sm text-muted">
             {crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry."}
           </p>
@@ -152,7 +160,7 @@ export default function DashboardPage() {
           href="/mint"
           className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
         >
-          <div className="text-lg font-bold">🐵 Mint an Astrochimp</div>
+          <div className="text-lg font-bold">Mint an Astrochimp</div>
           <p className="mt-1 text-sm text-muted">
             Trade 1,000 {TOKEN_SYMBOL} for an Astrochimp NFT.
           </p>

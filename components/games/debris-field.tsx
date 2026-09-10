@@ -178,10 +178,16 @@ export function DebrisField({ complete }: GameContext) {
       }
 
       // ship
-      ctx.font = "26px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("🐵", shipX, SHIP_Y);
+      ctx.fillStyle = "#22d3ee";
+      ctx.strokeStyle = "#0b0f16";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(shipX, SHIP_Y - 14);
+      ctx.lineTo(shipX + 11, SHIP_Y + 10);
+      ctx.lineTo(shipX - 11, SHIP_Y + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.strokeStyle = "rgba(124,131,255,0.35)";
       ctx.beginPath();
       ctx.moveTo(shipX - 12, SHIP_Y + 16);

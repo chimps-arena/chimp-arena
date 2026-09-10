@@ -4,7 +4,7 @@ export function CrewBadge({
   crew,
   size = "md",
 }: {
-  crew: Pick<Crew, "name" | "emoji" | "color"> | null;
+  crew: Pick<Crew, "name" | "color"> | null;
   size?: "sm" | "md";
 }) {
   if (!crew) {
@@ -25,7 +25,10 @@ export function CrewBadge({
         color: crew.color,
       }}
     >
-      <span>{crew.emoji}</span>
+      <span
+        className="inline-block h-1.5 w-1.5 rounded-full"
+        style={{ background: crew.color }}
+      />
       {crew.name}
     </span>
   );

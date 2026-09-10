@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { crewBySlug } from "@/lib/game/config";
+import { CrewMark } from "@/components/glyphs";
 import { shortWallet } from "@/lib/format";
 import type { LeaderboardResponse } from "@/lib/types";
 
@@ -134,7 +135,7 @@ export function LeaderboardTables({
               >
                 {c.rank}
               </span>
-              <span className="text-2xl">{c.emoji}</span>
+              <CrewMark name={c.name} color={c.color} size={32} />
               <div className="min-w-0 flex-1">
                 <div className="font-bold" style={{ color: c.color }}>
                   {c.name}
@@ -200,7 +201,7 @@ export function LeaderboardTables({
                   <div className="mono text-xs text-muted">
                     {shortWallet(p.wallet)}
                     {crew && (
-                      <span style={{ color: crew.color }}> · {crew.emoji} {crew.name}</span>
+                      <span style={{ color: crew.color }}> · {crew.name}</span>
                     )}
                   </div>
                 </div>

@@ -1,20 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { GuestButton } from "@/components/guest-button";
+import { CrewMark, MissionGlyph } from "@/components/glyphs";
 import { CREWS, MISSION_DEFS } from "@/lib/game/config";
 import type { MissionType } from "@/lib/types";
-
-const MISSION_ICON: Record<MissionType, string> = {
-  reaction: "⚡",
-  trivia: "🧠",
-  "astro-run": "🚀",
-  dodge: "☄️",
-};
 
 const MISSION_COLOR: Record<MissionType, string> = {
   reaction: "var(--accent)",
@@ -71,8 +66,15 @@ export default function Home() {
             className="pointer-events-none absolute left-1/2 top-4 -z-0 h-56 w-56 -translate-x-1/2 rounded-full blur-3xl"
             style={{ background: "radial-gradient(circle, rgba(246,92,232,0.5), transparent 70%)" }}
           />
-          <div className="float-y mb-4 text-center text-[5.5rem] leading-none drop-shadow-[0_0_30px_rgba(34,211,238,0.45)]">
-            🐵
+          <div className="float-y mb-4 flex justify-center">
+            <Image
+              src="/brand/chimp-logo.png"
+              alt=""
+              width={104}
+              height={104}
+              priority
+              className="rounded-full drop-shadow-[0_0_34px_rgba(34,211,238,0.4)]"
+            />
           </div>
           <div className="card card-featured p-5">
             <h2 className="text-sm font-semibold text-muted">
@@ -82,13 +84,14 @@ export default function Home() {
               {MISSION_DEFS.map((m) => (
                 <li key={m.slug} className="flex items-center gap-3">
                   <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-lg"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
                     style={{
                       background: `color-mix(in srgb, ${MISSION_COLOR[m.type]} 14%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${MISSION_COLOR[m.type]} 40%, transparent)`,
+                      color: MISSION_COLOR[m.type],
                     }}
                   >
-                    {MISSION_ICON[m.type]}
+                    <MissionGlyph type={m.type} className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
                     <div className="truncate font-semibold">{m.title}</div>
@@ -123,14 +126,8 @@ export default function Home() {
                 borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`,
               }}
             >
-              <div
-                className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition group-hover:scale-110"
-                style={{
-                  background: `color-mix(in srgb, ${c.color} 16%, transparent)`,
-                  boxShadow: `0 0 24px -8px ${c.color}`,
-                }}
-              >
-                {c.emoji}
+              <div className="transition group-hover:scale-110">
+                <CrewMark name={c.name} color={c.color} size={44} />
               </div>
               <div className="mt-3 font-bold" style={{ color: c.color }}>
                 {c.name}
