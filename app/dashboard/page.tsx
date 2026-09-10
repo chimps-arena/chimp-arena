@@ -11,6 +11,7 @@ import { MissionCard } from "@/components/mission-card";
 import { StreakCard } from "@/components/streak-card";
 import { GuestButton } from "@/components/guest-button";
 import { shortWallet } from "@/lib/format";
+import { TOKEN_SYMBOL } from "@/lib/game/economy";
 
 export default function DashboardPage() {
   const { me, loading, refresh } = useSession();
@@ -128,7 +129,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-3">
         <Link
           href="/leaderboard"
           className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
@@ -145,6 +146,15 @@ export default function DashboardPage() {
           <div className="text-lg font-bold">🤝 Crews</div>
           <p className="mt-1 text-sm text-muted">
             {crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry."}
+          </p>
+        </Link>
+        <Link
+          href="/mint"
+          className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
+        >
+          <div className="text-lg font-bold">🐵 Mint an Astrochimp</div>
+          <p className="mt-1 text-sm text-muted">
+            Trade 1,000 {TOKEN_SYMBOL} for an Astrochimp NFT.
           </p>
         </Link>
       </section>
