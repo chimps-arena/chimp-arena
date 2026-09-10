@@ -81,10 +81,21 @@ body::before {
 }
 
 h1,
-h2,
-h3 {
+h2 {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+h3 {
+  /* Unbounded is too wide at small sizes — h3s stay on the body face, heavy. */
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+/* electric edge on the biggest headline */
+h1 {
+  text-shadow: 0 0 32px color-mix(in srgb, var(--accent-2) 30%, transparent);
 }
 
 /* ---------- surfaces ---------- */
@@ -151,8 +162,10 @@ h3 {
   border-radius: 0.75rem;
   font-weight: 700;
   font-family: var(--font-display), var(--font-sans), sans-serif;
-  letter-spacing: -0.01em;
-  padding: 0.625rem 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+  padding: 0.7rem 1.2rem;
   transition:
     transform 0.08s ease,
     background 0.15s ease,

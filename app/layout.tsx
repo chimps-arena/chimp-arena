@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Sora, Space_Mono, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const display = Space_Grotesk({
+// Body: clean, warm geometric sans.
+const bodyFont = Sora({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+// Stat / wallet / XP readouts: arcade-terminal mono.
+const monoFont = Space_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
+// Headings, logo, CTAs: expanded, electric display.
+const displayFont = Unbounded({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["400", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -37,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AppScene />

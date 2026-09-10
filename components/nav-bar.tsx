@@ -49,7 +49,7 @@ export function NavBar() {
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2 text-[15px] font-bold tracking-tight"
+          className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-[0.08em]"
           style={{ fontFamily: "var(--font-display), sans-serif" }}
         >
           <Image
