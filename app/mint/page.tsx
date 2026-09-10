@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ChimpMint } from "@/components/chimp-mint";
+import { SceneBg } from "@/components/scene-bg";
 import { MINT_PRICE_CHIMP } from "@/lib/chain/mint-config";
 
 export const metadata = {
@@ -9,6 +10,7 @@ export const metadata = {
 export default function MintPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 py-6">
+      <SceneBg src="/scenes/coin-splash.png" objectPosition="center 20%" opacity={0.4} />
       <div className="text-center">
         <Image
           src="/characters/astrochimp.png"
