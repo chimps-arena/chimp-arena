@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
-import { SceneBg } from "@/components/scene-bg";
 import { CREWS } from "@/lib/game/config";
 import type { LeaderboardCrew } from "@/lib/types";
 
@@ -49,7 +48,6 @@ export default function CrewsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SceneBg src="/scenes/crew-city.png" objectPosition="center 35%" opacity={0.32} />
       <div>
         <h1 className="text-2xl font-bold sm:text-3xl">Pick your crew</h1>
         <p className="mt-1 text-muted">

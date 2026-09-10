@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { GuestButton } from "@/components/guest-button";
-import { SceneBg } from "@/components/scene-bg";
 import { CREWS, MISSION_DEFS } from "@/lib/game/config";
 import type { MissionType } from "@/lib/types";
 
@@ -34,7 +33,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-20 py-8">
-      <SceneBg src="/scenes/lookout-flag.jpg" objectPosition="center 25%" opacity={0.45} />
       {/* ---------- hero ---------- */}
       <section className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
         <div className="flex flex-col gap-5">

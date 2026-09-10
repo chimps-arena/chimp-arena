@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
+import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -39,6 +40,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <AppScene />
         <SessionProvider>
           <WalletSessionGuard />
           <NavBar />
