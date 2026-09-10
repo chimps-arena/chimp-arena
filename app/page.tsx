@@ -34,7 +34,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-20 py-8">
-      <SceneBg src="/scenes/lookout-flag.png" objectPosition="center 25%" opacity={0.45} />
+      <SceneBg src="/scenes/lookout-flag.jpg" objectPosition="center 25%" opacity={0.45} />
       {/* ---------- hero ---------- */}
       <section className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
         <div className="flex flex-col gap-5">
