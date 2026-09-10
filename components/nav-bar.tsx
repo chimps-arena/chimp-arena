@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -19,6 +20,23 @@ export function NavBar() {
   const { me, loading, logout } = useSession();
   const pathname = usePathname();
   const player = me?.player ?? null;
+
+  const realWallet =
+    player?.wallet && !player.wallet.startsWith("guest_") ? player.wallet : null;
+  const [chimp, setChimp] = useState<number | null>(null);
+  useEffect(() => {
+    if (!realWallet) return;
+    let active = true;
+    fetch(`/api/chimp-balance?wallet=${realWallet}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && typeof d.uiAmount === "number") setChimp(d.uiAmount);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [realWallet]);
 
   async function fullDisconnect() {
     await logout();
@@ -93,17 +111,24 @@ export function NavBar() {
                   🔥 {me.streak.count}
                 </span>
               )}
-              <span
-                className="chip mono hidden text-accent sm:inline-flex"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--accent) 40%, transparent)",
-                }}
-                title={`Weekly ${TOKEN_SYMBOL} claims begin at token launch`}
-              >
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                0 {TOKEN_SYMBOL}
-              </span>
+              {realWallet && (
+                <span
+                  className="chip mono hidden text-accent sm:inline-flex"
+                  style={{
+                    borderColor:
+                      "color-mix(in srgb, var(--accent) 40%, transparent)",
+                  }}
+                  title={`Your ${TOKEN_SYMBOL} balance`}
+                >
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                  {chimp == null
+                    ? "…"
+                    : chimp.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                  {TOKEN_SYMBOL}
+                </span>
+              )}
               <div className="hidden text-right sm:block">
                 <div className="text-sm font-semibold">{player.handle}</div>
                 <div className="mono text-xs text-muted">
