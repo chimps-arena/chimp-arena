@@ -41,6 +41,7 @@ export function ChimpMint() {
 
   // Wallet UI only renders post-hydration: WalletMultiButton renders
   // different markup on server vs client and would trip a hydration mismatch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   const walletKey = wallet.publicKey?.toBase58() ?? null;
