@@ -8,7 +8,7 @@ import Image from "next/image";
 export function SceneBg({
   src,
   objectPosition = "center 30%",
-  opacity = 0.5,
+  opacity = 0.85,
 }: {
   src: string;
   objectPosition?: string;
@@ -34,9 +34,9 @@ export function SceneBg({
         style={{
           background:
             "linear-gradient(180deg," +
-            " color-mix(in srgb, var(--background) 45%, transparent) 0%," +
-            " color-mix(in srgb, var(--background) 72%, transparent) 45%," +
-            " color-mix(in srgb, var(--background) 94%, transparent) 78%," +
+            " color-mix(in srgb, var(--background) 15%, transparent) 0%," +
+            " color-mix(in srgb, var(--background) 55%, transparent) 45%," +
+            " color-mix(in srgb, var(--background) 88%, transparent) 75%," +
             " var(--background) 100%)",
         }}
       />
