@@ -80,6 +80,37 @@ body::before {
     620px 620px, 620px 620px, 480px 480px, 800px 800px, 520px 520px, 700px 700px;
 }
 
+/* slow revolving nebula sweep - ambient motion, not a spotlight */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    color-mix(in srgb, var(--accent-2) 14%, transparent) 70deg,
+    transparent 150deg,
+    color-mix(in srgb, var(--accent-3) 12%, transparent) 230deg,
+    transparent 320deg,
+    transparent 360deg
+  );
+  mix-blend-mode: screen;
+  animation: revolve 110s linear infinite;
+  will-change: transform;
+}
+@keyframes revolve {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
+}
+
 h1,
 h2 {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
