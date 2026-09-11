@@ -93,8 +93,8 @@ h3 {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-/* electric edge on the biggest headline */
-h1 {
+/* electric edge — reserved for the marketing hero, not every h1 */
+.glow-heading {
   text-shadow: 0 0 32px color-mix(in srgb, var(--accent-2) 30%, transparent);
 }
 
@@ -128,7 +128,7 @@ h1 {
 /* ---------- surfaces ---------- */
 .card {
   background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 1rem;
   backdrop-filter: blur(14px) saturate(140%);
   box-shadow:
@@ -149,35 +149,24 @@ h1 {
   border-radius: 1rem;
   backdrop-filter: blur(14px) saturate(150%);
 }
+/* fixed, quiet gradient edge — no spin. Polish, not a marquee. */
 .card-featured::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: conic-gradient(
-    from 0deg,
-    var(--accent-2),
-    var(--accent-3),
-    var(--accent),
-    var(--accent-2)
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent-2) 75%, transparent),
+    color-mix(in srgb, var(--accent-3) 55%, transparent) 45%,
+    color-mix(in srgb, var(--border) 90%, transparent) 80%
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: spin-border 8s linear infinite;
-}
-@keyframes spin-border {
-  to {
-    transform: rotate(1turn);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .card-featured::before {
-    animation: none;
-  }
 }
 
 /* ---------- buttons ---------- */

@@ -79,7 +79,7 @@ export default function CrewsPage() {
               }}
             >
               <div className="flex items-center justify-between">
-                <CrewMark name={c.name} color={c.color} size={56} />
+                <CrewMark color={c.color} size={56} />
                 {t && (
                   <div className="text-right">
                     <div className="mono text-lg font-bold" style={{ color: c.color }}>

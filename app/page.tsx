@@ -35,7 +35,7 @@ export default function Home() {
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-2" />
             $CHIMP · live on Solana
           </span>
-          <h1 className="text-[1.85rem] font-bold leading-[1.08] sm:text-6xl">
+          <h1 className="glow-heading text-[1.85rem] font-bold leading-[1.08] sm:text-6xl">
             Run missions.<br />
             Rep your crew.<br />
             <span className="text-accent-2">Own the jungle.</span>
@@ -126,7 +126,7 @@ export default function Home() {
               }}
             >
               <div className="transition group-hover:scale-110">
-                <CrewMark name={c.name} color={c.color} size={44} />
+                <CrewMark color={c.color} size={44} />
               </div>
               <div className="mt-3 font-bold" style={{ color: c.color }}>
                 {c.name}

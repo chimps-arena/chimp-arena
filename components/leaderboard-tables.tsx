@@ -135,7 +135,7 @@ export function LeaderboardTables({
               >
                 {c.rank}
               </span>
-              <CrewMark name={c.name} color={c.color} size={32} />
+              <CrewMark color={c.color} size={32} />
               <div className="min-w-0 flex-1">
                 <div className="font-bold" style={{ color: c.color }}>
                   {c.name}

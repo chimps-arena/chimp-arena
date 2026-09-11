@@ -29,31 +29,32 @@ export function MissionGlyph({
   );
 }
 
-/** A crew's initial on a tinted tile, in the crew colour. */
+/**
+ * A crew's identity mark: a flat gradient colour swatch. No letter, no
+ * default glow — glow is reserved for `active` (the player's own crew) so it
+ * reads as a signal, not decoration.
+ */
 export function CrewMark({
-  name,
   color,
   size = 40,
+  active = false,
 }: {
-  name: string;
   color: string;
   size?: number;
+  active?: boolean;
 }) {
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-xl font-extrabold leading-none"
+      className="block shrink-0 rounded-lg"
       style={{
         width: size,
         height: size,
-        fontFamily: "var(--font-display), sans-serif",
-        fontSize: Math.round(size * 0.42),
-        color,
-        background: `color-mix(in srgb, ${color} 16%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 42%, transparent)`,
-        boxShadow: `0 0 22px -10px ${color}`,
+        background: `linear-gradient(155deg, ${color}, color-mix(in srgb, ${color} 45%, #05060f))`,
+        border: `1px solid color-mix(in srgb, ${color} 65%, #05060f)`,
+        boxShadow: active
+          ? `0 0 24px -8px ${color}, inset 0 1px 0 rgba(255,255,255,0.16)`
+          : "inset 0 1px 0 rgba(255,255,255,0.12)",
       }}
-    >
-      {name.charAt(0)}
-    </span>
+    />
   );
 }
