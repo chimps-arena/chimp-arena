@@ -216,3 +216,45 @@ The founders' public 4-phase roadmap, mapped to the groups above.
 1. Does a **mainnet `$CHIMP` token already exist**? If yes, paste the mint address — the plan changes from "create" to "integrate", and the public "Phase 1 complete" claim is accurate. If no, the public roadmap needs rewording before it reaches investors.
 2. **"Gold"** in P4 — second currency or in-game resource? (Single-token model is locked; a second *spendable token* would reopen TOKEN-POLICY.md.)
 3. Confirm scope for **Astroworld** (social features) and **Raids / Territory defence** (combat) — these are new groups, currently unscoped.
+
+---
+
+## Track V — Voxel World (Minecraft-like), Option A
+
+> **DECIDED (2026-09-14): Option A** — a first-party, in-browser voxel game
+> (not a modded Minecraft server). This is its own long-horizon track with
+> its own resourcing and timeline. **It does not block or draw from Phase A**
+> or any group above; nothing here starts until Phase A ships and this is
+> separately staffed.
+
+**Why Option A:** stays a first-party web app under full control, integrates
+natively with the wallet/economy already built. Trade-off accepted: a
+from-scratch clone will be judged against 15 years of Minecraft polish, so it
+needs its own honest timeline rather than riding the current sprint cadence.
+
+**What it actually requires:** a different rendering stack (React Three
+Fiber fits the existing Next.js app; the hard part is a chunked greedy-mesher
+for performant voxel rendering in a browser), a terrain/chunk-streaming
+system, a block/crafting content pipeline, and — the real bottleneck — a
+specialist with genuine WebGL/Three.js performance experience. This is not
+general web dev work; treat it as a separate hire or contractor engagement.
+
+**Staged plan:**
+1. **Technical spike (1–2 weeks, before any further commitment).** Prove
+   browser voxel rendering performance in isolation: a small React Three
+   Fiber prototype, a handful of chunks, greedy meshing, frame-rate on a
+   mid-range phone. This is the de-risking step — if it can't hold a solid
+   frame rate on mobile here, the whole track needs rethinking before more
+   is spent on it.
+2. **Diorama MVP.** A small, bounded per-plot build space (e.g. a 16×16×16
+   block cube), not an open explorable world. Ties into an owned parcel from
+   the property market (Track P, once that exists). This is the realistic
+   "Minecraft-like" entry point.
+3. **Persistent, explorable, shared world.** Sandbox/Decentraland scale —
+   a different company phase, revisit only once the diorama MVP has proven
+   the loop is fun and there's traction/funding to justify dedicated
+   engineering investment.
+
+**Gate before step 1 starts:** Phase A shipped, and a named person (hire or
+contractor) with WebGL/voxel experience is engaged. Until then this stays
+documented intent, not a task in progress.

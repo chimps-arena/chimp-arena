@@ -67,6 +67,7 @@ await check("table: weekly_scores", tableExists("weekly_scores"));
 await check("table: weekly_pools", tableExists("weekly_pools"));
 await check("table: weekly_allocations", tableExists("weekly_allocations"));
 await check("table: daily_bonuses", tableExists("daily_bonuses"));
+await check("table: properties", tableExists("properties"));
 await check("view: crew_totals", tableExists("crew_totals"));
 await check("view: weekly_xp_live", tableExists("weekly_xp_live"));
 

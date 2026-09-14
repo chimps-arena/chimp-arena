@@ -1,5 +1,15 @@
 export type MissionType = "reaction" | "trivia" | "astro-run" | "dodge";
 
+export interface Property {
+  id: string;
+  name: string;
+  zone: string;
+  type: string;
+  priceChimp: number;
+  ownerWallet: string | null;
+  acquiredAt: string | null;
+}
+
 export interface Crew {
   id: string;
   slug: string;

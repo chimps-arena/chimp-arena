@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/leaderboard", label: "Leaderboards" },
   { href: "/crews", label: "Crews" },
   { href: "/mint", label: "Mint" },
+  { href: "/market", label: "Market" },
 ];
 
 export function NavBar() {
