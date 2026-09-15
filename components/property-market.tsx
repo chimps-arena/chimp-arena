@@ -21,6 +21,7 @@ import {
   ZONES,
   deedMemo,
 } from "@/lib/chain/market-config";
+import { PropertyArt } from "@/components/glyphs";
 import type { Property } from "@/lib/types";
 
 type Phase = "idle" | "confirm" | "paying" | "claiming" | "error";
@@ -143,48 +144,54 @@ export function PropertyMarket() {
                 const mine = p.ownerWallet === wallet.publicKey?.toBase58();
                 const sold = !!p.ownerWallet;
                 return (
-                  <div key={p.id} className="card flex flex-col gap-2 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-bold">{p.name}</div>
-                        <div className="text-xs text-muted">
-                          {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
+                  <div
+                    key={p.id}
+                    className="card flex flex-col overflow-hidden p-0"
+                  >
+                    <PropertyArt type={p.type} className="h-20 w-full" />
+                    <div className="flex flex-col gap-2 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-bold">{p.name}</div>
+                          <div className="text-xs text-muted">
+                            {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
+                          </div>
                         </div>
+                        <span
+                          className={`chip shrink-0 ${
+                            mine
+                              ? "text-good"
+                              : sold
+                                ? "text-muted"
+                                : "text-accent"
+                          }`}
+                          style={{
+                            borderColor: mine
+                              ? "color-mix(in srgb, var(--good) 40%, transparent)"
+                              : sold
+                                ? undefined
+                                : "color-mix(in srgb, var(--accent) 40%, transparent)",
+                          }}
+                        >
+                          {mine ? "Yours" : sold ? "Held" : "Listed"}
+                        </span>
                       </div>
-                      <span
-                        className={`chip shrink-0 ${
-                          mine
-                            ? "text-good"
-                            : sold
-                              ? "text-muted"
-                              : "text-accent"
-                        }`}
-                        style={{
-                          borderColor: mine
-                            ? "color-mix(in srgb, var(--good) 40%, transparent)"
-                            : sold
-                              ? undefined
-                              : "color-mix(in srgb, var(--accent) 40%, transparent)",
-                        }}
-                      >
-                        {mine ? "Yours" : sold ? "Held" : "Listed"}
-                      </span>
+                      <div className="mono text-sm font-semibold">
+                        {p.priceChimp.toLocaleString()} $CHIMP
+                      </div>
+                      {!sold && (
+                        <button
+                          className="btn btn-primary mt-1 text-sm"
+                          onClick={() => {
+                            setActive(p);
+                            setPhase("confirm");
+                            setError(null);
+                          }}
+                        >
+                          Buy
+                        </button>
+                      )}
                     </div>
-                    <div className="mono text-sm font-semibold">
-                      {p.priceChimp.toLocaleString()} $CHIMP
-                    </div>
-                    {!sold && (
-                      <button
-                        className="btn btn-primary mt-1 text-sm"
-                        onClick={() => {
-                          setActive(p);
-                          setPhase("confirm");
-                          setError(null);
-                        }}
-                      >
-                        Buy
-                      </button>
-                    )}
                   </div>
                 );
               })}
@@ -195,7 +202,9 @@ export function PropertyMarket() {
 
       {active && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
-          <div className="card w-full max-w-sm p-6">
+          <div className="card w-full max-w-sm overflow-hidden p-0">
+            <PropertyArt type={active.type} className="h-24 w-full" />
+            <div className="p-6">
             <h3 className="text-lg font-bold">{active.name}</h3>
             <p className="mt-1 text-sm text-muted">
               {PROPERTY_TYPE_LABEL[active.type] ?? active.type} · {active.zone}
@@ -247,6 +256,7 @@ export function PropertyMarket() {
                 </button>
               </>
             )}
+            </div>
           </div>
         </div>
       )}

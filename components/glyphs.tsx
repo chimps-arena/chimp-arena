@@ -58,3 +58,62 @@ export function CrewMark({
     />
   );
 }
+
+const PROPERTY_COLOR: Record<string, string> = {
+  mining_claim: "var(--accent)",
+  hangar: "var(--accent-2)",
+  vault: "var(--accent-violet)",
+  greenhouse: "var(--accent-4)",
+  dock: "var(--accent-3)",
+};
+
+const PROPERTY_PATH: Record<string, string> = {
+  mining_claim: "M12 2l6 6-6 14L6 8z", // uncut gem / ore
+  hangar: "M4 19V10a8 8 0 0116 0v9", // dome / bay door
+  vault: "M12 3a9 9 0 100 18 9 9 0 000-18zm0 5.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7z", // vault dial
+  greenhouse: "M4 19 12 3l8 16zM8 19V13h8v6", // glasshouse
+  dock: "M4 20V9l8-6 8 6v11M4 20h16", // pier / berth
+};
+
+/**
+ * A property card's header art: no photography yet, so a tinted gradient
+ * plate with a geometric mark keyed to the property type. Swap for real
+ * location art per type/zone whenever it lands.
+ */
+export function PropertyArt({
+  type,
+  className,
+}: {
+  type: string;
+  className?: string;
+}) {
+  const color = PROPERTY_COLOR[type] ?? "var(--accent-2)";
+  const d = PROPERTY_PATH[type] ?? PROPERTY_PATH.hangar;
+  return (
+    <div
+      className={`relative flex items-center justify-center ${className ?? ""}`}
+      style={{
+        background: `radial-gradient(120% 140% at 22% 0%, color-mix(in srgb, ${color} 24%, transparent), transparent 60%), linear-gradient(160deg, color-mix(in srgb, ${color} 14%, #05060f), #05060f)`,
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-9 w-9"
+        style={{ color }}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d={d} />
+      </svg>
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
+        style={{
+          background: `color-mix(in srgb, ${color} 35%, transparent)`,
+        }}
+      />
+    </div>
+  );
+}
