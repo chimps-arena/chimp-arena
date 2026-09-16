@@ -21,7 +21,7 @@ import {
   ZONES,
   deedMemo,
 } from "@/lib/chain/market-config";
-import { PropertyArt } from "@/components/glyphs";
+import { PropertyThumb } from "@/components/property-thumb";
 import type { Property } from "@/lib/types";
 
 type Phase = "idle" | "confirm" | "paying" | "claiming" | "error";
@@ -138,22 +138,29 @@ export function PropertyMarket() {
       {[...byZone.entries()].map(([zone, list]) =>
         list.length === 0 ? null : (
           <section key={zone}>
-            <h2 className="text-lg font-bold">{zone}</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-xl sm:text-2xl">{zone}</h2>
+              <span className="mono text-xs text-muted">
+                {list.length} plot{list.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((p) => {
                 const mine = p.ownerWallet === wallet.publicKey?.toBase58();
                 const sold = !!p.ownerWallet;
                 return (
                   <div
                     key={p.id}
-                    className="card flex flex-col overflow-hidden p-0"
+                    className="card group flex flex-col overflow-hidden p-0 transition duration-200 hover:-translate-y-0.5"
                   >
-                    <PropertyArt type={p.type} className="h-20 w-full" />
-                    <div className="flex flex-col gap-2 p-4">
+                    <PropertyThumb type={p.type} className="h-32 w-full" />
+                    <div className="flex flex-col gap-2.5 p-4">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-bold">{p.name}</div>
-                          <div className="text-xs text-muted">
+                        <div className="min-w-0">
+                          <div className="truncate text-base font-bold">
+                            {p.name}
+                          </div>
+                          <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted">
                             {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
                           </div>
                         </div>
@@ -176,8 +183,11 @@ export function PropertyMarket() {
                           {mine ? "Yours" : sold ? "Held" : "Listed"}
                         </span>
                       </div>
-                      <div className="mono text-sm font-semibold">
-                        {p.priceChimp.toLocaleString()} $CHIMP
+                      <div className="mono text-base font-semibold text-accent">
+                        {p.priceChimp.toLocaleString()}{" "}
+                        <span className="text-xs font-normal text-muted">
+                          $CHIMP
+                        </span>
                       </div>
                       {!sold && (
                         <button
@@ -203,7 +213,7 @@ export function PropertyMarket() {
       {active && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
           <div className="card w-full max-w-sm overflow-hidden p-0">
-            <PropertyArt type={active.type} className="h-24 w-full" />
+            <PropertyThumb type={active.type} className="h-28 w-full" />
             <div className="p-6">
             <h3 className="text-lg font-bold">{active.name}</h3>
             <p className="mt-1 text-sm text-muted">
