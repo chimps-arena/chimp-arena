@@ -8,6 +8,9 @@ export interface Property {
   priceChimp: number;
   ownerWallet: string | null;
   acquiredAt: string | null;
+  blurb: string | null;
+  /** 'held' = Astro Corp inventory, not released for sale (independent of ownerWallet). */
+  status: "listed" | "held";
 }
 
 export interface Crew {

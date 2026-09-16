@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { data, error } = await supabaseAdmin()
     .from("properties")
-    .select("id, name, zone, type, price_chimp, owner_wallet, acquired_at")
+    .select("id, name, zone, type, price_chimp, owner_wallet, acquired_at, blurb, status")
     .order("zone")
     .order("price_chimp");
 
@@ -24,6 +24,8 @@ export async function GET() {
     priceChimp: p.price_chimp,
     ownerWallet: p.owner_wallet,
     acquiredAt: p.acquired_at,
+    blurb: p.blurb,
+    status: p.status === "held" ? "held" : "listed",
   }));
 
   return NextResponse.json({ properties });

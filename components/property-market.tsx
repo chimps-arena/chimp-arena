@@ -147,7 +147,7 @@ export function PropertyMarket() {
             <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((p) => {
                 const mine = p.ownerWallet === wallet.publicKey?.toBase58();
-                const sold = !!p.ownerWallet;
+                const sold = p.status === "held" || !!p.ownerWallet;
                 return (
                   <div
                     key={p.id}
@@ -183,6 +183,9 @@ export function PropertyMarket() {
                         <div className="mono mt-1 text-[10px] uppercase tracking-[0.14em] text-muted">
                           {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
                         </div>
+                        {p.blurb && (
+                          <p className="mt-1.5 text-xs text-muted">{p.blurb}</p>
+                        )}
                       </div>
                       <div className="flex items-baseline justify-between">
                         <div className="mono text-lg font-semibold text-accent">
@@ -222,6 +225,9 @@ export function PropertyMarket() {
             <p className="mt-1 text-sm text-muted">
               {PROPERTY_TYPE_LABEL[active.type] ?? active.type} · {active.zone}
             </p>
+            {active.blurb && (
+              <p className="mt-1 text-sm text-muted">{active.blurb}</p>
+            )}
 
             {phase === "confirm" && (
               <>

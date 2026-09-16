@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
   const { data: property } = await db
     .from("properties")
-    .select("id, price_chimp, owner_wallet")
+    .select("id, price_chimp, owner_wallet, status")
     .eq("id", propertyId)
     .maybeSingle();
   if (!property) {
@@ -53,6 +53,12 @@ export async function POST(req: Request) {
   }
   if (property.owner_wallet) {
     return NextResponse.json({ error: "already sold" }, { status: 409 });
+  }
+  if (property.status === "held") {
+    return NextResponse.json(
+      { error: "not released for sale yet" },
+      { status: 409 },
+    );
   }
 
   // ---- verify the payment on-chain ----
