@@ -144,50 +144,53 @@ export function PropertyMarket() {
                 {list.length} plot{list.length === 1 ? "" : "s"}
               </span>
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((p) => {
                 const mine = p.ownerWallet === wallet.publicKey?.toBase58();
                 const sold = !!p.ownerWallet;
                 return (
                   <div
                     key={p.id}
-                    className="card group flex flex-col overflow-hidden p-0 transition duration-200 hover:-translate-y-0.5"
+                    className="card group flex flex-col overflow-hidden p-0 transition duration-200 hover:-translate-y-1"
                   >
-                    <PropertyThumb type={p.type} className="h-32 w-full" />
-                    <div className="flex flex-col gap-2.5 p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-base font-bold">
-                            {p.name}
-                          </div>
-                          <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted">
-                            {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
-                          </div>
+                    <div className="relative">
+                      <PropertyThumb type={p.type} className="h-48 w-full" />
+                      <span
+                        className={`chip absolute right-3 top-3 backdrop-blur-md ${
+                          mine
+                            ? "text-good"
+                            : sold
+                              ? "text-muted"
+                              : "text-accent"
+                        }`}
+                        style={{
+                          background: "rgba(5,6,15,0.55)",
+                          borderColor: mine
+                            ? "color-mix(in srgb, var(--good) 45%, transparent)"
+                            : sold
+                              ? "color-mix(in srgb, var(--border) 80%, transparent)"
+                              : "color-mix(in srgb, var(--accent) 45%, transparent)",
+                        }}
+                      >
+                        {mine ? "Yours" : sold ? "Held" : "Listed"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-3 p-5">
+                      <div className="min-w-0">
+                        <div className="truncate text-lg font-bold">
+                          {p.name}
                         </div>
-                        <span
-                          className={`chip shrink-0 ${
-                            mine
-                              ? "text-good"
-                              : sold
-                                ? "text-muted"
-                                : "text-accent"
-                          }`}
-                          style={{
-                            borderColor: mine
-                              ? "color-mix(in srgb, var(--good) 40%, transparent)"
-                              : sold
-                                ? undefined
-                                : "color-mix(in srgb, var(--accent) 40%, transparent)",
-                          }}
-                        >
-                          {mine ? "Yours" : sold ? "Held" : "Listed"}
-                        </span>
+                        <div className="mono mt-1 text-[10px] uppercase tracking-[0.14em] text-muted">
+                          {PROPERTY_TYPE_LABEL[p.type] ?? p.type}
+                        </div>
                       </div>
-                      <div className="mono text-base font-semibold text-accent">
-                        {p.priceChimp.toLocaleString()}{" "}
-                        <span className="text-xs font-normal text-muted">
-                          $CHIMP
-                        </span>
+                      <div className="flex items-baseline justify-between">
+                        <div className="mono text-lg font-semibold text-accent">
+                          {p.priceChimp.toLocaleString()}{" "}
+                          <span className="text-xs font-normal text-muted">
+                            $CHIMP
+                          </span>
+                        </div>
                       </div>
                       {!sold && (
                         <button
@@ -213,7 +216,7 @@ export function PropertyMarket() {
       {active && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
           <div className="card w-full max-w-sm overflow-hidden p-0">
-            <PropertyThumb type={active.type} className="h-28 w-full" />
+            <PropertyThumb type={active.type} className="h-40 w-full" />
             <div className="p-6">
             <h3 className="text-lg font-bold">{active.name}</h3>
             <p className="mt-1 text-sm text-muted">
