@@ -1,0 +1,11 @@
+
+> chimp-arena@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.20.10.3:3000
+- Environments: .env.local
+✓ Ready in 2.3s
+✓ Running next.config.ts took 186ms
+

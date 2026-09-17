@@ -1,36 +1,43 @@
 # Property art
 
-One image per property **type** (reused across every matching card). Drop
-these exact filenames here; `components/property-thumb.tsx` picks them up
-automatically, no code change needed. Anything missing falls back to the
+One image per property **type** (reused across every matching card). Drop a
+file named `<type>.jpg`, `.png`, `.jpeg`, or `.webp` here — any of those four
+extensions work, `components/property-thumb.tsx` tries them in that order
+automatically. No code change needed. Anything missing falls back to the
 current geometric placeholder, so land these one at a time in any order.
 
-## Have art for these 5 already
-`mining_claim.jpg` · `hangar.jpg` · `vault.jpg` · `greenhouse.jpg` · `dock.jpg`
+## Have art for all 19 types
 
-## Still on the placeholder — 13 more types
+`mining_claim` · `hangar` · `vault` · `greenhouse` · `dock` · `fuel_lot` ·
+`armory` · `box` · `outpost` · `field` · `loft` · `observatory` · `yard` ·
+`stall` · `array` · `cantina` · `tower` · `dome` · `foundry`
 
-| File | Type | Prompt |
-| --- | --- | --- |
-| `fuel_lot.jpg` | Fuel Lot | cryogenic fuel tanks and a service gantry |
-| `armory.jpg` | Armory | sealed crates, mesh cages, and a locker run |
-| `box.jpg` | Box | stepped seating carved into a hull, amphitheater-style |
-| `outpost.jpg` | Outpost | an armored module with a sensor mast on open rock |
-| `field.jpg` | Field | a survey stake in pale lunar regolith |
-| `loft.jpg` | Loft | tall windows over stacked habitation modules |
-| `observatory.jpg` | Observatory | a dome on a crater rim, shutter half open |
-| `yard.jpg` | Yard | stacked cargo containers, a gantry, an open platform |
-| `stall.jpg` | Stall | a brushed-metal market kiosk on a concourse |
-| `array.jpg` | Array | an orange-and-cyan solar array farm on a truss |
-| `cantina.jpg` | Cantina | a neon-lit cantina stall on a plaza |
-| `tower.jpg` | Tower | a needle tower with cyan dishes and orange strobes |
-| `dome.jpg` | Dome | a pressurized greenhouse dome with orange grow light |
-| `foundry.jpg` | Foundry | molten orange metal and industrial pipe on a dark rock |
+## Prompts, if you need to redo or add more
 
-Shared style suffix — append to every prompt above:
+Shared style suffix — append to every prompt below:
 > cinematic sci-fi concept art, Astrochimpz space-colony aesthetic, warm amber
 > and cyan neon lighting, detailed environment, wide establishing shot, no
 > text, no watermark, no people, 4:3 aspect ratio
+
+- **mining_claim** — a rugged asteroid mining claim with drilling rigs and glowing ore veins
+- **hangar** — a starship hangar bay with a parked shuttle, mechanical gantries
+- **vault** — a secure vault chamber door, reinforced metal, glowing security panel
+- **greenhouse** — a domed greenhouse on an alien surface, glowing bioluminescent plants
+- **dock** — a space station docking pier with ships berthed, walkways
+- **fuel_lot** — cryogenic fuel tanks and a service gantry
+- **armory** — sealed crates, mesh cages, and a locker run
+- **box** — stepped amphitheater seating carved into a hull
+- **outpost** — an armored module with a sensor mast on open asteroid rock
+- **field** — a survey stake in pale lunar regolith
+- **loft** — tall windows over stacked habitation modules
+- **observatory** — a dome on a crater rim, shutter half open, telescope visible
+- **yard** — stacked cargo containers, a gantry crane, an open loading platform
+- **stall** — a brushed-metal market kiosk on a concourse
+- **array** — an orange-and-cyan solar array farm bolted to a station truss
+- **cantina** — a neon-lit cantina stall on a plaza at night
+- **tower** — a needle communications tower with cyan dishes and orange strobes
+- **dome** — a pressurized greenhouse dome glowing with orange grow lights
+- **foundry** — molten orange metal and industrial pipework on a dark rock
 
 Later: swap to one unique image per property (`public/properties/<property-id>.jpg`,
 e.g. `belt-a12.jpg`) once there's real per-location art — `PropertyThumb`
