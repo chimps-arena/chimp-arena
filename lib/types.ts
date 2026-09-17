@@ -11,6 +11,8 @@ export interface Property {
   blurb: string | null;
   /** 'held' = Astro Corp inventory, not released for sale (independent of ownerWallet). */
   status: "listed" | "held";
+  /** Resolved server-side; null if no real photo exists yet for this type. */
+  image: string | null;
 }
 
 export interface Crew {

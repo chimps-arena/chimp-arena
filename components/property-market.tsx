@@ -154,7 +154,7 @@ export function PropertyMarket() {
                     className="card group flex flex-col overflow-hidden p-0 transition duration-200 hover:-translate-y-1"
                   >
                     <div className="relative">
-                      <PropertyThumb type={p.type} className="h-48 w-full" />
+                      <PropertyThumb src={p.image} type={p.type} className="h-48 w-full" />
                       <span
                         className={`chip absolute right-3 top-3 backdrop-blur-md ${
                           mine
@@ -219,7 +219,7 @@ export function PropertyMarket() {
       {active && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
           <div className="card w-full max-w-sm overflow-hidden p-0">
-            <PropertyThumb type={active.type} className="h-40 w-full" />
+            <PropertyThumb src={active.image} type={active.type} className="h-40 w-full" />
             <div className="p-6">
             <h3 className="text-lg font-bold">{active.name}</h3>
             <p className="mt-1 text-sm text-muted">

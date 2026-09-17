@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { resolvePropertyImage } from "@/lib/chain/property-art";
 import type { Property } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ export async function GET() {
     acquiredAt: p.acquired_at,
     blurb: p.blurb,
     status: p.status === "held" ? "held" : "listed",
+    image: resolvePropertyImage(p.type),
   }));
 
   return NextResponse.json({ properties });
