@@ -399,3 +399,22 @@ comment on function public.add_player_gold(text, bigint) is
   'are clamped to 0. Returns NULL if the wallet has no players row.';
 
 revoke all on function public.add_player_gold(text, bigint) from public, anon, authenticated;
+
+
+-- ==============  migrations/0008_gold_ledger.sql  ==========================
+
+create table if not exists public.gold_ledger (
+  id         bigint generated always as identity primary key,
+  wallet     text    not null references public.players (wallet) on delete cascade,
+  delta      bigint  not null,
+  reason     text    not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists gold_ledger_wallet_idx
+  on public.gold_ledger (wallet, created_at desc);
+
+alter table public.gold_ledger enable row level security;
+drop policy if exists "gold_ledger readable by anyone" on public.gold_ledger;
+create policy "gold_ledger readable by anyone"
+  on public.gold_ledger for select using (true);

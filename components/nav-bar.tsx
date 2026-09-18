@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/dashboard", label: "Mission Control" },
   { href: "/leaderboard", label: "Leaderboards" },
   { href: "/crews", label: "Crews" },
+  { href: "/bank", label: "Safu Bank" },
   { href: "/mint", label: "Mint" },
   { href: "/market", label: "Market" },
 ];

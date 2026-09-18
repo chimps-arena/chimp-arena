@@ -219,6 +219,9 @@ export async function POST(
     p_wallet: session.wallet,
     p_amount: goldAwarded,
   });
+  await db
+    .from("gold_ledger")
+    .insert({ wallet: session.wallet, delta: goldAwarded, reason: `mission:${slug}` });
 
   const result: SubmitResult = {
     ok: true,

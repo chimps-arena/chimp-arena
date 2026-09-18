@@ -68,6 +68,7 @@ await check("table: weekly_pools", tableExists("weekly_pools"));
 await check("table: weekly_allocations", tableExists("weekly_allocations"));
 await check("table: daily_bonuses", tableExists("daily_bonuses"));
 await check("table: properties", tableExists("properties"));
+await check("table: gold_ledger", tableExists("gold_ledger"));
 await check("view: crew_totals", tableExists("crew_totals"));
 await check("view: weekly_xp_live", tableExists("weekly_xp_live"));
 
@@ -97,6 +98,16 @@ await check("function: bump_streak", async () => {
   if (!data || data.streak_count !== 0) {
     return `expected {streak_count:0} for unknown wallet, got ${JSON.stringify(data)}`;
   }
+  return null;
+});
+
+await check("function: add_player_gold", async () => {
+  const { data, error } = await db.rpc("add_player_gold", {
+    p_wallet: "__verify_nonexistent__",
+    p_amount: 0,
+  });
+  if (error) return error.message;
+  if (data !== null) return `expected null for unknown wallet, got ${JSON.stringify(data)}`;
   return null;
 });
 
