@@ -156,6 +156,7 @@ export async function POST(
         totalXp: playerRow?.xp ?? 0,
         alreadyClaimedToday: true,
         scoreAccepted: score,
+        goldAwarded: 0,
       };
       return NextResponse.json(result);
     }
@@ -199,9 +200,10 @@ export async function POST(
   }
 
   // Atomic increment - cannot lose a concurrent write from the same wallet.
+  const totalXpAward = xpForRun + streakXp;
   const { data: newXp, error: updErr } = await db.rpc("add_player_xp", {
     p_wallet: session.wallet,
-    p_amount: xpForRun + streakXp,
+    p_amount: totalXpAward,
   });
   if (updErr || typeof newXp !== "number") {
     return NextResponse.json(
@@ -210,13 +212,23 @@ export async function POST(
     );
   }
 
+  // Gold: a flat share of the XP earned this run. Off-chain resource, never
+  // a token - spent later on boosts/structures (ECONOMY plan §6).
+  const goldAwarded = Math.max(1, Math.round(totalXpAward / 4));
+  const { data: newGold } = await db.rpc("add_player_gold", {
+    p_wallet: session.wallet,
+    p_amount: goldAwarded,
+  });
+
   const result: SubmitResult = {
     ok: true,
-    xpAwarded: xpForRun + streakXp,
+    xpAwarded: totalXpAward,
     totalXp: newXp,
     alreadyClaimedToday: false,
     scoreAccepted: score,
     streak: streakInfo,
+    goldAwarded,
+    totalGold: typeof newGold === "number" ? newGold : undefined,
   };
   return NextResponse.json(result);
 }

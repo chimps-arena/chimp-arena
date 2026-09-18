@@ -9,6 +9,7 @@ import {
   nextStreakMilestone,
 } from "@/lib/game/economy";
 import { utcDay } from "@/lib/game/config";
+import { computeRank } from "@/lib/game/ranks";
 import type { MeResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -25,7 +26,7 @@ export async function GET() {
   const { data: row } = await supabaseAdmin()
     .from("players")
     .select(
-      "wallet, handle, crew_slug, xp, created_at, streak_count, streak_best, last_active_day",
+      "wallet, handle, crew_slug, xp, gold, created_at, streak_count, streak_best, last_active_day",
     )
     .eq("wallet", session.wallet)
     .maybeSingle();
@@ -61,12 +62,20 @@ export async function GET() {
     .reduce((s, w) => s + BigInt(w.chimpBaseUnits), 0n)
     .toString();
 
+  // Rank: level (from XP) + properties actually owned on the market.
+  const { count: propertiesOwned } = await db
+    .from("properties")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_wallet", session.wallet);
+  const rank = computeRank(row.xp, propertiesOwned ?? 0);
+
   const payload: MeResponse = {
     player: {
       wallet: row.wallet,
       handle: row.handle,
       crewSlug: row.crew_slug,
       xp: row.xp,
+      gold: row.gold ?? 0,
       createdAt: row.created_at,
     },
     crew: crewBySlug(row.crew_slug),
@@ -92,6 +101,20 @@ export async function GET() {
         nextMilestone: nextStreakMilestone(count),
       };
     })(),
+    rank: {
+      name: rank.current.name,
+      index: rank.current.index,
+      unlocks: rank.current.unlocks,
+      next: rank.next
+        ? {
+            name: rank.next.name,
+            minLevel: rank.next.minLevel,
+            minProperties: rank.next.minProperties,
+          }
+        : null,
+      level: rank.level,
+      propertiesOwned: rank.propertiesOwned,
+    },
   };
   return NextResponse.json(payload);
 }

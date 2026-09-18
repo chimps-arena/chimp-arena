@@ -174,6 +174,17 @@ function ResultView({
             ` · +${result.streak.milestoneXp} milestone`}
         </div>
       )}
+      {!result.alreadyClaimedToday && result.goldAwarded > 0 && (
+        <div
+          className="chip mono"
+          style={{
+            color: "var(--accent-2)",
+            borderColor: "color-mix(in srgb, var(--accent-2) 45%, transparent)",
+          }}
+        >
+          +{result.goldAwarded} Gold
+        </div>
+      )}
       <div className="mono text-sm text-muted">
         Total XP: {result.totalXp.toLocaleString()}
       </div>

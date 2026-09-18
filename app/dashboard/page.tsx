@@ -10,6 +10,7 @@ import { HandleEditor } from "@/components/handle-editor";
 import { DevnetFaucet } from "@/components/devnet-faucet";
 import { MissionCard } from "@/components/mission-card";
 import { StreakCard } from "@/components/streak-card";
+import { RankCard } from "@/components/rank-card";
 import { GuestButton } from "@/components/guest-button";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
@@ -44,7 +45,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today, week, streak } = me;
+  const { player, crew, today, week, streak, rank } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
 
   return (
@@ -79,6 +80,13 @@ export default function DashboardPage() {
               </div>
               <div className="text-[11px] text-muted">XP</div>
             </div>
+            <div className="stat-tile text-right">
+              <div className="text-xs text-muted">Gold</div>
+              <div className="text-2xl font-bold text-accent-2">
+                {player.gold.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-muted">spend on boosts soon</div>
+            </div>
           </div>
         </div>
 
@@ -107,8 +115,9 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,20rem)_1fr]">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StreakCard streak={streak} crewName={crew?.name} />
+        <RankCard rank={rank} />
         <div className="card flex flex-col justify-center gap-1 p-5">
           <div className="text-xs text-muted">This week for your crew</div>
           <div className="text-2xl font-bold">
@@ -137,7 +146,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/leaderboard"
           className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
@@ -154,6 +163,15 @@ export default function DashboardPage() {
           <div className="text-lg font-bold">Crews</div>
           <p className="mt-1 text-sm text-muted">
             {crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry."}
+          </p>
+        </Link>
+        <Link
+          href="/market"
+          className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
+        >
+          <div className="text-lg font-bold">Property Market</div>
+          <p className="mt-1 text-sm text-muted">
+            Claim territory across the belt. {rank.propertiesOwned} owned.
           </p>
         </Link>
         <Link

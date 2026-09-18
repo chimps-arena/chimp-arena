@@ -371,3 +371,31 @@ insert into public.properties (id, name, zone, type, price_chimp, blurb, status)
   ('lun-gd2',   'Grow Dome GD2',    'Lunar Rim',       'dome',         180, 'Pressurized greenhouse with orange grow light',              'listed'),
   ('lun-obs',   'Rim Observatory',  'Lunar Rim',       'observatory',  220, 'Dome on a crater rim, shutter half open',                    'held')
 on conflict (id) do nothing;
+
+
+-- ============  migrations/0007_gold_and_rank.sql  ==========================
+
+alter table public.players
+  add column if not exists gold bigint not null default 0 check (gold >= 0);
+
+create or replace function public.add_player_gold(
+  p_wallet text,
+  p_amount bigint
+)
+returns bigint
+language sql
+volatile
+security definer
+set search_path = public
+as $$
+  update public.players
+     set gold = gold + greatest(p_amount, 0)
+   where wallet = p_wallet
+  returning gold;
+$$;
+
+comment on function public.add_player_gold(text, bigint) is
+  'Atomically add Gold to a player and return the new total. Negative amounts '
+  'are clamped to 0. Returns NULL if the wallet has no players row.';
+
+revoke all on function public.add_player_gold(text, bigint) from public, anon, authenticated;

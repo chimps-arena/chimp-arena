@@ -38,6 +38,7 @@ export interface PlayerProfile {
   handle: string;
   crewSlug: string | null;
   xp: number;
+  gold: number;
   createdAt: string;
 }
 
@@ -73,6 +74,15 @@ export interface MeResponse {
     playedToday: boolean; // a mission completed this UTC day
     atRisk: boolean; // count > 0 and not played today
     nextMilestone: number | null; // next milestone day, or null past the top
+  };
+  /** Rank ladder (lib/game/ranks.ts) - computed from level + properties owned. */
+  rank: {
+    name: string;
+    index: number;
+    unlocks: string;
+    next: { name: string; minLevel: number; minProperties: number } | null;
+    level: number;
+    propertiesOwned: number;
   };
 }
 
@@ -123,4 +133,6 @@ export interface SubmitResult {
     bonusXp: number; // streak % bonus on this run
     milestoneXp: number; // flat milestone bonus, 0 if none
   };
+  goldAwarded: number;
+  totalGold?: number;
 }
