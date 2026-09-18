@@ -207,15 +207,18 @@ The founders' public 4-phase roadmap, mapped to the groups above.
 
 | Founder phase | = groups here | Notes / discrepancies to resolve |
 | --- | --- | --- |
-| **P1 · Token Launch** — "$CHIMP live on Solana, Raydium liquidity, community forms" (shown **COMPLETE**) | Group G (mint + swap) + #54 (Raydium pool) | **Not actually done.** We are devnet, no mint deployed, no Raydium pool. Either (a) a mainnet `$CHIMP` token already exists that this build must *integrate* rather than create — need the mint address — or (b) the public roadmap is aspirational and should be reworded. Blocks all of G either way. |
-| **P2 · NFT Characters** — "Astrochimp NFTs: tradable, upgradeable, on-chain stats" (**IN PROGRESS**) | Group H (Chimp NFT) + parts of J (upgradeable / stats) | "Upgradeable + on-chain stats" is more than H's identity NFT — pulls forward some structure/stat mechanics. Scope with founders. |
-| **P3 · Astroworld** — "social hub, player interaction, on-chain trading" | Group K #53 (in-app marketplace) + **new: social layer** (profiles, chat, presence) | Social hub is not in this roadmap yet. Needs its own group if confirmed. |
-| **P4 · Full Game Universe** — "galactic exploration, Gold, Raids, Territory defence" | Groups I + J (land, structures, asteroid claim battles) + **new: PvE/PvP combat** | **"Gold"** — is this a second in-game currency (conflicts with the single-token lock in TOKEN-POLICY.md) or a non-token resource? Raids / territory defence are a combat layer not yet scoped. |
+| **P1 · Token Launch** — "$CHIMP live on Solana, Raydium liquidity, community forms" (shown **COMPLETE**) | Group G (mint + swap) + #54 (Raydium pool) | **RESOLVED (2026-09-15):** a mainnet `$CHIMP` mint already exists — `21ZDgkJ9ULqLoGyHMskAfwVwrx6oixWzxxENu59HHoBV`, 1B fixed supply, 9 decimals, mint + freeze authority both revoked. The app integrates it (not devnet, not something we deploy). No Raydium pool yet — that part of "complete" is still aspirational. |
+| **P2 · NFT Characters** — "Astrochimp NFTs: tradable, upgradeable, on-chain stats" (**IN PROGRESS**) | Group H (Chimp NFT) + parts of J (upgradeable / stats) | Test mint shipped (`/mint`, Metaplex Core, pays Astro Corp). "Upgradeable + on-chain stats" is more than the identity NFT — still needs scoping. |
+| **P3 · Astroworld** — "social hub, player interaction, on-chain trading" | Group K #53 (in-app marketplace) + **new: social layer** (profiles, chat, presence) | **In progress, ahead of schedule.** The property market shipped early (`/market`) — 36 listings, real photos, on-chain `$CHIMP` payment + ASTRODEED memo, server-verified claim. Social layer (chat/presence) still unscoped. |
+| **P4 · Full Game Universe** — "galactic exploration, Gold, Raids, Territory defence" | Groups I + J (land, structures, asteroid claim battles) + **new: PvE/PvP combat** | **"Gold" RESOLVED (2026-09-18):** a non-token off-chain resource (`players.gold`), earned per mission run, spent later on boosts — never redeemable to `$CHIMP`. Shipped alongside the rank ladder (Cadet→Governor, `lib/game/ranks.ts`). Raids / territory defence still unscoped. |
 
 ### Open questions for the founders
-1. Does a **mainnet `$CHIMP` token already exist**? If yes, paste the mint address — the plan changes from "create" to "integrate", and the public "Phase 1 complete" claim is accurate. If no, the public roadmap needs rewording before it reaches investors.
-2. **"Gold"** in P4 — second currency or in-game resource? (Single-token model is locked; a second *spendable token* would reopen TOKEN-POLICY.md.)
+1. ~~Does a mainnet `$CHIMP` token already exist?~~ **Resolved** — yes, see above.
+2. ~~"Gold" — second currency or in-game resource?~~ **Resolved** — non-token resource, shipped.
 3. Confirm scope for **Astroworld** (social features) and **Raids / Territory defence** (combat) — these are new groups, currently unscoped.
+
+### Phase A status (station hub / Gold / rank ladder / Safu Bank)
+Shipped: Gold resource + award pipeline, rank ladder wired to real level + property-ownership data, property market (a founder-driven addition that landed ahead of the station-hub UI). Still open: a proper station-hub navigation shell (The Deck / Safu Bank / Outfitters as distinct destinations, not just dashboard cards), and a dedicated Safu Bank page showing `$CHIMP` + Gold together with any transaction history.
 
 ---
 
