@@ -21,9 +21,13 @@ type Phase = "idle" | "confirm" | "creating" | "done" | "error";
 /**
  * One-time setup: creates the Astrochimps collection with a 3% Royalties
  * plugin paying Astro Corp, enforced by marketplaces that respect Metaplex
- * Core (Tensor and others). Must be signed by the Astro Corp wallet itself -
- * that wallet becomes the collection's update authority by default (whoever
- * pays/signs the creation transaction), per the founders' decision.
+ * Core (Tensor and others).
+ *
+ * ANY connected wallet can pay for and submit this transaction - creating
+ * the collection and controlling it are separate things. `updateAuthority`
+ * is explicitly set to the Astro Corp wallet regardless of who signs, so
+ * control lands there from the first block without needing that wallet to
+ * sign anything today. It only needs to sign later, to change settings.
  *
  * Run this once, then put the resulting address in
  * NEXT_PUBLIC_ASTROCHIMPS_COLLECTION (local + Vercel) so new mints join it.
@@ -59,6 +63,9 @@ export function CreateCollection() {
         collection,
         name: COLLECTION_NAME,
         uri: `${window.location.origin}/nft/collection-metadata`,
+        // Set explicitly - the connected wallet pays/signs, but control
+        // lands on the Astro Corp wallet regardless.
+        updateAuthority: publicKey(ASTRO_CORP_WALLET),
         plugins: [
           {
             type: "Royalties",
@@ -101,8 +108,9 @@ export function CreateCollection() {
     return (
       <div className="card p-6 text-center">
         <p className="text-sm text-muted">
-          Connect the Astro Corp wallet ({ASTRO_CORP_WALLET.slice(0, 4)}…
-          {ASTRO_CORP_WALLET.slice(-4)}) to create the collection.
+          Connect any funded wallet to pay for this one-time setup — it
+          doesn&apos;t need to be the Astro Corp wallet. Control still lands
+          on Astro Corp either way (see below).
         </p>
         <div className="mt-4 flex justify-center">
           <WalletMultiButton />
@@ -111,20 +119,17 @@ export function CreateCollection() {
     );
   }
 
-  if (!isAstroCorpWallet) {
-    return (
-      <div className="card p-6 text-center">
-        <p className="text-sm text-bad">
-          Wrong wallet connected. This must be signed by the Astro Corp
-          wallet ({ASTRO_CORP_WALLET.slice(0, 4)}…{ASTRO_CORP_WALLET.slice(-4)}
-          ) — it becomes the collection&apos;s update authority.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="card flex flex-col gap-4 p-6">
+      {!isAstroCorpWallet && (
+        <p className="rounded-lg border border-accent-2/40 bg-accent-2/10 p-3 text-sm text-muted">
+          <strong className="text-foreground">
+            {walletKey?.slice(0, 4)}…{walletKey?.slice(-4)}
+          </strong>{" "}
+          will pay for this transaction. That&apos;s fine — the collection&apos;s
+          update authority is set below regardless of who signs.
+        </p>
+      )}
       {SOLANA_CLUSTER !== "mainnet-beta" && (
         <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
           Not on mainnet — this collection would be created on{" "}
