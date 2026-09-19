@@ -30,6 +30,7 @@ export const PUBLIC_ENV = {
   // Live mainnet $CHIMP mint + the Astro Corp revenue wallet.
   chimpMint: process.env.NEXT_PUBLIC_CHIMP_MINT_ADDRESS ?? "",
   astroCorpWallet: process.env.NEXT_PUBLIC_ASTRO_CORP_WALLET ?? "",
+  astrochimpsCollection: process.env.NEXT_PUBLIC_ASTROCHIMPS_COLLECTION ?? "",
 };
 
 export function assertPublicEnv() {

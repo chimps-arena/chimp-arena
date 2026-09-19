@@ -29,6 +29,17 @@ export const COLLECTION_NAME = "Astrochimps";
 export const NFT_SYMBOL = "ACHMP";
 
 /**
+ * The Astrochimps collection - created once via /admin/create-collection.
+ * Empty until that's run; new mints go in standalone (no royalty enforced)
+ * until this is set. Update authority = the Astro Corp wallet (whoever signs
+ * the creation transaction), per the founders' decision (2026-09-19).
+ */
+export const ASTROCHIMPS_COLLECTION = PUBLIC_ENV.astrochimpsCollection || "";
+
+/** 3% resale royalty, enforced by marketplaces that respect Core (e.g. Tensor). */
+export const ROYALTY_BASIS_POINTS = 300;
+
+/**
  * Tags the $CHIMP payment so Astro Corp's wallet activity is
  * self-documenting - same idea as market-config.ts's deedMemo(). Includes
  * the minted asset's address so a specific mint can be traced to its payment.
