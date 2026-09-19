@@ -418,3 +418,18 @@ alter table public.gold_ledger enable row level security;
 drop policy if exists "gold_ledger readable by anyone" on public.gold_ledger;
 create policy "gold_ledger readable by anyone"
   on public.gold_ledger for select using (true);
+
+
+-- ============  migrations/0009_property_resale.sql  ========================
+
+alter table public.properties
+  add column if not exists resale_price     integer,
+  add column if not exists resale_listed_at timestamptz;
+
+do $$
+begin
+  alter table public.properties
+    add constraint properties_resale_price_check
+      check (resale_price is null or resale_price > 0);
+exception when duplicate_object then null;
+end $$;

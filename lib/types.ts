@@ -13,6 +13,9 @@ export interface Property {
   status: "listed" | "held";
   /** Resolved server-side; null if no real photo exists yet for this type. */
   image: string | null;
+  /** Set by the owner via POST /api/market/list; null if not listed for resale. */
+  resalePrice: number | null;
+  resaleListedAt: string | null;
 }
 
 export interface Crew {
