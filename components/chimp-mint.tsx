@@ -8,6 +8,7 @@ import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { create as createCoreAsset } from "@metaplex-foundation/mpl-core";
 import {
+  addMemo,
   fetchToken,
   findAssociatedTokenPda,
   mplToolbox,
@@ -22,6 +23,7 @@ import {
   CHIMP_DECIMALS,
   MINT_PRICE_BASE,
   MINT_PRICE_CHIMP,
+  mintMemo,
 } from "@/lib/chain/mint-config";
 
 type Phase = "idle" | "confirm" | "minting" | "done" | "error";
@@ -102,13 +104,15 @@ export function ChimpMint() {
 
       const asset = generateSigner(umi);
 
-      // ONE transaction: pay Astro Corp + mint the NFT. Atomic.
+      // ONE transaction: pay Astro Corp + mint the NFT. Atomic. The memo
+      // tags the payment so Astro Corp's wallet activity is self-documenting.
       const tx = await transferTokens(umi, {
         source: buyerAta,
         destination: astroAta,
         authority: umi.identity,
         amount: MINT_PRICE_BASE,
       })
+        .add(addMemo(umi, { memo: mintMemo(asset.publicKey, owner) }))
         .add(
           createCoreAsset(umi, {
             asset,

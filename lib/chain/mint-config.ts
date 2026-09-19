@@ -27,3 +27,12 @@ export const MINT_PRICE_BASE = BigInt(MINT_PRICE_CHIMP) * 10n ** BigInt(CHIMP_DE
 
 export const COLLECTION_NAME = "Astrochimps";
 export const NFT_SYMBOL = "ACHMP";
+
+/**
+ * Tags the $CHIMP payment so Astro Corp's wallet activity is
+ * self-documenting - same idea as market-config.ts's deedMemo(). Includes
+ * the minted asset's address so a specific mint can be traced to its payment.
+ */
+export function mintMemo(assetAddress: string, wallet: string): string {
+  return `ASTROMINT:${assetAddress}:${wallet}`;
+}

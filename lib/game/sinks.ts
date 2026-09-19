@@ -47,9 +47,23 @@ export function upgradeCost(kind: StructureKind, level: number): number {
 /** Flat fee, charged only when land yield is bundled into the weekly claim. */
 export const CLAIM_FEE = 50;
 
-/** Secondary-trade fee (TOKEN-POLICY.md). Split sums to feeRate.
- *  `astroCorp` is company revenue; the rest stays in the economy. */
+/**
+ * Secondary-trade fee (TOKEN-POLICY.md), on any resale of a property or an
+ * Astrochimp NFT. 100% to Astro Corp - founders' decision (2026-09-19), no
+ * split with burn/crew. Not built yet (ROADMAP #17 - no secondary market
+ * exists), but the rate + destination are locked so the eventual escrow
+ * flow just wires these in.
+ */
 export const MARKETPLACE = {
   feeRate: 0.03,
-  split: { astroCorp: 0.02, burn: 0.005, crew: 0.005 },
+  split: { astroCorp: 0.03 },
 } as const;
+
+/**
+ * Tags a resale fee payment so Astro Corp's wallet activity is
+ * self-documenting - same convention as ASTRODEED (primary property sale,
+ * market-config.ts) and ASTROMINT (NFT mint, mint-config.ts).
+ */
+export function resaleMemo(kind: "property" | "nft", id: string): string {
+  return `ASTROFEE:${kind}:${id}`;
+}
