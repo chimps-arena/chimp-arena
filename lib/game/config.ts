@@ -1,3 +1,8 @@
+import {
+  RegExpMatcher,
+  englishDataset,
+  englishRecommendedTransformers,
+} from "obscenity";
 import type { Crew, MissionDef } from "@/lib/types";
 
 /* ============================ CREWS ============================ */
@@ -205,11 +210,18 @@ export const DEFAULT_HANDLE = (wallet: string) =>
 
 export const HANDLE_RULES = { min: 3, max: 20 } as const;
 
+// Built once per process. Catches common leetspeak/spacing evasions
+// ("f_u_c_k", "fuuuck") via obscenity's recommended transformers.
+const profanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers,
+});
+
 /**
  * Validate + normalise a user-supplied handle. Used by the edit UI (instant
  * feedback) and re-checked server-side in PATCH /api/me.
  * Rules: 3-20 chars; letters, digits, `-` and `_` only; no separator at the
- * start or end.
+ * start or end; no profanity.
  */
 export function validateHandle(
   raw: string,
@@ -225,5 +237,7 @@ export function validateHandle(
       ok: false,
       error: "Letters, digits, - and _ only (not at the start or end).",
     };
+  if (profanityMatcher.hasMatch(handle))
+    return { ok: false, error: "That handle isn't allowed." };
   return { ok: true, handle };
 }

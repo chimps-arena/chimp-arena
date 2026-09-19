@@ -180,11 +180,16 @@ h3 {
   border-radius: 1rem;
   backdrop-filter: blur(14px) saturate(150%);
 }
-/* fixed, quiet gradient edge — no spin. Polish, not a marquee. */
+/* fixed, quiet gradient edge — no spin. Polish, not a marquee.
+   pointer-events: none matters here: this is `inset: 0` (the full card) and,
+   despite being masked to just the border visually, an absolutely-positioned
+   element still paints above in-flow content for hit-testing regardless of
+   the mask - without this it silently swallows every click inside the card. */
 .card-featured::before {
   content: "";
   position: absolute;
   inset: 0;
+  pointer-events: none;
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
