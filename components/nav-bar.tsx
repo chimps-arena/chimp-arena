@@ -148,6 +148,20 @@ export function NavBar() {
               >
                 Disconnect
               </button>
+              {/* mobile: icon-only, kept a full gap-3 away from the menu
+                  toggle so it can't be mistaken for it */}
+              <button
+                type="button"
+                aria-label="Disconnect"
+                onClick={() => fullDisconnect()}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-2 text-muted sm:hidden"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2H3.5A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14H6" />
+                  <path d="M10.5 11.5 14 8l-3.5-3.5" />
+                  <path d="M14 8H6" />
+                </svg>
+              </button>
             </>
           ) : (
             <div className="hidden sm:block">
