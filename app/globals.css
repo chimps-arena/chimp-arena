@@ -111,6 +111,13 @@ body::after {
   }
 }
 
+/* Everything below is in @layer components so Tailwind utilities (hidden,
+   sm:inline-flex, w-full, etc.) can override it. Without this, these plain
+   rules sit outside Tailwind's cascade layers entirely and unconditionally
+   beat every utility class regardless of breakpoint or source order - e.g.
+   `hidden sm:inline-flex` on a `.chip` or `.btn` silently stayed visible on
+   mobile because `.chip`/`.btn` set `display` outside any layer. */
+@layer components {
 h1,
 h2 {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
@@ -363,3 +370,4 @@ h3 {
 .wallet-adapter-modal-list-more {
   color: var(--accent-2) !important;
 }
+} /* end @layer components */
