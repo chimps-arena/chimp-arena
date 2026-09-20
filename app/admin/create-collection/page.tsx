@@ -10,8 +10,9 @@ export default function CreateCollectionPage() {
       <div className="text-center">
         <h1 className="text-2xl font-black">Astrochimps Collection Setup</h1>
         <p className="mt-1 text-sm text-muted">
-          One-time. Must be signed by the Astro Corp wallet — it becomes the
-          collection&apos;s update authority.
+          One-time. Any funded wallet can connect and pay for this — it
+          doesn&apos;t need to be the Astro Corp wallet. Astro Corp becomes
+          the collection&apos;s update authority regardless of who signs.
         </p>
       </div>
       <CreateCollection />
