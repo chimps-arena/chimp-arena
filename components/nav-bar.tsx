@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/bank", label: "Safu Bank" },
   { href: "/mint", label: "Mint" },
   { href: "/market", label: "Market" },
+  { href: "/my-assets", label: "My Assets" },
 ];
 
 export function NavBar() {
