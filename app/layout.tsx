@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora, Space_Mono, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
@@ -38,6 +38,15 @@ export const metadata: Metadata = {
       "Missions, rivalry and crew competition for the $CHIMP community.",
     images: ["/og.png"],
   },
+};
+
+// Without this, mobile browsers have no idea this is a responsive site and
+// render it at a fake desktop width (~980px), forcing a zoomed-out view on
+// load - exactly the "have to zoom out to see everything" symptom. This was
+// missing entirely; Next doesn't add a default.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
