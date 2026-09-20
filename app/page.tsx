@@ -30,7 +30,7 @@ export default function Home() {
     <div className="flex flex-col gap-20 py-8">
       {/* ---------- hero ---------- */}
       <section className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           <span className="chip w-fit text-accent-2" style={{ borderColor: "color-mix(in srgb, var(--accent-2) 40%, transparent)" }}>
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-2" />
             $CHIMP · live on Solana
@@ -59,7 +59,7 @@ export default function Home() {
         </div>
 
         {/* mascot + mission preview */}
-        <div className="relative">
+        <div className="relative min-w-0">
           <div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-4 -z-0 h-56 w-56 -translate-x-1/2 rounded-full blur-3xl"
