@@ -46,6 +46,12 @@
 html {
   background: var(--background);
   color: var(--foreground);
+  /* Safety net: with no cap, any single element even a few px too wide makes
+     the whole page horizontally scrollable on mobile - everything shifts
+     right and gets cut off instead of wrapping. Doesn't clip position:fixed
+     children (AppScene, the nebula layers), which paint against the
+     viewport regardless. */
+  overflow-x: hidden;
 }
 
 body {
@@ -56,6 +62,7 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   position: relative;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 /* layered space backdrop: nebula blobs + fine starfield, fixed behind everything */
