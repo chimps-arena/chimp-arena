@@ -31,6 +31,7 @@ export const PUBLIC_ENV = {
   chimpMint: process.env.NEXT_PUBLIC_CHIMP_MINT_ADDRESS ?? "",
   astroCorpWallet: process.env.NEXT_PUBLIC_ASTRO_CORP_WALLET ?? "",
   astrochimpsCollection: process.env.NEXT_PUBLIC_ASTROCHIMPS_COLLECTION ?? "",
+  mintDelegate: process.env.NEXT_PUBLIC_MINT_DELEGATE ?? "",
 };
 
 export function assertPublicEnv() {
@@ -51,5 +52,9 @@ export function serverEnv() {
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     ),
     jwtSecret: required("JWT_SECRET", process.env.JWT_SECRET),
+    mintDelegateSecret: required(
+      "MPL_CORE_MINT_DELEGATE_SECRET",
+      process.env.MPL_CORE_MINT_DELEGATE_SECRET,
+    ),
   };
 }

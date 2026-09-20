@@ -433,3 +433,21 @@ begin
       check (resale_price is null or resale_price > 0);
 exception when duplicate_object then null;
 end $$;
+
+
+-- ============  migrations/0010_nft_mint_claims.sql  =========================
+
+create table if not exists public.nft_mint_claims (
+  id             uuid primary key default gen_random_uuid(),
+  tx_signature   text not null unique,
+  wallet         text not null,
+  asset_address  text not null,
+  created_at     timestamptz not null default now()
+);
+
+create index if not exists nft_mint_claims_wallet_idx on public.nft_mint_claims (wallet);
+
+alter table public.nft_mint_claims enable row level security;
+drop policy if exists "nft_mint_claims readable by anyone" on public.nft_mint_claims;
+create policy "nft_mint_claims readable by anyone"
+  on public.nft_mint_claims for select using (true);

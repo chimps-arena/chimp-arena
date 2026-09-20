@@ -6,7 +6,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
-import { create as createCoreAsset } from "@metaplex-foundation/mpl-core";
 import {
   addMemo,
   fetchToken,
@@ -14,7 +13,7 @@ import {
   mplToolbox,
   transferTokens,
 } from "@metaplex-foundation/mpl-toolbox";
-import { generateSigner, publicKey } from "@metaplex-foundation/umi";
+import { publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import {
@@ -102,30 +101,35 @@ export function ChimpMint() {
         );
       }
 
-      const asset = generateSigner(umi);
-
-      // ONE transaction: pay Astro Corp + mint the NFT. Atomic. The memo
-      // tags the payment so Astro Corp's wallet activity is self-documenting.
+      // Buyer only signs the payment - a plain transfer, nothing privileged.
+      // The memo tags it so Astro Corp's wallet activity is self-documenting.
+      // The server verifies this payment landed, then mints the NFT into the
+      // collection (see app/api/mint/claim) - it can't be done client-side
+      // since joining the collection needs the mint delegate's signature.
       const tx = await transferTokens(umi, {
         source: buyerAta,
         destination: astroAta,
         authority: umi.identity,
         amount: MINT_PRICE_BASE,
       })
-        .add(addMemo(umi, { memo: mintMemo(asset.publicKey, owner) }))
-        .add(
-          createCoreAsset(umi, {
-            asset,
-            name: "Astrochimp",
-            uri: `${window.location.origin}/nft/metadata`,
-          }),
-        )
+        .add(addMemo(umi, { memo: mintMemo(owner) }))
         .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
 
-      setResult({
-        asset: asset.publicKey.toString(),
-        signature: bs58.encode(tx.signature),
+      const paymentSignature = bs58.encode(tx.signature);
+
+      const claimRes = await fetch("/api/mint/claim", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wallet: owner, signature: paymentSignature }),
       });
+      const claim = await claimRes.json().catch(() => ({}));
+      if (!claimRes.ok) {
+        throw new Error(
+          `Payment went through but minting failed (${claim.error || "unknown error"}) - contact support with this transaction: ${paymentSignature}`,
+        );
+      }
+
+      setResult({ asset: claim.asset, signature: claim.signature });
       setPhase("done");
       void checkBalance();
     } catch (e) {
