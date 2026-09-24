@@ -477,3 +477,9 @@ alter table public.property_mint_claims enable row level security;
 drop policy if exists "property_mint_claims readable by anyone" on public.property_mint_claims;
 create policy "property_mint_claims readable by anyone"
   on public.property_mint_claims for select using (true);
+
+
+-- ============  migrations/0012_property_metadata_uri.sql  ====================
+
+alter table public.properties
+  add column if not exists metadata_uri text;

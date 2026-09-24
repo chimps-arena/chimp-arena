@@ -10,6 +10,8 @@
     "verify:db": "node scripts/verify-supabase.mjs"
   },
   "dependencies": {
+    "@irys/upload": "^0.0.15",
+    "@irys/upload-solana": "^0.1.8",
     "@metaplex-foundation/mpl-core": "^1.10.0",
     "@metaplex-foundation/mpl-toolbox": "^0.11.5",
     "@metaplex-foundation/umi": "^1.5.1",

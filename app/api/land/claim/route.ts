@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: property } = await db
     .from("properties")
-    .select("id, name, price_chimp, asset_address")
+    .select("id, name, price_chimp, asset_address, metadata_uri")
     .eq("id", propertyId)
     .maybeSingle();
 
@@ -139,10 +139,15 @@ export async function POST(req: Request) {
     const collection = await fetchCollection(umi, umiPublicKey(PROPERTIES_COLLECTION));
     const asset = generateSigner(umi);
 
+    // Permanent Arweave metadata once uploaded (see
+    // scripts/upload-property-art.mjs); falls back to our own dynamic route
+    // for properties minted before their art existed.
+    const uri = property.metadata_uri ?? `${SITE_URL}/nft/property-metadata/${propertyId}`;
+
     const mintTx = await createCoreAsset(umi, {
       asset,
       name: property.name,
-      uri: `${SITE_URL}/nft/property-metadata/${propertyId}`,
+      uri,
       collection,
       owner: umiPublicKey(wallet),
     }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
