@@ -32,6 +32,7 @@ export const PUBLIC_ENV = {
   astroCorpWallet: process.env.NEXT_PUBLIC_ASTRO_CORP_WALLET ?? "",
   astrochimpsCollection: process.env.NEXT_PUBLIC_ASTROCHIMPS_COLLECTION ?? "",
   mintDelegate: process.env.NEXT_PUBLIC_MINT_DELEGATE ?? "",
+  propertiesCollection: process.env.NEXT_PUBLIC_PROPERTIES_COLLECTION ?? "",
 };
 
 export function assertPublicEnv() {
