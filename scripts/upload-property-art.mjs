@@ -10,17 +10,23 @@
  * to make something permanent" costs.
  *
  * Usage:
- *   1. Fill in `price_chimp` and `image` (a local file path) for each entry
- *      in scripts/property-manifest.json that's ready to go live. Entries
- *      still missing either are skipped, not errored - fill in the rest
- *      later and re-run.
- *   2. node --env-file=.env.local scripts/upload-property-art.mjs
+ *   1. Fill in `price_chimp` for each entry in scripts/property-manifest.json
+ *      that's ready to go live.
+ *   2. Drop the art file into scripts/property-art/, named exactly after the
+ *      property's id - e.g. core-fs1.png for "Founders Stall". No need to
+ *      edit the manifest's `image` field by hand; it's auto-matched by id at
+ *      run time. (You can still set `image` explicitly in the manifest to
+ *      point elsewhere if that's easier.)
+ *   3. node --env-file=.env.local scripts/upload-property-art.mjs
+ *
+ * An entry with a price but no matching art file yet is skipped, not
+ * errored - drop the rest in later and re-run.
  *
  * Safe to re-run: properties that already have a metadata_uri in the DB
  * are skipped unless --force is passed.
  */
 import { readFileSync, existsSync, statSync } from "node:fs";
-import { extname } from "node:path";
+import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import bs58 from "bs58";
 import { Uploader } from "@irys/upload";
@@ -28,7 +34,19 @@ import { Solana } from "@irys/upload-solana";
 import { createClient } from "@supabase/supabase-js";
 
 const MANIFEST_PATH = fileURLToPath(new URL("./property-manifest.json", import.meta.url));
+const ART_DIR = fileURLToPath(new URL("./property-art/", import.meta.url));
 const FORCE = process.argv.includes("--force");
+
+const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".webp"];
+
+/** scripts/property-art/<id>.<ext> for each manifest id that has no explicit `image` set. */
+function findArtFile(id) {
+  for (const ext of IMAGE_EXTS) {
+    const candidate = join(ART_DIR, `${id}${ext}`);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
 
 const MIME_TYPES = {
   ".png": "image/png",
@@ -62,14 +80,17 @@ async function main() {
   const balance = await irys.getLoadedBalance();
   console.log("Irys balance:", irys.utils.fromAtomic(balance).toString(), "SOL");
 
-  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
+  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8")).map((p) => ({
+    ...p,
+    image: p.image ?? findArtFile(p.id),
+  }));
   const ready = manifest.filter((p) => p.price_chimp != null && p.image);
   const notReady = manifest.length - ready.length;
   if (notReady > 0) {
-    console.log(`Skipping ${notReady} propert${notReady === 1 ? "y" : "ies"} still missing price_chimp or image.`);
+    console.log(`Skipping ${notReady} propert${notReady === 1 ? "y" : "ies"} still missing a price or a matching art file.`);
   }
   if (ready.length === 0) {
-    console.log("Nothing ready to upload yet - fill in price_chimp and image in scripts/property-manifest.json.");
+    console.log("Nothing ready to upload yet - set price_chimp in the manifest and drop art into scripts/property-art/<id>.png.");
     return;
   }
 
