@@ -483,3 +483,9 @@ create policy "property_mint_claims readable by anyone"
 
 alter table public.properties
   add column if not exists metadata_uri text;
+
+
+-- ============  migrations/0013_property_image_url.sql  =======================
+
+alter table public.properties
+  add column if not exists image_url text;

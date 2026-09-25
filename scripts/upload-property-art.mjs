@@ -185,6 +185,7 @@ async function main() {
           blurb: p.blurb ?? null,
           non_transferable: p.non_transferable ?? false,
           metadata_uri: metadataUri,
+          image_url: imageUri,
         },
         { onConflict: "id" },
       );

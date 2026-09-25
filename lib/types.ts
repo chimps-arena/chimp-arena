@@ -18,6 +18,25 @@ export interface Property {
   resaleListedAt: string | null;
 }
 
+/**
+ * A property in the new NFT-based land system (see app/api/land,
+ * app/api/land/claim) - distinct from the legacy off-chain Property above.
+ * Ownership lives on-chain once assetAddress is set; nothing here tracks
+ * resale, since that happens through wallet/marketplace transfer, not a
+ * DB-mediated listing.
+ */
+export interface LandProperty {
+  id: string;
+  name: string;
+  zone: string;
+  type: string;
+  priceChimp: number;
+  blurb: string | null;
+  imageUrl: string | null;
+  assetAddress: string | null;
+  nonTransferable: boolean;
+}
+
 export interface Crew {
   id: string;
   slug: string;
