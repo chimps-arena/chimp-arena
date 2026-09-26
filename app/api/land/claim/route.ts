@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: property } = await db
     .from("properties")
-    .select("id, name, price_chimp, asset_address, metadata_uri")
+    .select("id, name, price_chimp, asset_address, metadata_uri, non_transferable")
     .eq("id", propertyId)
     .maybeSingle();
 
@@ -144,12 +144,22 @@ export async function POST(req: Request) {
     // for properties minted before their art existed.
     const uri = property.metadata_uri ?? `${SITE_URL}/nft/property-metadata/${propertyId}`;
 
+    // Reserved properties (Founders Club, Devs Block, Marketing Station)
+    // are frozen permanently at mint time, authority locked to None in the
+    // same instruction - PermanentFreezeDelegate can only be added at
+    // creation, never after, so this is the one chance to make it real
+    // rather than just a display label.
+    const plugins = property.non_transferable
+      ? [{ type: "PermanentFreezeDelegate" as const, frozen: true, authority: { type: "None" as const } }]
+      : undefined;
+
     const mintTx = await createCoreAsset(umi, {
       asset,
       name: property.name,
       uri,
       collection,
       owner: umiPublicKey(wallet),
+      plugins,
     }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
 
     const assetAddress = asset.publicKey.toString();
