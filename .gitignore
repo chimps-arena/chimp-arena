@@ -41,3 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 dev-server.log
+
+# raw property art - already permanently stored on Arweave once uploaded
+# (see scripts/upload-property-art.mjs); too large and no reason to duplicate
+# in git. Keep the folder's own README explaining the naming convention.
+scripts/property-art/*
+!scripts/property-art/README.md

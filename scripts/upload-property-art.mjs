@@ -148,7 +148,11 @@ async function main() {
           { name: "Property-Id", value: p.id },
         ],
       });
-      const imageUri = `https://arweave.net/${imageReceipt.id}`;
+      // Irys's own gateway serves bundled items immediately; arweave.net only
+      // catches up once the containing bundle is actually mined on Arweave,
+      // which can take a while. Both resolve the same permanent data - this
+      // just avoids a dead link in between.
+      const imageUri = `https://gateway.irys.xyz/${imageReceipt.id}`;
 
       const metadata = {
         name: p.name,
@@ -173,7 +177,7 @@ async function main() {
           { name: "Property-Id", value: p.id },
         ],
       });
-      const metadataUri = `https://arweave.net/${metadataReceipt.id}`;
+      const metadataUri = `https://gateway.irys.xyz/${metadataReceipt.id}`;
 
       const { error } = await db.from("properties").upsert(
         {
