@@ -45,11 +45,17 @@ export async function POST(req: Request) {
 
   const { data: property } = await db
     .from("properties")
-    .select("id, price_chimp, owner_wallet, status")
+    .select("id, price_chimp, owner_wallet, status, metadata_uri")
     .eq("id", propertyId)
     .maybeSingle();
   if (!property) {
     return NextResponse.json({ error: "unknown property" }, { status: 404 });
+  }
+  if (property.metadata_uri) {
+    return NextResponse.json(
+      { error: "this property is sold as an NFT now - use /api/land/claim instead" },
+      { status: 409 },
+    );
   }
   if (property.owner_wallet) {
     return NextResponse.json({ error: "already sold" }, { status: 409 });

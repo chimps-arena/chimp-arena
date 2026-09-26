@@ -32,7 +32,7 @@ export async function GET() {
   const { data: propRows } = await db
     .from("properties")
     .select(
-      "id, name, zone, type, price_chimp, owner_wallet, acquired_at, blurb, status, resale_price, resale_listed_at",
+      "id, name, zone, type, price_chimp, owner_wallet, acquired_at, blurb, status, resale_price, resale_listed_at, image_url",
     )
     .eq("owner_wallet", session.wallet)
     .order("zone")
@@ -48,7 +48,9 @@ export async function GET() {
     acquiredAt: p.acquired_at,
     blurb: p.blurb,
     status: p.status === "held" ? "held" : "listed",
-    image: resolvePropertyImage(p.type),
+    // New NFT properties carry their own Arweave art (image_url); only the
+    // legacy off-chain-registry ones fall back to a local file by type.
+    image: p.image_url ?? resolvePropertyImage(p.type),
     resalePrice: p.resale_price,
     resaleListedAt: p.resale_listed_at,
   }));

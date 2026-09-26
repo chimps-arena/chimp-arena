@@ -71,8 +71,8 @@ export default function MyAssetsPage() {
             {properties.map((p) => (
               <div key={p.id} className="card overflow-hidden">
                 {p.image && (
-                  <div className="relative h-32 w-full">
-                    <Image src={p.image} alt="" fill className="object-cover" />
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image src={p.image} alt="" fill className="object-cover" unoptimized />
                   </div>
                 )}
                 <div className="p-4">
@@ -117,7 +117,7 @@ export default function MyAssetsPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {nfts.map((n) => (
               <div key={n.asset} className="card overflow-hidden">
-                <div className="relative h-32 w-full">
+                <div className="relative aspect-square w-full">
                   <Image src={n.image} alt="" fill className="object-cover" />
                 </div>
                 <div className="p-4">

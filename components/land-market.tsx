@@ -187,7 +187,7 @@ export function LandMarket() {
           {visible.map((p) => (
             <button key={p.id} className="card overflow-hidden text-left" onClick={() => open(p)}>
               {p.imageUrl && (
-                <div className="relative h-36 w-full">
+                <div className="relative aspect-[4/3] w-full">
                   <Image src={p.imageUrl} alt="" fill className="object-cover" unoptimized />
                 </div>
               )}

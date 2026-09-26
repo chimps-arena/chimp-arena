@@ -47,12 +47,21 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: property } = await db
     .from("properties")
-    .select("id, owner_wallet")
+    .select("id, owner_wallet, metadata_uri")
     .eq("id", propertyId)
     .maybeSingle();
 
   if (!property) {
     return NextResponse.json({ error: "unknown property" }, { status: 404 });
+  }
+  if (property.metadata_uri) {
+    return NextResponse.json(
+      {
+        error:
+          "this is a real NFT now - resell it on a marketplace that supports the collection, not here",
+      },
+      { status: 409 },
+    );
   }
   if (property.owner_wallet !== session.wallet) {
     return NextResponse.json(
