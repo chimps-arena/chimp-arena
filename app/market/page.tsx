@@ -1,20 +1,21 @@
-import { PropertyMarket } from "@/components/property-market";
+import { LandMarket } from "@/components/land-market";
 
 export const metadata = {
-  title: "Property Market",
+  title: "Market",
 };
 
 export default function MarketPage() {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 py-6">
+    <div className="flex flex-col gap-6 py-6">
       <div>
-        <h1 className="text-2xl font-black">Property Market</h1>
-        <p className="mt-1 text-sm text-muted">
-          Claim territory across the belt. Paid for in $CHIMP, held by your
-          wallet.
+        <h1 className="text-2xl font-black sm:text-3xl">Market</h1>
+        <p className="mt-1 text-muted">
+          Real property NFTs — permanently yours, tradeable on any
+          marketplace that respects the collection, 3% resale royalty locked
+          to Astro Corp forever.
         </p>
       </div>
-      <PropertyMarket />
+      <LandMarket />
     </div>
   );
 }

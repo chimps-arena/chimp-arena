@@ -3,7 +3,7 @@ import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { PUBLIC_ENV } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ASTRO_CORP_WALLET, CHIMP_DECIMALS, CHIMP_MINT } from "@/lib/chain/market-config";
+import { ASTRO_CORP_WALLET, CHIMP_DECIMALS, CHIMP_MINT } from "@/lib/chain/mint-config";
 import { MARKETPLACE } from "@/lib/game/sinks";
 
 export const runtime = "nodejs";
