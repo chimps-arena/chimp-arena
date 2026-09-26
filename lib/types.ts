@@ -16,6 +16,13 @@ export interface Property {
   /** Set by the owner via POST /api/market/list; null if not listed for resale. */
   resalePrice: number | null;
   resaleListedAt: string | null;
+  /**
+   * Set once this property has gone through the new NFT mint flow
+   * (app/api/land/claim). Legacy properties (the 5 remaining owned ones from
+   * the old off-chain system) have this null - only those get the old
+   * list/delist resale controls; a real NFT trades on-chain instead.
+   */
+  assetAddress: string | null;
 }
 
 /**

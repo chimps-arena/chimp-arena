@@ -32,7 +32,7 @@ export async function GET() {
   const { data: propRows } = await db
     .from("properties")
     .select(
-      "id, name, zone, type, price_chimp, owner_wallet, acquired_at, blurb, status, resale_price, resale_listed_at, image_url",
+      "id, name, zone, type, price_chimp, owner_wallet, acquired_at, blurb, status, resale_price, resale_listed_at, image_url, asset_address",
     )
     .eq("owner_wallet", session.wallet)
     .order("zone")
@@ -53,6 +53,7 @@ export async function GET() {
     image: p.image_url ?? resolvePropertyImage(p.type),
     resalePrice: p.resale_price,
     resaleListedAt: p.resale_listed_at,
+    assetAddress: p.asset_address,
   }));
 
   // Guest sessions and anything not a real Solana wallet can't own on-chain

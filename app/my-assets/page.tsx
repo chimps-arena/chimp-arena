@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { explorerAddress } from "@/lib/chain/connection";
+import { ResaleControls } from "@/components/resale-controls";
 import type { Property } from "@/lib/types";
 
 interface Nft {
@@ -18,18 +19,20 @@ export default function MyAssetsPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [nfts, setNfts] = useState<Nft[]>([]);
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/me/assets")
+  function loadAssets() {
+    return fetch("/api/me/assets")
       .then((r) => r.json())
       .then((d) => {
-        if (!active) return;
         setProperties(d.properties ?? []);
         setNfts(d.nfts ?? []);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    let active = true;
+    loadAssets().finally(() => {
+      if (active) setLoading(false);
+    });
     return () => {
       active = false;
     };
@@ -78,13 +81,35 @@ export default function MyAssetsPage() {
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{p.name}</span>
-                    {p.resalePrice != null && (
-                      <span className="chip text-xs text-accent-2">Listed</span>
+                    {p.assetAddress ? (
+                      <span className="chip text-xs text-good" title="3% resale royalty locked to Astro Corp">
+                        NFT
+                      </span>
+                    ) : (
+                      p.resalePrice != null && (
+                        <span className="chip text-xs text-accent-2">Listed</span>
+                      )
                     )}
                   </div>
                   <div className="mono text-xs text-muted">
                     {p.zone} · {p.type}
                   </div>
+                  {p.assetAddress ? (
+                    <a
+                      href={explorerAddress(p.assetAddress)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block text-xs text-muted underline"
+                    >
+                      Trade this on any marketplace that supports the collection
+                    </a>
+                  ) : (
+                    <ResaleControls
+                      propertyId={p.id}
+                      resalePrice={p.resalePrice}
+                      onChange={loadAssets}
+                    />
+                  )}
                 </div>
               </div>
             ))}
