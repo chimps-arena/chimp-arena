@@ -11,8 +11,12 @@ import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
   CHIMP_MINT,
+  MILESTONE_MINT_INTERVAL,
   MINT_PRICE_BASE,
+  TIER_ODDS,
+  type ChimpTier,
 } from "@/lib/chain/mint-config";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
@@ -27,20 +31,78 @@ const conn = new Connection(endpoint, "confirmed");
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/** Standard vs Rare only - One of One only ever comes from a milestone, see POST below. */
+function rollTier(): Exclude<ChimpTier, "one_of_one"> {
+  return Math.random() < TIER_ODDS.RARE ? "rare" : "standard";
+}
+
 /**
- * POST { wallet, signature } -> { ok, asset, signature }
+ * Claims one unclaimed one-of-one, race-safely - the update only succeeds if
+ * nobody beat us to that exact row (asset_address is null is the same claim
+ * guard properties use). Tries a few candidates in case two concurrent
+ * requests grab the same row out of the batch below. Returns null if the
+ * whole catalog is currently claimed (or mid-claim by someone else).
+ */
+async function claimOneOfOne(
+  db: SupabaseClient,
+  claimTag: string,
+): Promise<{ id: string; name: string } | null> {
+  const { data: candidates } = await db
+    .from("chimp_variants")
+    .select("id, name")
+    .is("asset_address", null)
+    .limit(20);
+  if (!candidates || candidates.length === 0) return null;
+
+  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+  for (const candidate of shuffled) {
+    const { data: updated } = await db
+      .from("chimp_variants")
+      .update({ asset_address: claimTag })
+      .eq("id", candidate.id)
+      .is("asset_address", null)
+      .select("id")
+      .maybeSingle();
+    if (updated) return candidate;
+  }
+  return null;
+}
+
+async function releaseOneOfOne(db: SupabaseClient, variantId: string, claimTag: string) {
+  await db
+    .from("chimp_variants")
+    .update({ asset_address: null })
+    .eq("id", variantId)
+    .eq("asset_address", claimTag);
+}
+
+/**
+ * POST { wallet, signature } -> { ok, asset, signature, tier, name, milestone? }
  *
  * The buyer already sent the $CHIMP payment themselves (a plain transfer,
- * nothing privileged). This verifies that payment actually landed on-chain,
- * then uses the mint delegate (see /admin/collection-authority) to create
- * the NFT inside the Astrochimps collection, owned by the buyer - the same
- * verify-then-act pattern as /api/market/resale/claim, just minting instead
- * of transferring an existing row.
+ * nothing privileged). This verifies that payment landed on-chain, draws a
+ * Standard vs Rare tier (weighted random, same price regardless - see
+ * rollTier), then mints via the mint delegate (see
+ * /admin/collection-authority) into the Astrochimps collection. Both tiers
+ * mint indefinitely - neither can sell out.
+ *
+ * One of One is deliberately NOT part of that random draw (founder's call,
+ * 2026-09-27, after the 5% random chance and the milestone bonus below were
+ * both drawing from the same small finite catalog and draining it too
+ * fast) - the only way to get one is the milestone rule.
+ *
+ * Every mint gets a sequential number from chimp_mint_seq (Postgres
+ * sequences are atomic, so concurrent mints near a milestone boundary can't
+ * both land on the same number). Every MILESTONE_MINT_INTERVAL-th mint also
+ * gets a second, free one-of-one minted to the same wallet - on top of, not
+ * instead of, their paid tier. That bonus is best-effort: if the one-of-one
+ * catalog happens to be empty right then, the milestone is skipped rather
+ * than failing the paid mint.
  *
  * The unique constraint on nft_mint_claims.tx_signature is claimed BEFORE
  * minting (not after) so two concurrent requests for the same payment can't
  * both mint - the loser gets a 409, not a free NFT. If minting itself then
- * fails, the placeholder row is removed so the same payment can be retried.
+ * fails, the claim is released so the same payment can be retried.
  */
 export async function POST(req: Request) {
   let body: { wallet?: unknown; signature?: unknown };
@@ -120,15 +182,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: claimErr.message }, { status: 500 });
   }
 
+  // A reliable sequential mint number - this is what the milestone check
+  // reads, not a count(*) (which two mints landing at once could both see
+  // as 999 and both think they're about to become the 1000th).
+  const { data: mintNumber, error: seqErr } = await db.rpc("next_chimp_mint_number");
+  if (seqErr || typeof mintNumber !== "number") {
+    await db.from("nft_mint_claims").delete().eq("tx_signature", signature);
+    return NextResponse.json({ error: "could not assign a mint number" }, { status: 500 });
+  }
+
+  const tier = rollTier();
+
   try {
     const umi = mintDelegateUmi();
     const collection = await fetchCollection(umi, umiPublicKey(ASTROCHIMPS_COLLECTION));
     const asset = generateSigner(umi);
 
+    const name = `Astrochimp #${mintNumber}`;
+    const uri = `${SITE_URL}/nft/chimp-metadata/tier/${tier}`;
+
     const mintTx = await createCoreAsset(umi, {
       asset,
-      name: "Astrochimp",
-      uri: `${SITE_URL}/nft/metadata`,
+      name,
+      uri,
       collection,
       owner: umiPublicKey(wallet),
     }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
@@ -136,14 +212,65 @@ export async function POST(req: Request) {
     const assetAddress = asset.publicKey.toString();
     await db
       .from("nft_mint_claims")
-      .update({ asset_address: assetAddress })
+      .update({
+        asset_address: assetAddress,
+        tier,
+        mint_number: mintNumber,
+      })
       .eq("tx_signature", signature);
 
-    return NextResponse.json({
+    const result: Record<string, unknown> = {
       ok: true,
       asset: assetAddress,
       signature: bs58.encode(mintTx.signature),
-    });
+      tier,
+      name,
+    };
+
+    // Best-effort bonus: the paid mint above already succeeded regardless of
+    // what happens here, so a failure or an empty catalog just means no
+    // milestone this time, not a failed request.
+    if (mintNumber % MILESTONE_MINT_INTERVAL === 0) {
+      const milestoneTag = `milestone:${signature}`;
+      const bonusVariant = await claimOneOfOne(db, milestoneTag);
+      if (bonusVariant) {
+        try {
+          const bonusAsset = generateSigner(umi);
+          const bonusTx = await createCoreAsset(umi, {
+            asset: bonusAsset,
+            name: bonusVariant.name,
+            uri: `${SITE_URL}/nft/chimp-metadata/${bonusVariant.id}`,
+            collection,
+            owner: umiPublicKey(wallet),
+          }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+
+          const bonusAddress = bonusAsset.publicKey.toString();
+          await db
+            .from("chimp_variants")
+            .update({ asset_address: bonusAddress, wallet, claimed_at: new Date().toISOString() })
+            .eq("id", bonusVariant.id);
+          await db.from("chimp_milestones").insert({
+            mint_number: mintNumber,
+            wallet,
+            variant_id: bonusVariant.id,
+            asset_address: bonusAddress,
+          });
+
+          result.milestone = {
+            mintNumber,
+            asset: bonusAddress,
+            name: bonusVariant.name,
+            signature: bs58.encode(bonusTx.signature),
+          };
+        } catch {
+          // Bonus mint failed after the paid mint already succeeded - free
+          // the one-of-one back up rather than losing it to a dead claim.
+          await releaseOneOfOne(db, bonusVariant.id, milestoneTag);
+        }
+      }
+    }
+
+    return NextResponse.json(result);
   } catch (e) {
     // Minting failed after the payment already landed - free up the claim so
     // the same payment signature can be retried instead of being stuck.

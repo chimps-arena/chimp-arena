@@ -48,6 +48,30 @@ export const MINT_DELEGATE = PUBLIC_ENV.mintDelegate || "";
 export const ROYALTY_BASIS_POINTS = 300;
 
 /**
+ * Rarity tiers (see migration 0014/0015). Every mint pays the same price;
+ * Standard vs Rare is a weighted random draw (roll < RARE -> rare, else
+ * standard), not something the buyer picks. One of One is NOT part of this
+ * random draw - the finite chimp_variants catalog is only ever handed out
+ * through the milestone rule below, so it depletes at one per
+ * MILESTONE_MINT_INTERVAL mints instead of being drained early by random
+ * chance on top of that (the founder's fix, 2026-09-27).
+ */
+export const TIER_ODDS = {
+  RARE: 0.15,
+} as const;
+
+export type ChimpTier = "standard" | "rare" | "one_of_one";
+
+/**
+ * The founder's rule (2026-09-27): every Nth mint gets a second, bonus
+ * one-of-one NFT minted to the same wallet for free, on top of whatever
+ * tier their paid mint drew. Tracked via chimp_mint_seq / chimp_milestones
+ * (migration 0014) so it survives concurrent mints landing near the
+ * boundary at the same time.
+ */
+export const MILESTONE_MINT_INTERVAL = 1000;
+
+/**
  * Tags the $CHIMP payment so Astro Corp's wallet activity is
  * self-documenting - same idea as market-config.ts's deedMemo(). The asset
  * doesn't exist yet at payment time (it's created server-side after the

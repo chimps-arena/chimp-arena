@@ -20,6 +20,7 @@ import {
   ASTRO_CORP_WALLET,
   CHIMP_MINT,
   CHIMP_DECIMALS,
+  MILESTONE_MINT_INTERVAL,
   MINT_PRICE_BASE,
   MINT_PRICE_CHIMP,
   mintMemo,
@@ -27,10 +28,30 @@ import {
 
 type Phase = "idle" | "confirm" | "minting" | "done" | "error";
 
+interface Milestone {
+  mintNumber: number;
+  asset: string;
+  name: string;
+}
+
 interface Result {
   asset: string;
   signature: string;
+  tier?: string;
+  name?: string;
+  milestone?: Milestone;
 }
+
+const TIER_LABEL: Record<string, string> = {
+  standard: "Standard",
+  rare: "Rare",
+  one_of_one: "One of One",
+};
+const TIER_STYLE: Record<string, string> = {
+  standard: "text-foreground",
+  rare: "text-accent-3",
+  one_of_one: "text-accent",
+};
 
 export function ChimpMint() {
   const wallet = useWallet();
@@ -129,7 +150,13 @@ export function ChimpMint() {
         );
       }
 
-      setResult({ asset: claim.asset, signature: claim.signature });
+      setResult({
+        asset: claim.asset,
+        signature: claim.signature,
+        tier: claim.tier,
+        name: claim.name,
+        milestone: claim.milestone,
+      });
       setPhase("done");
       void checkBalance();
     } catch (e) {
@@ -191,6 +218,23 @@ export function ChimpMint() {
           <span className="text-muted">You receive</span>
           <span className="font-semibold">1 Astrochimp NFT</span>
         </div>
+        <div className="mt-3 border-t border-border pt-3 text-xs text-muted">
+          <p className="mb-1">Which one is a weighted random draw, same price either way:</p>
+          <div className="flex justify-between">
+            <span className="text-foreground">Standard</span>
+            <span>85%</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-accent-3">Rare</span>
+            <span>15%</span>
+          </div>
+          <p className="mt-2 border-t border-border pt-2">
+            <span className="text-accent">One of One</span> isn&apos;t part of
+            that draw — every {MILESTONE_MINT_INTERVAL.toLocaleString()}th
+            mint automatically gets a second, free one, on top of whichever
+            of the above you drew.
+          </p>
+        </div>
       </div>
 
       {phase === "idle" && (
@@ -241,6 +285,11 @@ export function ChimpMint() {
       {phase === "done" && result && (
         <div className="flex flex-col gap-2 rounded-xl border border-good/40 bg-good/10 p-4 text-sm">
           <p className="font-semibold text-good">Minted.</p>
+          {result.tier && (
+            <p className={`text-lg font-black ${TIER_STYLE[result.tier] ?? ""}`}>
+              {result.name} — {TIER_LABEL[result.tier] ?? result.tier}
+            </p>
+          )}
           <a
             href={explorerAddress(result.asset)}
             target="_blank"
@@ -257,6 +306,24 @@ export function ChimpMint() {
           >
             transaction ↗
           </a>
+          {result.milestone && (
+            <div className="mt-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
+              <p className="font-black text-accent">
+                🎉 You&apos;re mint #{result.milestone.mintNumber.toLocaleString()} —
+                bonus One of One!
+              </p>
+              <p className="mt-1 font-semibold text-accent">{result.milestone.name}</p>
+              <a
+                href={explorerAddress(result.milestone.asset)}
+                target="_blank"
+                rel="noreferrer"
+                className="mono text-xs underline"
+              >
+                bonus NFT: {result.milestone.asset.slice(0, 8)}…
+                {result.milestone.asset.slice(-8)}
+              </a>
+            </div>
+          )}
           <button
             className="btn btn-ghost mt-2"
             onClick={() => {

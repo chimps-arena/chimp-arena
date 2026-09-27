@@ -20,8 +20,9 @@ export default function MintPage() {
         />
         <h1 className="mt-4 text-2xl font-black">Mint an Astrochimp</h1>
         <p className="mt-1 text-sm text-muted">
-          Test mint. Pay {MINT_PRICE_CHIMP.toLocaleString()} $CHIMP, get an NFT.
-          Placeholder art — the real character drops later.
+          Pay {MINT_PRICE_CHIMP.toLocaleString()} $CHIMP, get one of 100 —
+          Standard, Rare, or a One of One, drawn at random. Placeholder art
+          for now — real per-tier art drops later.
         </p>
       </div>
       <ChimpMint />
