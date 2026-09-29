@@ -1,0 +1,23 @@
+[
+  { "id": "std-ember", "tier": "standard", "name": "Standard Ember" },
+  { "id": "std-frost", "tier": "standard", "name": "Standard Frost" },
+  { "id": "std-verdant", "tier": "standard", "name": "Standard Verdant" },
+  { "id": "std-voltage", "tier": "standard", "name": "Standard Voltage" },
+  { "id": "std-slate", "tier": "standard", "name": "Standard Slate" },
+  { "id": "std-rosewater", "tier": "standard", "name": "Standard Rosewater" },
+  { "id": "std-copper", "tier": "standard", "name": "Standard Copper" },
+  { "id": "std-indigo", "tier": "standard", "name": "Standard Indigo" },
+  { "id": "std-sand", "tier": "standard", "name": "Standard Sand" },
+  { "id": "std-mint", "tier": "standard", "name": "Standard Mint" },
+  { "id": "rare-voidwalker", "tier": "rare", "name": "Rare Voidwalker" },
+  { "id": "rare-aurora", "tier": "rare", "name": "Rare Aurora" },
+  { "id": "rare-magnetar", "tier": "rare", "name": "Rare Magnetar" },
+  { "id": "rare-solflare", "tier": "rare", "name": "Rare Solflare" },
+  { "id": "rare-deepcore", "tier": "rare", "name": "Rare Deepcore" },
+  { "id": "rare-wraith", "tier": "rare", "name": "Rare Wraith" },
+  { "id": "chimp-1of1-founder", "tier": "one_of_one", "name": "The Founder" },
+  { "id": "chimp-1of1-comet-marshal", "tier": "one_of_one", "name": "Comet Marshal" },
+  { "id": "chimp-1of1-first-signal", "tier": "one_of_one", "name": "The First Signal" },
+  { "id": "chimp-1of1-warden", "tier": "one_of_one", "name": "Warden of AstroWorld" },
+  { "id": "chimp-1of1-last-astronaut", "tier": "one_of_one", "name": "The Last Astronaut" }
+]

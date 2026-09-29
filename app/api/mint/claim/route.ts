@@ -77,6 +77,25 @@ async function releaseOneOfOne(db: SupabaseClient, variantId: string, claimTag: 
 }
 
 /**
+ * Standard/Rare art variety (migration 0016) - not scarce, so no claiming,
+ * just a random pick among whichever styles actually have art uploaded.
+ * Returns null (falls back to the old shared per-tier placeholder) until
+ * at least one style in that tier has real art.
+ */
+async function pickStyleVariant(
+  db: SupabaseClient,
+  tier: "standard" | "rare",
+): Promise<{ id: string; name: string } | null> {
+  const { data: ready } = await db
+    .from("chimp_style_variants")
+    .select("id, name")
+    .eq("tier", tier)
+    .not("image_url", "is", null);
+  if (!ready || ready.length === 0) return null;
+  return ready[Math.floor(Math.random() * ready.length)];
+}
+
+/**
  * POST { wallet, signature } -> { ok, asset, signature, tier, name, milestone? }
  *
  * The buyer already sent the $CHIMP payment themselves (a plain transfer,
@@ -198,8 +217,11 @@ export async function POST(req: Request) {
     const collection = await fetchCollection(umi, umiPublicKey(ASTROCHIMPS_COLLECTION));
     const asset = generateSigner(umi);
 
-    const name = `Astrochimp #${mintNumber}`;
-    const uri = `${SITE_URL}/nft/chimp-metadata/tier/${tier}`;
+    const style = await pickStyleVariant(db, tier);
+    const name = style ? `${style.name} #${mintNumber}` : `Astrochimp #${mintNumber}`;
+    const uri = style
+      ? `${SITE_URL}/nft/chimp-metadata/style/${style.id}`
+      : `${SITE_URL}/nft/chimp-metadata/tier/${tier}`;
 
     const mintTx = await createCoreAsset(umi, {
       asset,
