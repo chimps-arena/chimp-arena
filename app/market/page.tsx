@@ -10,9 +10,9 @@ export default function MarketPage() {
       <div>
         <h1 className="text-2xl font-black sm:text-3xl">Market</h1>
         <p className="mt-1 text-muted">
-          Real property NFTs — permanently yours, tradeable on any
-          marketplace that respects the collection, 3% resale royalty locked
-          to Astro Corp forever.
+          Real property NFTs, permanently yours and tradeable on any
+          marketplace that respects the collection, with a 3% resale royalty
+          locked to Astro Corp forever.
         </p>
       </div>
       <LandMarket />

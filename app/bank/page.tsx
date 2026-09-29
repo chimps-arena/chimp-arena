@@ -20,7 +20,7 @@ interface BankData {
 
 function friendlyReason(reason: string): string {
   const [kind, detail] = reason.split(":");
-  if (kind === "mission") return `Mission cleared — ${detail}`;
+  if (kind === "mission") return `Mission cleared: ${detail}`;
   if (kind === "streak") return `Streak day ${detail}`;
   return reason;
 }
@@ -122,7 +122,7 @@ export default function BankPage() {
             {(bank?.gold ?? me.player.gold).toLocaleString()}
           </div>
           <p className="mt-2 text-xs text-muted">
-            Earned by playing. Off-chain, never a token — boosts to spend it
+            Earned by playing. Off-chain, never a token. Boosts to spend it
             on are coming.
           </p>
         </div>

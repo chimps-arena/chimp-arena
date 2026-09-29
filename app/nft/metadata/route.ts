@@ -15,7 +15,7 @@ export function GET(req: Request) {
       name: "Astrochimp",
       symbol: NFT_SYMBOL,
       description:
-        "A test Astrochimp from the Astrochimpz mint. Placeholder art — the real character drops later.",
+        "A test Astrochimp from the Astrochimpz mint. Placeholder art; the real character drops later.",
       image: `${origin}/characters/astrochimp-512.png`,
       external_url: origin,
       attributes: [

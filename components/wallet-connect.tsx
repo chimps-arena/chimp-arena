@@ -147,7 +147,7 @@ export function WalletConnect({
           {mobile
             ? "Reopens this page inside the Phantom app, then connect there."
             : phantomInstalled()
-              ? "One free signature to sign in — no transaction."
+              ? "One free signature to sign in. No transaction."
               : null}
           {!mobile && !phantomInstalled() && (
             <>

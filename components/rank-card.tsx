@@ -15,7 +15,7 @@ export function RankCard({ rank }: { rank: MeResponse["rank"] }) {
       <p className="text-xs text-muted">{rank.unlocks}</p>
       {rank.next && (
         <p className="mt-1 text-xs text-muted">
-          Next — <span className="text-foreground">{rank.next.name}</span> at
+          Next: <span className="text-foreground">{rank.next.name}</span> at
           level {rank.next.minLevel} with {rank.next.minProperties} properties
           owned.
         </p>

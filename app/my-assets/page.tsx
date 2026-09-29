@@ -43,7 +43,7 @@ export default function MyAssetsPage() {
       <div>
         <h1 className="text-2xl font-black sm:text-3xl">My Assets</h1>
         <p className="mt-1 text-muted">
-          Everything you currently own — properties from the Market, and
+          Everything you currently own: properties from the Market, and
           Astrochimps NFTs read live from your wallet.
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function MyAssetsPage() {
                         Royalty-protected
                       </span>
                     ) : (
-                      <span className="chip text-xs text-muted" title="Minted before the collection existed - no royalty enforcement">
+                      <span className="chip text-xs text-muted" title="No royalty enforcement (minted before the collection existed)">
                         Legacy
                       </span>
                     )}

@@ -117,7 +117,7 @@ export function PropertyCollectionAuthority() {
   if (!PROPERTIES_COLLECTION) {
     return (
       <div className="card p-6 text-sm text-muted">
-        No collection yet - run /admin/create-property-collection first.
+        No collection yet. Run /admin/create-property-collection first.
       </div>
     );
   }
@@ -126,7 +126,7 @@ export function PropertyCollectionAuthority() {
     return (
       <div className="card p-6 text-center">
         <p className="text-sm text-muted">
-          Connect the Astro Corp wallet — both steps here need to be signed by
+          Connect the Astro Corp wallet. Both steps here need to be signed by
           it specifically, since there&apos;s no delegate yet to hand this off
           to.
         </p>
@@ -149,7 +149,7 @@ export function PropertyCollectionAuthority() {
       )}
       {SOLANA_CLUSTER !== "mainnet-beta" && (
         <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
-          Not on mainnet — this would act on {SOLANA_CLUSTER}.
+          Not on mainnet. This would act on {SOLANA_CLUSTER}.
         </p>
       )}
       {fetchError && (
@@ -172,7 +172,7 @@ export function PropertyCollectionAuthority() {
         </div>
         <p className="text-sm text-muted">
           Sets the Royalties plugin&apos;s own authority to{" "}
-          <span className="mono">None</span> — permanently immutable. After
+          <span className="mono">None</span>, permanently immutable. After
           this, the 3% to Astro Corp on property resales can never be changed
           by anyone again, including Astro Corp itself. Do this{" "}
           <strong className="text-foreground">before</strong> step 2, so the
@@ -216,7 +216,7 @@ export function PropertyCollectionAuthority() {
             rel="noreferrer"
             className="underline"
           >
-            {MINT_DELEGATE || "(not generated — run scripts/gen-mint-delegate.mjs)"}
+            {MINT_DELEGATE || "(not generated, run scripts/gen-mint-delegate.mjs)"}
           </a>
         </p>
         {!royaltiesLocked && (

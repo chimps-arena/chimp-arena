@@ -32,7 +32,7 @@ export async function GET(
     {
       name: `Astrochimp (${label})`,
       symbol: NFT_SYMBOL,
-      description: `An Astrochimp from the Astrochimpz mint (${label} tier). Placeholder art — real per-tier art drops later.`,
+      description: `An Astrochimp from the Astrochimpz mint (${label} tier).`,
       image,
       external_url: origin,
       attributes: [{ trait_type: "Tier", value: label }],

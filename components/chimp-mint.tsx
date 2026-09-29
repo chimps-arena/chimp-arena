@@ -115,7 +115,7 @@ export function ChimpMint() {
       }
       if (held < MINT_PRICE_BASE) {
         throw new Error(
-          `Need ${MINT_PRICE_CHIMP.toLocaleString()} $CHIMP — this wallet has ${(
+          `Need ${MINT_PRICE_CHIMP.toLocaleString()} $CHIMP. This wallet has ${(
             Number(held) /
             10 ** CHIMP_DECIMALS
           ).toLocaleString()}.`,
@@ -146,7 +146,7 @@ export function ChimpMint() {
       const claim = await claimRes.json().catch(() => ({}));
       if (!claimRes.ok) {
         throw new Error(
-          `Payment went through but minting failed (${claim.error || "unknown error"}) - contact support with this transaction: ${paymentSignature}`,
+          `Payment went through but minting failed (${claim.error || "unknown error"}). Contact support with this transaction: ${paymentSignature}`,
         );
       }
 
@@ -230,7 +230,7 @@ export function ChimpMint() {
           </div>
           <p className="mt-2 border-t border-border pt-2">
             <span className="text-accent">One of One</span> isn&apos;t part of
-            that draw — every {MILESTONE_MINT_INTERVAL.toLocaleString()}th
+            that draw. Every {MILESTONE_MINT_INTERVAL.toLocaleString()}th
             mint automatically gets a second, free one, on top of whichever
             of the above you drew.
           </p>
@@ -246,7 +246,7 @@ export function ChimpMint() {
       {phase === "confirm" && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted">
-            <strong className="text-foreground">Mainnet — real tokens.</strong>{" "}
+            <strong className="text-foreground">Mainnet. Real tokens.</strong>{" "}
             You will send {MINT_PRICE_CHIMP.toLocaleString()} $CHIMP to Astro Corp
             and receive one Astrochimp NFT, in a single transaction. This can’t be
             undone.
@@ -287,7 +287,7 @@ export function ChimpMint() {
           <p className="font-semibold text-good">Minted.</p>
           {result.tier && (
             <p className={`text-lg font-black ${TIER_STYLE[result.tier] ?? ""}`}>
-              {result.name} — {TIER_LABEL[result.tier] ?? result.tier}
+              {result.name} · {TIER_LABEL[result.tier] ?? result.tier}
             </p>
           )}
           <a
@@ -309,7 +309,7 @@ export function ChimpMint() {
           {result.milestone && (
             <div className="mt-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
               <p className="font-black text-accent">
-                🎉 You&apos;re mint #{result.milestone.mintNumber.toLocaleString()} —
+                🎉 You&apos;re mint #{result.milestone.mintNumber.toLocaleString()}:
                 bonus One of One!
               </p>
               <p className="mt-1 font-semibold text-accent">{result.milestone.name}</p>

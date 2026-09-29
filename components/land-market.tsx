@@ -95,7 +95,7 @@ export function LandMarket() {
       }
       if (held < priceBase) {
         throw new Error(
-          `Need ${selected.priceChimp.toLocaleString()} $CHIMP — this wallet has ${(
+          `Need ${selected.priceChimp.toLocaleString()} $CHIMP. This wallet has ${(
             Number(held) /
             10 ** CHIMP_DECIMALS
           ).toLocaleString()}.`,
@@ -121,7 +121,7 @@ export function LandMarket() {
       const claim = await claimRes.json().catch(() => ({}));
       if (!claimRes.ok) {
         throw new Error(
-          `Payment went through but minting failed (${claim.error || "unknown error"}) - contact support with this transaction: ${paymentSignature}`,
+          `Payment went through but minting failed (${claim.error || "unknown error"}). Contact support with this transaction: ${paymentSignature}`,
         );
       }
 
@@ -180,7 +180,7 @@ export function LandMarket() {
         </div>
       ) : visible.length === 0 ? (
         <p className="card p-6 text-sm text-muted">
-          No land available to buy right now — check back soon.
+          No land available to buy right now. Check back soon.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

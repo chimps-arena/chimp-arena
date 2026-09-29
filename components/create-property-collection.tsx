@@ -101,7 +101,7 @@ export function CreatePropertyCollection() {
     return (
       <div className="card p-6 text-center">
         <p className="text-sm text-muted">
-          Connect any funded wallet to pay for this one-time setup — it
+          Connect any funded wallet to pay for this one-time setup. It
           doesn&apos;t need to be the Astro Corp wallet. Control still lands
           on Astro Corp either way (see below).
         </p>
@@ -119,13 +119,13 @@ export function CreatePropertyCollection() {
           <strong className="text-foreground">
             {walletKey?.slice(0, 4)}…{walletKey?.slice(-4)}
           </strong>{" "}
-          will pay for this transaction. That&apos;s fine — the collection&apos;s
+          will pay for this transaction. That&apos;s fine: the collection&apos;s
           update authority is set below regardless of who signs.
         </p>
       )}
       {SOLANA_CLUSTER !== "mainnet-beta" && (
         <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
-          Not on mainnet — this collection would be created on{" "}
+          Not on mainnet. This collection would be created on{" "}
           {SOLANA_CLUSTER}.
         </p>
       )}
@@ -200,7 +200,7 @@ export function CreatePropertyCollection() {
           </a>
           <p className="mt-2 text-xs text-muted">
             Add this as <code>NEXT_PUBLIC_PROPERTIES_COLLECTION</code> in
-            .env.local and on Vercel, then redeploy — new property mints will
+            .env.local and on Vercel, then redeploy. New property mints will
             join this collection and carry the royalty.
           </p>
         </div>

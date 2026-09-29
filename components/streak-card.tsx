@@ -60,7 +60,7 @@ export function StreakCard({
       {nextMilestone && toMilestone !== null && (
         <p className="mt-1 text-xs text-muted">
           {toMilestone === 0
-            ? `Milestone day — +${STREAK_MILESTONES[nextMilestone] ?? 0} XP on your next run.`
+            ? `Milestone day: +${STREAK_MILESTONES[nextMilestone] ?? 0} XP on your next run.`
             : `${toMilestone} day${toMilestone === 1 ? "" : "s"} to the ${nextMilestone}-day milestone (+${STREAK_MILESTONES[nextMilestone] ?? 0} XP).`}
         </p>
       )}
