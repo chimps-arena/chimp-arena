@@ -1,16 +1,20 @@
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 
-/** Human-readable sign-in challenge. The nonce ties it to one /nonce call. */
+/**
+ * Human-readable sign-in challenge. The nonce ties it to one /nonce call.
+ *
+ * Single line, deliberately - a multi-line message here (this used to be 6
+ * lines with blank-line separators) is very likely what's triggering
+ * Phantom's "signature request cannot be shown due to invalid formatting"
+ * error on desktop (2026-09-29): the display:"utf8" mode in
+ * components/wallet-connect.tsx has to render this text directly in the
+ * popup, and Phantom's renderer appears to choke on embedded newlines in
+ * that mode on some extension versions. The message content is otherwise
+ * unchanged - same wallet+nonce binding, same verifySignature check.
+ */
 export function buildChallenge(wallet: string, nonce: string): string {
-  return [
-    "CHIMP Arena wants you to sign in with your Solana account.",
-    "",
-    `Wallet: ${wallet}`,
-    `Nonce: ${nonce}`,
-    "",
-    "Signing is free and does not authorize any transaction.",
-  ].join("\n");
+  return `CHIMP Arena sign-in - wallet ${wallet}, nonce ${nonce}. Free, no transaction.`;
 }
 
 export function isLikelySolanaAddress(value: unknown): value is string {
