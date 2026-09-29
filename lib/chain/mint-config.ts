@@ -51,10 +51,11 @@ export const ROYALTY_BASIS_POINTS = 300;
  * Rarity tiers (see migration 0014/0015). Every mint pays the same price;
  * Standard vs Rare is a weighted random draw (roll < RARE -> rare, else
  * standard), not something the buyer picks. One of One is NOT part of this
- * random draw - the finite chimp_variants catalog is only ever handed out
- * through the milestone rule below, so it depletes at one per
- * MILESTONE_MINT_INTERVAL mints instead of being drained early by random
- * chance on top of that (the founder's fix, 2026-09-27).
+ * random draw - the only way to get one is the milestone rule below. The 5
+ * chimp_variants designs are reusable and shuffled rather than a shrinking
+ * catalog (founder's call, 2026-09-29): what makes a milestone chimp
+ * special is that it's free and rare to land on, not that its design is
+ * unique on-chain.
  */
 export const TIER_ODDS = {
   RARE: 0.15,

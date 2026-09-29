@@ -37,43 +37,20 @@ function rollTier(): Exclude<ChimpTier, "one_of_one"> {
 }
 
 /**
- * Claims one unclaimed one-of-one, race-safely - the update only succeeds if
- * nobody beat us to that exact row (asset_address is null is the same claim
- * guard properties use). Tries a few candidates in case two concurrent
- * requests grab the same row out of the batch below. Returns null if the
- * whole catalog is currently claimed (or mid-claim by someone else).
+ * Picks a random One of One design for a milestone bonus. Reusable, not
+ * claimed (founder's call, 2026-09-29): the catalog is only 5 designs and
+ * hand-making a new one every 1000 mints forever isn't realistic, so the
+ * same 5 shuffle and repeat indefinitely rather than running out. What
+ * makes a milestone chimp special is that it's free and only comes once
+ * every MILESTONE_MINT_INTERVAL mints, not that the design itself is
+ * one-of-a-kind on-chain - two different wallets can both end up holding
+ * a "The Founder". chimp_milestones (not chimp_variants) is the real
+ * record of who got which design and when.
  */
-async function claimOneOfOne(
-  db: SupabaseClient,
-  claimTag: string,
-): Promise<{ id: string; name: string } | null> {
-  const { data: candidates } = await db
-    .from("chimp_variants")
-    .select("id, name")
-    .is("asset_address", null)
-    .limit(20);
-  if (!candidates || candidates.length === 0) return null;
-
-  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
-  for (const candidate of shuffled) {
-    const { data: updated } = await db
-      .from("chimp_variants")
-      .update({ asset_address: claimTag })
-      .eq("id", candidate.id)
-      .is("asset_address", null)
-      .select("id")
-      .maybeSingle();
-    if (updated) return candidate;
-  }
-  return null;
-}
-
-async function releaseOneOfOne(db: SupabaseClient, variantId: string, claimTag: string) {
-  await db
-    .from("chimp_variants")
-    .update({ asset_address: null })
-    .eq("id", variantId)
-    .eq("asset_address", claimTag);
+async function pickOneOfOne(db: SupabaseClient): Promise<{ id: string; name: string } | null> {
+  const { data: variants } = await db.from("chimp_variants").select("id, name");
+  if (!variants || variants.length === 0) return null;
+  return variants[Math.floor(Math.random() * variants.length)];
 }
 
 /**
@@ -107,16 +84,17 @@ async function pickStyleVariant(
  *
  * One of One is deliberately NOT part of that random draw (founder's call,
  * 2026-09-27, after the 5% random chance and the milestone bonus below were
- * both drawing from the same small finite catalog and draining it too
- * fast) - the only way to get one is the milestone rule.
+ * both drawing from the same small catalog and draining it too fast) - the
+ * only way to get one is the milestone rule.
  *
  * Every mint gets a sequential number from chimp_mint_seq (Postgres
  * sequences are atomic, so concurrent mints near a milestone boundary can't
  * both land on the same number). Every MILESTONE_MINT_INTERVAL-th mint also
  * gets a second, free one-of-one minted to the same wallet - on top of, not
- * instead of, their paid tier. That bonus is best-effort: if the one-of-one
- * catalog happens to be empty right then, the milestone is skipped rather
- * than failing the paid mint.
+ * instead of, their paid tier. The 5 designs are reusable, not claimed
+ * (founder's call, 2026-09-29 - see pickOneOfOne), so this never runs out;
+ * it's just best-effort in the sense that a failed bonus mint doesn't fail
+ * the paid mint it rides along with.
  *
  * The unique constraint on nft_mint_claims.tx_signature is claimed BEFORE
  * minting (not after) so two concurrent requests for the same payment can't
@@ -250,11 +228,11 @@ export async function POST(req: Request) {
     };
 
     // Best-effort bonus: the paid mint above already succeeded regardless of
-    // what happens here, so a failure or an empty catalog just means no
-    // milestone this time, not a failed request.
+    // what happens here, so a failure just means no milestone this time,
+    // not a failed request. Nothing to release on failure since picking a
+    // design no longer claims it - see pickOneOfOne.
     if (mintNumber % MILESTONE_MINT_INTERVAL === 0) {
-      const milestoneTag = `milestone:${signature}`;
-      const bonusVariant = await claimOneOfOne(db, milestoneTag);
+      const bonusVariant = await pickOneOfOne(db);
       if (bonusVariant) {
         try {
           const bonusAsset = generateSigner(umi);
@@ -267,10 +245,6 @@ export async function POST(req: Request) {
           }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
 
           const bonusAddress = bonusAsset.publicKey.toString();
-          await db
-            .from("chimp_variants")
-            .update({ asset_address: bonusAddress, wallet, claimed_at: new Date().toISOString() })
-            .eq("id", bonusVariant.id);
           await db.from("chimp_milestones").insert({
             mint_number: mintNumber,
             wallet,
@@ -285,9 +259,8 @@ export async function POST(req: Request) {
             signature: bs58.encode(bonusTx.signature),
           };
         } catch {
-          // Bonus mint failed after the paid mint already succeeded - free
-          // the one-of-one back up rather than losing it to a dead claim.
-          await releaseOneOfOne(db, bonusVariant.id, milestoneTag);
+          // Bonus mint failed after the paid mint already succeeded - just
+          // no milestone bonus this time, nothing to unwind.
         }
       }
     }
