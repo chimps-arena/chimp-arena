@@ -45,7 +45,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { player, crew, today, week, streak, rank } = me;
+  const { player, crew, today, week, streak, rank, rename } = me;
   const missionsDone = today.missions.filter((m) => m.completed).length;
 
   return (
@@ -54,7 +54,13 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <HandleEditor current={player.handle} onSaved={refresh} />
+              <HandleEditor
+                current={player.handle}
+                freeUntil={rename.freeUntil}
+                nextAvailableAt={rename.nextAvailableAt}
+                priceChimp={rename.priceChimp}
+                onSaved={refresh}
+              />
               <CrewBadge crew={crew} />
             </div>
             <p className="mono mt-1 text-xs text-muted">

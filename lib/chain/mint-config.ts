@@ -82,3 +82,19 @@ export const MILESTONE_MINT_INTERVAL = 1000;
 export function mintMemo(wallet: string): string {
   return `ASTROMINT:${wallet}`;
 }
+
+/**
+ * Handle (display name) changes (founder's rule, 2026-09-30, see migration
+ * 0018 and PATCH /api/me): every player gets free renames for the first
+ * RENAME_FREE_TRIAL_DAYS after their account is created. After that, a
+ * rename costs RENAME_PRICE_CHIMP. Either way, a rename (free or paid)
+ * starts a RENAME_COOLDOWN_DAYS lockout before the next one.
+ */
+export const RENAME_PRICE_CHIMP = 300;
+export const RENAME_PRICE_BASE = BigInt(RENAME_PRICE_CHIMP) * 10n ** BigInt(CHIMP_DECIMALS);
+export const RENAME_FREE_TRIAL_DAYS = 3;
+export const RENAME_COOLDOWN_DAYS = 3;
+
+export function renameMemo(wallet: string): string {
+  return `ASTRORENAME:${wallet}`;
+}

@@ -69,6 +69,7 @@ export interface PlayerProfile {
   xp: number;
   gold: number;
   createdAt: string;
+  lastRenamedAt: string | null;
 }
 
 export interface MeResponse {
@@ -112,6 +113,15 @@ export interface MeResponse {
     next: { name: string; minLevel: number; minProperties: number } | null;
     level: number;
     propertiesOwned: number;
+  };
+  /** Handle-change rules (see PATCH /api/me) - server-computed so the client never redoes the date math. */
+  rename: {
+    /** ISO timestamp - renames are free up to this instant. */
+    freeUntil: string;
+    /** ISO timestamp, or null if not on cooldown right now. */
+    nextAvailableAt: string | null;
+    /** Whole $CHIMP required for a rename once past freeUntil. */
+    priceChimp: number;
   };
 }
 
