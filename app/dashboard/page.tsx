@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Trophy, Users, PiggyBank, Building2, Sparkles, type LucideIcon } from "lucide-react";
 import { useSession } from "@/components/session-provider";
+import { Reveal } from "@/components/reveal";
 import { WalletConnect } from "@/components/wallet-connect";
 import { XpBar } from "@/components/xp-bar";
 import { CrewBadge } from "@/components/crew-badge";
@@ -153,53 +155,91 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          href="/leaderboard"
-          className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
-        >
-          <div className="text-lg font-bold">Leaderboards</div>
-          <p className="mt-1 text-sm text-muted">
-            See where you and your crew rank globally. Updates live.
-          </p>
-        </Link>
-        <Link
-          href="/crews"
-          className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
-        >
-          <div className="text-lg font-bold">Crews</div>
-          <p className="mt-1 text-sm text-muted">
-            {crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry."}
-          </p>
-        </Link>
-        <Link
-          href="/bank"
-          className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
-        >
-          <div className="text-lg font-bold">Safu Bank</div>
-          <p className="mt-1 text-sm text-muted">
-            {player.gold.toLocaleString()} Gold on hand, plus your {TOKEN_SYMBOL}.
-          </p>
-        </Link>
-        <Link
-          href="/market"
-          className="card hoverglow-cyan p-5 transition duration-200 hover:-translate-y-1"
-        >
-          <div className="text-lg font-bold">Property Market</div>
-          <p className="mt-1 text-sm text-muted">
-            Claim territory across the belt. {rank.propertiesOwned} owned.
-          </p>
-        </Link>
-        <Link
-          href="/mint"
-          className="card hoverglow-magenta p-5 transition duration-200 hover:-translate-y-1"
-        >
-          <div className="text-lg font-bold">Mint an Astrochimp</div>
-          <p className="mt-1 text-sm text-muted">
-            Trade 1,000 {TOKEN_SYMBOL} for an Astrochimp NFT.
-          </p>
-        </Link>
+        {[
+          {
+            href: "/leaderboard",
+            icon: Trophy,
+            color: "var(--accent-2)",
+            title: "Leaderboards",
+            blurb: "See where you and your crew rank globally. Updates live.",
+          },
+          {
+            href: "/crews",
+            icon: Users,
+            color: "var(--accent-3)",
+            title: "Crews",
+            blurb: crew ? `You rep ${crew.name}.` : "Choose the crew you'll carry.",
+          },
+          {
+            href: "/bank",
+            icon: PiggyBank,
+            color: "var(--accent-2)",
+            title: "Safu Bank",
+            blurb: `${player.gold.toLocaleString()} Gold on hand, plus your ${TOKEN_SYMBOL}.`,
+          },
+          {
+            href: "/market",
+            icon: Building2,
+            color: "var(--accent-4)",
+            title: "Property Market",
+            blurb: `Claim territory across the belt. ${rank.propertiesOwned} owned.`,
+          },
+          {
+            href: "/mint",
+            icon: Sparkles,
+            color: "var(--accent-3)",
+            title: "Mint an Astrochimp",
+            blurb: `Trade 1,000 ${TOKEN_SYMBOL} for an Astrochimp NFT.`,
+          },
+        ].map((q, i) => (
+          <Reveal key={q.href} delay={i * 0.05}>
+            <QuickLink {...q} />
+          </Reveal>
+        ))}
       </section>
     </div>
+  );
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  color,
+  title,
+  blurb,
+}: {
+  href: string;
+  icon: LucideIcon;
+  color: string;
+  title: string;
+  blurb: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex h-full flex-col gap-3 rounded-2xl border p-5 transition duration-200 hover:-translate-y-1"
+      style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
+    >
+      <span
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full border transition group-hover:scale-110"
+        style={{
+          background: `color-mix(in srgb, ${color} 14%, transparent)`,
+          borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+          color,
+        }}
+      >
+        <Icon className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+      </span>
+      <div>
+        <div className="flex items-center gap-1.5 text-lg font-semibold">
+          {title}
+          <span className="text-muted transition group-hover:translate-x-0.5 group-hover:text-foreground">
+            →
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-muted">{blurb}</p>
+      </div>
+    </Link>
   );
 }
 

@@ -18,6 +18,7 @@ const LINKS = [
   { href: "/mint", label: "Mint" },
   { href: "/market", label: "Market" },
   { href: "/my-assets", label: "My Assets" },
+  { href: "/whitepaper", label: "Whitepaper" },
 ];
 
 export function NavBar() {

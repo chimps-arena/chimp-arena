@@ -1,13 +1,14 @@
 /**
- * Brand-neutral geometric marks that replace emoji in the UI.
+ * Brand-neutral marks that replace emoji in the UI.
  * All monochrome (currentColor) so callers set the tint.
  */
+import { Zap, Brain, Rocket, Shield, type LucideIcon } from "lucide-react";
 
-const MISSION_PATH: Record<string, string> = {
-  reaction: "M13 2 4 13h6l-1 9 10-12h-6z", // bolt
-  trivia: "M12 2l10 10-10 10L2 12z", // diamond
-  "astro-run": "M12 2l9 18H3z", // triangle / launch
-  dodge: "M7 3h10l5 9-5 9H7l-5-9z", // hexagon / asteroid
+const MISSION_ICON: Record<string, LucideIcon> = {
+  reaction: Zap,
+  trivia: Brain,
+  "astro-run": Rocket,
+  dodge: Shield,
 };
 
 export function MissionGlyph({
@@ -17,16 +18,8 @@ export function MissionGlyph({
   type: string;
   className?: string;
 }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d={MISSION_PATH[type] ?? MISSION_PATH.reaction} />
-    </svg>
-  );
+  const Icon = MISSION_ICON[type] ?? MISSION_ICON.reaction;
+  return <Icon className={className} strokeWidth={2} aria-hidden="true" />;
 }
 
 /**

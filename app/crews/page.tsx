@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { CrewMark } from "@/components/glyphs";
+import { Reveal } from "@/components/reveal";
 import { CREWS } from "@/lib/game/config";
 import type { LeaderboardCrew } from "@/lib/types";
 
@@ -64,59 +65,67 @@ export default function CrewsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {CREWS.map((c) => {
+        {CREWS.map((c, i) => {
           const t = totals[c.slug];
           const mine = current === c.slug;
           return (
-            <div
-              key={c.slug}
-              className="card flex flex-col gap-3 p-6 transition duration-200 hover:-translate-y-1"
-              style={{
-                borderColor: mine
-                  ? c.color
-                  : `color-mix(in srgb, ${c.color} 35%, transparent)`,
-                boxShadow: mine ? `0 0 40px -12px ${c.color}` : undefined,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <CrewMark color={c.color} size={56} />
-                {t && (
-                  <div className="text-right">
-                    <div className="mono text-lg font-bold" style={{ color: c.color }}>
-                      {t.totalXp.toLocaleString()} XP
-                    </div>
-                    <div className="text-xs text-muted">
-                      {t.members} member{t.members === 1 ? "" : "s"} · rank #{t.rank}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <h2 className="text-xl font-bold" style={{ color: c.color }}>
-                  {c.name}
-                </h2>
-                <p className="mt-1 text-sm text-muted">{c.blurb}</p>
-              </div>
-              <div className="mt-auto pt-2">
-                {mine ? (
-                  <span className="btn btn-ghost w-full cursor-default">
-                    ✓ Your crew
-                  </span>
-                ) : current ? (
-                  <span className="text-xs text-muted">
-                    Locked. You already rep another crew.
-                  </span>
-                ) : (
-                  <button
-                    className="btn btn-primary w-full"
-                    disabled={!!joining || loading || !me?.player}
-                    onClick={() => join(c.slug)}
+            <Reveal key={c.slug} delay={i * 0.06}>
+              <div
+                className="flex h-full flex-col gap-4 rounded-2xl border p-6 transition duration-200 hover:-translate-y-1"
+                style={{
+                  borderColor: mine
+                    ? `color-mix(in srgb, ${c.color} 55%, transparent)`
+                    : "color-mix(in srgb, var(--border) 70%, transparent)",
+                  background: "color-mix(in srgb, var(--surface) 55%, transparent)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border"
+                    style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
                   >
-                    {joining === c.slug ? "Joining…" : `Join ${c.name}`}
-                  </button>
-                )}
+                    <CrewMark color={c.color} size={56} />
+                  </div>
+                  {t && (
+                    <div className="text-right">
+                      <div className="mono text-lg font-semibold" style={{ color: c.color }}>
+                        {t.totalXp.toLocaleString()} XP
+                      </div>
+                      <div className="text-xs text-muted">
+                        {t.members} member{t.members === 1 ? "" : "s"} · rank #{t.rank}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold" style={{ color: c.color }}>
+                    {c.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">{c.blurb}</p>
+                </div>
+                <div className="mt-auto pt-2">
+                  {mine ? (
+                    <span className="flex h-10 w-full items-center justify-center rounded-full border text-sm text-muted" style={{ borderColor: "color-mix(in srgb, var(--border) 80%, transparent)" }}>
+                      ✓ Your crew
+                    </span>
+                  ) : current ? (
+                    <span className="text-xs text-muted">
+                      Locked. You already rep another crew.
+                    </span>
+                  ) : (
+                    <button
+                      className="h-10 w-full rounded-full font-semibold text-background transition disabled:opacity-45"
+                      style={{ background: "linear-gradient(135deg, #fff6d8, var(--accent))" }}
+                      disabled={!!joining || loading || !me?.player}
+                      onClick={() => join(c.slug)}
+                    >
+                      {joining === c.slug ? "Joining…" : `Join ${c.name}`}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            </Reveal>
           );
         })}
       </div>

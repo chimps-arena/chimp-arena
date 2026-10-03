@@ -67,6 +67,11 @@ export default function RootLayout({
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
             {children}
           </main>
+          <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} Astrochimpz</span>
+            <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
+            <a href="/legal" className="hover:text-foreground">Legal</a>
+          </footer>
         </SessionProvider>
       </body>
     </html>

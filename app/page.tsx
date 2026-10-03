@@ -1,22 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { WalletConnect } from "@/components/wallet-connect";
 import { GuestButton } from "@/components/guest-button";
-import { CrewMark, MissionGlyph } from "@/components/glyphs";
-import { CREWS, MISSION_DEFS } from "@/lib/game/config";
-import type { MissionType } from "@/lib/types";
+import { ChimpTicker } from "@/components/chimp-ticker";
+import { OrbitVisual } from "@/components/orbit-visual";
+import { Reveal } from "@/components/reveal";
+import { CrewMark } from "@/components/glyphs";
+import { CREWS } from "@/lib/game/config";
 
-const MISSION_COLOR: Record<MissionType, string> = {
-  reaction: "var(--accent)",
-  trivia: "var(--accent-2)",
-  "astro-run": "var(--accent-3)",
-  dodge: "var(--accent-4)",
-};
+const TRUST_SIGNALS = [
+  { label: "Mint authority revoked", blurb: "No new $CHIMP can ever be printed." },
+  { label: "Freeze authority revoked", blurb: "Wallets can never be frozen or censored." },
+  { label: "Ownership renounced", blurb: "The contract runs on autopilot, enforced by Solana." },
+];
+
+const FEATURE_CARDS = [
+  {
+    n: "01",
+    title: "Connect",
+    blurb: "One wallet, one signature. That's your identity - no passwords.",
+    gradient: "radial-gradient(120% 120% at 20% 20%, #2dd4bf 0%, #1e3a5f 45%, #0c0e20 100%)",
+  },
+  {
+    n: "02",
+    title: "Compete",
+    blurb: "Clear daily mini-games for XP. One reward per mission per day.",
+    gradient: "radial-gradient(120% 120% at 80% 30%, #8b5cf6 0%, #3b2a6e 45%, #0c0e20 100%)",
+  },
+  {
+    n: "03",
+    title: "Conquer",
+    blurb: "Your XP lifts your crew up the board. Spend $CHIMP on what's next.",
+    gradient: "radial-gradient(120% 120% at 50% 80%, #f65ce8 0%, #4a1f52 45%, #0c0e20 100%)",
+  },
+];
 
 export default function Home() {
   const { me, loading } = useSession();
@@ -29,15 +50,21 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-20 py-8">
       {/* ---------- hero ---------- */}
-      <section className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+      <section className="relative grid gap-14 md:grid-cols-[1fr_1fr] md:items-center">
+        <OrbitVisual />
+
         <div className="flex min-w-0 flex-col gap-5">
-          <span className="chip w-fit text-accent-2" style={{ borderColor: "color-mix(in srgb, var(--accent-2) 40%, transparent)" }}>
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-2" />
-            $CHIMP · live on Solana
+          <span className="mono text-xs uppercase tracking-[0.3em] text-muted">
+            « $CHIMP · live on Solana
           </span>
-          <h1 className="glow-heading text-[1.85rem] font-bold leading-[1.08] sm:text-6xl">
-            Run missions.<br />
-            Rep your crew.<br />
+          <h1
+            className="text-[2rem] leading-[1.1] sm:text-6xl"
+            style={{ fontWeight: 500, letterSpacing: "-0.02em" }}
+          >
+            Run missions.
+            <br />
+            Rep your crew.
+            <br />
             <span className="text-accent-2">Own the jungle.</span>
           </h1>
           <p className="max-w-prose text-muted">
@@ -48,8 +75,12 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-3">
             <WalletConnect redirectTo="/dashboard" />
             <GuestButton redirectTo="/dashboard" />
-            <Link href="/leaderboard" className="btn btn-neon">
-              View leaderboards
+            <Link
+              href="/leaderboard"
+              className="rounded-full border px-4 py-2 text-sm text-muted transition hover:text-foreground"
+              style={{ borderColor: "color-mix(in srgb, var(--border) 80%, transparent)" }}
+            >
+              View leaderboards →
             </Link>
           </div>
           <p className="text-xs text-muted">
@@ -58,103 +89,89 @@ export default function Home() {
           </p>
         </div>
 
-        {/* mascot + mission preview */}
-        <div className="relative min-w-0">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-4 -z-0 h-56 w-56 -translate-x-1/2 rounded-full blur-3xl"
-            style={{ background: "radial-gradient(circle, rgba(246,92,232,0.5), transparent 70%)" }}
-          />
-          <div className="float-y mb-4 flex justify-center">
-            <Image
-              src="/brand/chimp-logo.png"
-              alt=""
-              width={104}
-              height={104}
-              priority
-              className="rounded-full drop-shadow-[0_0_34px_rgba(34,211,238,0.4)]"
-            />
-          </div>
-          <div className="card card-featured p-5">
-            <h2 className="text-sm font-semibold text-muted">
-              Today&apos;s missions
-            </h2>
-            <ul className="mt-4 flex flex-col gap-3">
-              {MISSION_DEFS.map((m) => (
-                <li key={m.slug} className="flex items-center gap-3">
-                  <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-                    style={{
-                      background: `color-mix(in srgb, ${MISSION_COLOR[m.type]} 14%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${MISSION_COLOR[m.type]} 40%, transparent)`,
-                      color: MISSION_COLOR[m.type],
-                    }}
-                  >
-                    <MissionGlyph type={m.type} className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{m.title}</div>
-                    <div className="truncate text-xs text-muted">{m.blurb}</div>
+        {/* numbered feature rail */}
+        <div className="flex min-w-0 flex-col gap-4">
+          {FEATURE_CARDS.map((f, i) => (
+            <Reveal key={f.n} delay={i * 0.08}>
+              <div
+                className="flex items-center gap-4 rounded-2xl border p-3"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--border) 70%, transparent)",
+                  background: "color-mix(in srgb, var(--surface) 60%, transparent)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <div
+                  className="h-16 w-20 shrink-0 rounded-xl"
+                  style={{ background: f.gradient }}
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="mono grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] text-muted" style={{ borderColor: "color-mix(in srgb, var(--border) 80%, transparent)" }}>
+                      {f.n}
+                    </span>
+                    <span className="font-semibold">{f.title}</span>
                   </div>
-                  <span
-                    className="mono ml-auto shrink-0 text-xs font-semibold"
-                    style={{ color: MISSION_COLOR[m.type] }}
-                  >
-                    +{m.baseXp}+
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- crews ---------- */}
-      <section>
-        <h2 className="text-2xl font-bold sm:text-3xl">Pick your crew</h2>
-        <p className="mt-1 max-w-prose text-muted">
-          Every point of XP you earn is added to your crew&apos;s score. Four
-          crews, one board, no mercy.
-        </p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CREWS.map((c) => (
-            <div
-              key={c.slug}
-              className="card group p-5 transition duration-200 hover:-translate-y-1"
-              style={{
-                borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`,
-              }}
-            >
-              <div className="transition group-hover:scale-110">
-                <CrewMark color={c.color} size={44} />
+                  <p className="mt-1 text-sm text-muted">{f.blurb}</p>
+                </div>
               </div>
-              <div className="mt-3 font-bold" style={{ color: c.color }}>
-                {c.name}
-              </div>
-              <p className="mt-1 text-sm text-muted">{c.blurb}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ---------- how it works ---------- */}
+      <Reveal>
+        <ChimpTicker />
+      </Reveal>
+
+      {/* ---------- trust strip ---------- */}
       <section className="grid gap-4 sm:grid-cols-3">
-        {[
-          ["01", "Connect", "One wallet, one signature. That's your identity. No passwords.", "var(--accent-2)"],
-          ["02", "Compete", "Clear daily mini-games for XP. One reward per mission per UTC day.", "var(--accent-3)"],
-          ["03", "Conquer", "Your XP lifts your crew up the global board. Spend $CHIMP on what comes next.", "var(--accent)"],
-        ].map(([n, h, p, color]) => (
-          <div key={h} className="card p-5">
+        {TRUST_SIGNALS.map((t, i) => (
+          <Reveal key={t.label} delay={i * 0.08}>
             <div
-              className="font-mono text-sm font-bold"
-              style={{ color }}
+              className="rounded-2xl border p-5"
+              style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
             >
-              {n}
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-4" />
+                {t.label}
+              </div>
+              <p className="mt-1 text-sm text-muted">{t.blurb}</p>
             </div>
-            <div className="mt-1 text-lg font-bold">{h}</div>
-            <p className="mt-1 text-sm text-muted">{p}</p>
-          </div>
+          </Reveal>
         ))}
+      </section>
+
+      {/* ---------- crews ---------- */}
+      <section>
+        <Reveal>
+          <h2 className="text-2xl font-bold sm:text-3xl">Pick your crew</h2>
+          <p className="mt-1 max-w-prose text-muted">
+            Every point of XP you earn is added to your crew&apos;s score. Four
+            crews, one board, no mercy.
+          </p>
+        </Reveal>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {CREWS.map((c, i) => (
+            <Reveal key={c.slug} delay={i * 0.06}>
+              <div
+                className="group flex h-full flex-col rounded-2xl border p-5 transition duration-200 hover:-translate-y-1"
+                style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
+              >
+                <div
+                  className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border transition group-hover:scale-110"
+                  style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
+                >
+                  <CrewMark color={c.color} size={44} />
+                </div>
+                <div className="mt-3 font-semibold" style={{ color: c.color }}>
+                  {c.name}
+                </div>
+                <p className="mt-1 text-sm text-muted">{c.blurb}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </section>
     </div>
   );
