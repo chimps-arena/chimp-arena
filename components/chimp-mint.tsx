@@ -16,6 +16,9 @@ import {
 import { publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
+import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
+import { TxErrorBanner } from "@/components/tx-error-banner";
+import { useTxTracker } from "@/components/tx-tracker";
 import {
   ASTRO_CORP_WALLET,
   CHIMP_MINT,
@@ -26,7 +29,7 @@ import {
   mintMemo,
 } from "@/lib/chain/mint-config";
 
-type Phase = "idle" | "confirm" | "minting" | "done" | "error";
+type Phase = "idle" | "confirm" | "minting" | "done" | "error" | "stuck";
 
 interface Milestone {
   mintNumber: number;
@@ -55,11 +58,15 @@ const TIER_STYLE: Record<string, string> = {
 
 export function ChimpMint() {
   const wallet = useWallet();
+  const { track } = useTxTracker();
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DescribedTxError | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  /** Set once a payment lands but the mint itself fails - lets "try again"
+   *  resubmit this same payment to the claim route instead of paying twice. */
+  const [stuckPayment, setStuckPayment] = useState<{ signature: string; raw: string } | null>(null);
 
   // Wallet UI only renders post-hydration: WalletMultiButton renders
   // different markup on server vs client and would trip a hydration mismatch.
@@ -93,12 +100,43 @@ export function ChimpMint() {
     }
   }
 
+  /** Submits the payment signature to the claim route - shared by a fresh
+   *  mint and by retrying a stuck one without paying again. */
+  async function claimWithSignature(owner: string, paymentSignature: string) {
+    const claimRes = await fetch("/api/mint/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ wallet: owner, signature: paymentSignature }),
+    });
+    const claim = await claimRes.json().catch(() => ({}));
+    if (!claimRes.ok) {
+      // This failure happens on OUR side (the mint delegate), after the
+      // buyer's money already moved - never describeTxError() this as if
+      // it were the buyer's wallet. See lib/chain/tx-error.ts.
+      setStuckPayment({ signature: paymentSignature, raw: claim.error || "unknown error" });
+      setPhase("stuck");
+      return;
+    }
+    setStuckPayment(null);
+    setResult({
+      asset: claim.asset,
+      signature: claim.signature,
+      tier: claim.tier,
+      name: claim.name,
+      milestone: claim.milestone,
+    });
+    setPhase("done");
+    void checkBalance();
+  }
+
   async function mint() {
     if (!wallet.publicKey) return;
     setPhase("minting");
     setError(null);
+    const owner = publicKey(wallet.publicKey.toBase58());
+
+    let paymentSignature: string;
     try {
-      const owner = publicKey(wallet.publicKey.toBase58());
       const mint = publicKey(CHIMP_MINT);
       const buyerAta = findAssociatedTokenPda(umi, { mint, owner });
       const astroAta = findAssociatedTokenPda(umi, {
@@ -136,33 +174,17 @@ export function ChimpMint() {
         .add(addMemo(umi, { memo: mintMemo(owner) }))
         .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
 
-      const paymentSignature = bs58.encode(tx.signature);
-
-      const claimRes = await fetch("/api/mint/claim", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: owner, signature: paymentSignature }),
-      });
-      const claim = await claimRes.json().catch(() => ({}));
-      if (!claimRes.ok) {
-        throw new Error(
-          `Payment went through but minting failed (${claim.error || "unknown error"}). Contact support with this transaction: ${paymentSignature}`,
-        );
-      }
-
-      setResult({
-        asset: claim.asset,
-        signature: claim.signature,
-        tier: claim.tier,
-        name: claim.name,
-        milestone: claim.milestone,
-      });
-      setPhase("done");
-      void checkBalance();
+      paymentSignature = bs58.encode(tx.signature);
+      track(paymentSignature, "Mint payment");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Mint failed");
+      setError(describeTxError(e));
       setPhase("error");
+      return;
     }
+
+    // Payment is irreversible at this point - any failure from here is ours
+    // to fix, not the buyer's wallet (see claimWithSignature).
+    await claimWithSignature(owner, paymentSignature);
   }
 
   if (!mounted) {
@@ -267,17 +289,48 @@ export function ChimpMint() {
 
       {phase === "minting" && (
         <button className="btn btn-primary" disabled>
-          Minting… approve in your wallet
+          {stuckPayment ? "Retrying mint…" : "Minting… approve in your wallet"}
         </button>
       )}
 
-      {phase === "error" && (
+      {phase === "error" && error && (
         <div className="flex flex-col gap-3">
-          <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
-            {error}
-          </p>
+          <TxErrorBanner error={error} />
           <button className="btn btn-ghost" onClick={() => setPhase("idle")}>
             Try again
+          </button>
+        </div>
+      )}
+
+      {phase === "stuck" && stuckPayment && (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">
+            <div className="font-semibold text-bad">
+              Payment went through, minting didn&apos;t
+            </div>
+            <p className="mt-0.5 text-muted">
+              This is on our end, not your wallet - your $CHIMP wasn&apos;t
+              lost. Hit retry below and we&apos;ll finish minting with the
+              payment you already sent (you won&apos;t be charged again).
+            </p>
+            <a
+              href={explorerTx(stuckPayment.signature)}
+              target="_blank"
+              rel="noreferrer"
+              className="mono mt-2 inline-block text-xs underline"
+            >
+              payment transaction ↗
+            </a>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              if (!wallet.publicKey) return;
+              setPhase("minting");
+              await claimWithSignature(wallet.publicKey.toBase58(), stuckPayment.signature);
+            }}
+          >
+            Retry minting (no extra payment)
           </button>
         </div>
       )}

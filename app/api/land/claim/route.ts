@@ -207,7 +207,13 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     await db.from("property_mint_claims").delete().eq("tx_signature", signature);
-    const msg = e instanceof Error ? e.message : "Mint failed after payment";
+    // See app/api/mint/claim's identical catch block for why this doesn't
+    // return the raw error - same mint delegate wallet, same failure class.
+    console.error("land claim mint failed after payment", signature, e);
+    const raw = e instanceof Error ? e.message : "Mint failed after payment";
+    const msg = /insufficient funds for rent|insufficient lamports/i.test(raw)
+      ? "Minting is temporarily unavailable (internal funding issue)."
+      : "Minting failed unexpectedly.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

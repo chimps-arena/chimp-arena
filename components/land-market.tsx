@@ -19,9 +19,12 @@ import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connecti
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import { ASTRO_CORP_WALLET, CHIMP_MINT, CHIMP_DECIMALS } from "@/lib/chain/mint-config";
 import { propertyMintMemo } from "@/lib/chain/property-mint-config";
+import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
+import { TxErrorBanner } from "@/components/tx-error-banner";
+import { useTxTracker } from "@/components/tx-tracker";
 import type { LandProperty } from "@/lib/types";
 
-type Phase = "idle" | "confirm" | "buying" | "done" | "error";
+type Phase = "idle" | "confirm" | "buying" | "done" | "error" | "stuck";
 
 export function LandMarket() {
   const wallet = useWallet();
@@ -54,10 +57,12 @@ export function LandMarket() {
   );
   const visible = zone === "all" ? properties : properties.filter((p) => p.zone === zone);
 
+  const { track } = useTxTracker();
   const [selected, setSelected] = useState<LandProperty | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DescribedTxError | null>(null);
   const [result, setResult] = useState<{ asset: string; signature: string } | null>(null);
+  const [stuckPayment, setStuckPayment] = useState<{ signature: string } | null>(null);
 
   const walletKey = wallet.publicKey?.toBase58() ?? null;
   const umi = useMemo(() => {
@@ -76,12 +81,35 @@ export function LandMarket() {
     setResult(null);
   }
 
+  /** Shared by a fresh purchase and by retrying a stuck one without paying
+   *  again - see components/chimp-mint.tsx's identical split for why. */
+  async function claimWithSignature(owner: string, paymentSignature: string) {
+    if (!selected) return;
+    const claimRes = await fetch("/api/land/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ propertyId: selected.id, wallet: owner, signature: paymentSignature }),
+    });
+    const claim = await claimRes.json().catch(() => ({}));
+    if (!claimRes.ok) {
+      setStuckPayment({ signature: paymentSignature });
+      setPhase("stuck");
+      return;
+    }
+    setStuckPayment(null);
+    setResult({ asset: claim.asset, signature: claim.signature });
+    setPhase("done");
+    setProperties((prev) => prev.filter((p) => p.id !== selected.id));
+  }
+
   async function buy() {
     if (!selected || !wallet.publicKey) return;
     setPhase("buying");
     setError(null);
+    const owner = publicKey(wallet.publicKey.toBase58());
+
+    let paymentSignature: string;
     try {
-      const owner = publicKey(wallet.publicKey.toBase58());
       const mint = publicKey(CHIMP_MINT);
       const buyerAta = findAssociatedTokenPda(umi, { mint, owner });
       const astroAta = findAssociatedTokenPda(umi, { mint, owner: publicKey(ASTRO_CORP_WALLET) });
@@ -111,27 +139,15 @@ export function LandMarket() {
         .add(addMemo(umi, { memo: propertyMintMemo(selected.id, owner) }))
         .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
 
-      const paymentSignature = bs58.encode(tx.signature);
-
-      const claimRes = await fetch("/api/land/claim", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ propertyId: selected.id, wallet: owner, signature: paymentSignature }),
-      });
-      const claim = await claimRes.json().catch(() => ({}));
-      if (!claimRes.ok) {
-        throw new Error(
-          `Payment went through but minting failed (${claim.error || "unknown error"}). Contact support with this transaction: ${paymentSignature}`,
-        );
-      }
-
-      setResult({ asset: claim.asset, signature: claim.signature });
-      setPhase("done");
-      setProperties((prev) => prev.filter((p) => p.id !== selected.id));
+      paymentSignature = bs58.encode(tx.signature);
+      track(paymentSignature, "Land payment");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Purchase failed");
+      setError(describeTxError(e));
       setPhase("error");
+      return;
     }
+
+    await claimWithSignature(owner, paymentSignature);
   }
 
   if (!mounted) return null;
@@ -226,16 +242,46 @@ export function LandMarket() {
             )}
             {phase === "buying" && (
               <button className="btn btn-primary w-full" disabled>
-                Buying… approve in your wallet
+                {stuckPayment ? "Retrying…" : "Buying… approve in your wallet"}
               </button>
             )}
-            {phase === "error" && (
+            {phase === "error" && error && (
               <div className="flex flex-col gap-3">
-                <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
-                  {error}
-                </p>
+                <TxErrorBanner error={error} />
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>
                   Close
+                </button>
+              </div>
+            )}
+            {phase === "stuck" && stuckPayment && (
+              <div className="flex flex-col gap-3">
+                <div className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">
+                  <div className="font-semibold text-bad">
+                    Payment went through, minting didn&apos;t
+                  </div>
+                  <p className="mt-0.5 text-muted">
+                    This is on our end, not your wallet - your $CHIMP
+                    wasn&apos;t lost. Retry below and we&apos;ll finish with
+                    the payment you already sent.
+                  </p>
+                  <a
+                    href={explorerTx(stuckPayment.signature)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono mt-2 inline-block text-xs underline"
+                  >
+                    payment transaction ↗
+                  </a>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    if (!wallet.publicKey) return;
+                    setPhase("buying");
+                    await claimWithSignature(wallet.publicKey.toBase58(), stuckPayment.signature);
+                  }}
+                >
+                  Retry (no extra payment)
                 </button>
               </div>
             )}

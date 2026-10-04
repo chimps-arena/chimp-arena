@@ -205,6 +205,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true, handle: v.handle });
   }
 
+  // Checked before payment (not just before the final write) so nobody
+  // pays 300 $CHIMP for a handle that was already doomed to fail.
+  const { data: clash } = await db
+    .from("players")
+    .select("wallet")
+    .ilike("handle", v.handle)
+    .neq("wallet", session.wallet)
+    .limit(1);
+  if (clash && clash.length > 0) {
+    return NextResponse.json({ error: "That handle is taken." }, { status: 409 });
+  }
+
   const now = Date.now();
   if (player.last_renamed_at) {
     const cooldownEnds =
@@ -292,23 +304,20 @@ export async function PATCH(req: Request) {
     }
   }
 
-  const { data: clash } = await db
-    .from("players")
-    .select("wallet")
-    .ilike("handle", v.handle)
-    .neq("wallet", session.wallet)
-    .limit(1);
-  if (clash && clash.length > 0) {
-    return NextResponse.json({ error: "That handle is taken." }, { status: 409 });
-  }
-
   const { error } = await db
     .from("players")
     .update({ handle: v.handle, last_renamed_at: new Date(now).toISOString() })
     .eq("wallet", session.wallet);
   if (error) {
+    // Payment (if any) already landed and was claimed above - release it so
+    // this same payment can be retried instead of being stuck unused. Same
+    // pattern as app/api/mint/claim and app/api/land/claim.
+    if (!inTrial && signature) {
+      await db.from("handle_rename_claims").delete().eq("tx_signature", signature);
+    }
+    console.error("rename failed after claim", session.wallet, error);
     return NextResponse.json(
-      { error: "db error", detail: error.message },
+      { error: "Rename failed unexpectedly. If you paid, it's safe to retry." },
       { status: 500 },
     );
   }

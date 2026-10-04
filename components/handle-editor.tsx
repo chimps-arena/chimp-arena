@@ -16,6 +16,8 @@ import {
 import { publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint } from "@/lib/chain/connection";
 import { HANDLE_RULES, validateHandle } from "@/lib/game/config";
+import { describeTxError } from "@/lib/chain/tx-error";
+import { useTxTracker } from "@/components/tx-tracker";
 import {
   ASTRO_CORP_WALLET,
   CHIMP_MINT,
@@ -45,10 +47,14 @@ export function HandleEditor({
   onSaved: () => void | Promise<void>;
 }) {
   const wallet = useWallet();
+  const { track } = useTxTracker();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** Set if payment lands but the server-side save fails - lets a retry
+   *  resubmit this same signature instead of paying 300 $CHIMP twice. */
+  const [stuckSignature, setStuckSignature] = useState<string | null>(null);
 
   const walletKey = wallet.publicKey?.toBase58() ?? null;
   const umi = useMemo(() => {
@@ -75,13 +81,17 @@ export function HandleEditor({
     }
     setSaving(true);
     setError(null);
-    try {
-      let signature: string | undefined;
 
-      if (!inTrial) {
-        if (!wallet.publicKey) {
-          throw new Error(`Your free trial has ended. Connect a wallet to pay ${priceChimp} $CHIMP.`);
-        }
+    // Retrying a stuck save reuses the payment already sent - never pay twice.
+    let signature: string | undefined = stuckSignature ?? undefined;
+
+    if (!signature && !inTrial) {
+      if (!wallet.publicKey) {
+        setError(`Your free trial has ended. Connect a wallet to pay ${priceChimp} $CHIMP.`);
+        setSaving(false);
+        return;
+      }
+      try {
         const owner = publicKey(wallet.publicKey.toBase58());
         const mint = publicKey(CHIMP_MINT);
         const buyerAta = findAssociatedTokenPda(umi, { mint, owner });
@@ -111,8 +121,17 @@ export function HandleEditor({
           .add(addMemo(umi, { memo: renameMemo(owner) }))
           .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
         signature = bs58.encode(tx.signature);
+        track(signature, "Rename payment");
+      } catch (e) {
+        setError(describeTxError(e).detail);
+        setSaving(false);
+        return;
       }
+    }
 
+    // Payment (if any) is done at this point - a failure from here is ours
+    // to fix, not the player's wallet, so it gets "retry" not "pay again".
+    try {
       const res = await fetch("/api/me", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -120,13 +139,20 @@ export function HandleEditor({
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Could not save.");
+        if (signature) {
+          setStuckSignature(signature);
+          setError(`${data.error ?? "Could not save."} Your payment is safe - hit retry, it won't charge you again.`);
+        } else {
+          setError(data.error ?? "Could not save.");
+        }
         return;
       }
+      setStuckSignature(null);
       setEditing(false);
       await onSaved();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error.");
+    } catch {
+      if (signature) setStuckSignature(signature);
+      setError("Network error. " + (signature ? "Your payment is safe - hit retry." : ""));
     } finally {
       setSaving(false);
     }
@@ -191,10 +217,20 @@ export function HandleEditor({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || (!inTrial && !wallet.publicKey)}
+          disabled={saving || (!inTrial && !wallet.publicKey && !stuckSignature)}
           className="btn btn-primary px-3 py-1 text-xs"
         >
-          {saving ? (inTrial ? "Saving…" : "Paying…") : inTrial ? "Save" : `Pay & save`}
+          {saving
+            ? stuckSignature
+              ? "Retrying…"
+              : inTrial
+                ? "Saving…"
+                : "Paying…"
+            : stuckSignature
+              ? "Retry (no extra charge)"
+              : inTrial
+                ? "Save"
+                : "Pay & save"}
         </button>
         <button
           type="button"

@@ -3,6 +3,7 @@ import { Sora, Space_Mono, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
+import { TxTrackerProvider } from "@/components/tx-tracker";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 
@@ -62,16 +63,18 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppScene />
         <SessionProvider>
-          <WalletSessionGuard />
-          <NavBar />
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-            {children}
-          </main>
-          <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
-            <span>© {new Date().getFullYear()} Astrochimpz</span>
-            <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
-            <a href="/legal" className="hover:text-foreground">Legal</a>
-          </footer>
+          <TxTrackerProvider>
+            <WalletSessionGuard />
+            <NavBar />
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              {children}
+            </main>
+            <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
+              <span>© {new Date().getFullYear()} Astrochimpz</span>
+              <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
+              <a href="/legal" className="hover:text-foreground">Legal</a>
+            </footer>
+          </TxTrackerProvider>
         </SessionProvider>
       </body>
     </html>

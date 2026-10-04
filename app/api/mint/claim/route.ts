@@ -270,7 +270,15 @@ export async function POST(req: Request) {
     // Minting failed after the payment already landed - free up the claim so
     // the same payment signature can be retried instead of being stuck.
     await db.from("nft_mint_claims").delete().eq("tx_signature", signature);
-    const msg = e instanceof Error ? e.message : "Mint failed after payment";
+    // Full detail (often a multi-line Solana simulation log) goes to the
+    // server log for debugging - the client only needs a short, honest
+    // reason, not a raw log dump (see components/chimp-mint.tsx's "stuck"
+    // state, which already tells the buyer this is our fault, not theirs).
+    console.error("mint claim failed after payment", signature, e);
+    const raw = e instanceof Error ? e.message : "Mint failed after payment";
+    const msg = /insufficient funds for rent|insufficient lamports/i.test(raw)
+      ? "Minting is temporarily unavailable (internal funding issue)."
+      : "Minting failed unexpectedly.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
