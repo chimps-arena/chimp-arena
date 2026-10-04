@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import bs58 from "bs58";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import {
@@ -169,6 +170,12 @@ export function HandleEditor({
           Your free trial has ended. This rename costs {priceChimp} $CHIMP.
         </span>
       )}
+      {!inTrial && !wallet.publicKey && (
+        <div className="flex items-center gap-2">
+          <WalletMultiButton />
+          <span className="text-xs text-muted">Connect the wallet holding your $CHIMP.</span>
+        </div>
+      )}
       <span className="inline-flex items-center gap-2">
         <input
           autoFocus
@@ -184,7 +191,7 @@ export function HandleEditor({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving}
+          disabled={saving || (!inTrial && !wallet.publicKey)}
           className="btn btn-primary px-3 py-1 text-xs"
         >
           {saving ? (inTrial ? "Saving…" : "Paying…") : inTrial ? "Save" : `Pay & save`}
