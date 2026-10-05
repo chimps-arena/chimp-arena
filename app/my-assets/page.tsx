@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { explorerAddress } from "@/lib/chain/connection";
 import { ResaleControls } from "@/components/resale-controls";
+import { HoloCard } from "@/components/holo-card";
 import type { Property } from "@/lib/types";
 
 interface Nft {
@@ -142,9 +143,11 @@ export default function MyAssetsPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {nfts.map((n) => (
               <div key={n.asset} className="card overflow-hidden">
-                <div className="relative aspect-square w-full">
-                  <Image src={n.image} alt="" fill className="object-cover" />
-                </div>
+                <HoloCard className="block">
+                  <div className="relative aspect-square w-full">
+                    <Image src={n.image} alt="" fill className="object-cover" />
+                  </div>
+                </HoloCard>
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold">{n.name}</span>

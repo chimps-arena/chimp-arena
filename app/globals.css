@@ -264,6 +264,45 @@ h3 {
   border-color: color-mix(in srgb, var(--accent-2) 45%, var(--border));
 }
 
+/* ---------- holo card (foil trading-card tilt) ---------- */
+.holo-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+}
+.holo-card-inner {
+  position: relative;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.25s ease-out;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.holo-card-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  background: radial-gradient(
+    circle at var(--mx) var(--my),
+    rgba(255, 255, 255, 0.35),
+    transparent 45%
+  );
+  mix-blend-mode: overlay;
+}
+.holo-card:hover .holo-card-glare {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-card-inner {
+    transform: none !important;
+  }
+  .holo-card-glare {
+    display: none;
+  }
+}
+
 /* ---------- bits ---------- */
 .mono {
   font-family: var(--font-mono), ui-monospace, monospace;
