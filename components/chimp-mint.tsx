@@ -172,7 +172,10 @@ export function ChimpMint() {
         amount: MINT_PRICE_BASE,
       })
         .add(addMemo(umi, { memo: mintMemo(owner) }))
-        .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+        .sendAndConfirm(umi, {
+          send: { maxRetries: 5 },
+          confirm: { commitment: "confirmed" },
+        });
 
       paymentSignature = bs58.encode(tx.signature);
       track(paymentSignature, "Mint payment");

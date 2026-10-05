@@ -119,7 +119,10 @@ export function HandleEditor({
           amount: RENAME_PRICE_BASE,
         })
           .add(addMemo(umi, { memo: renameMemo(owner) }))
-          .sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+          .sendAndConfirm(umi, {
+            send: { maxRetries: 5 },
+            confirm: { commitment: "confirmed" },
+          });
         signature = bs58.encode(tx.signature);
         track(signature, "Rename payment");
       } catch (e) {

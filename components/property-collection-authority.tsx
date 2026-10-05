@@ -85,7 +85,7 @@ export function PropertyCollectionAuthority() {
         collection: publicKey(PROPERTIES_COLLECTION),
         plugin: { type: "Royalties" },
         newAuthority: { type: "None" },
-      }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
       setLockPhase("idle");
       await refresh();
     } catch (e) {
@@ -103,7 +103,7 @@ export function PropertyCollectionAuthority() {
       await addCollectionPlugin(umi, {
         collection: publicKey(PROPERTIES_COLLECTION),
         plugin: { type: "UpdateDelegate", additionalDelegates: [publicKey(MINT_DELEGATE)] },
-      }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
       setDelegatePhase("idle");
       await refresh();
     } catch (e) {

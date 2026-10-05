@@ -207,7 +207,7 @@ export async function POST(req: Request) {
       uri,
       collection,
       owner: umiPublicKey(wallet),
-    }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+    }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
     const assetAddress = asset.publicKey.toString();
     await db
@@ -242,7 +242,7 @@ export async function POST(req: Request) {
             uri: `${SITE_URL}/nft/chimp-metadata/${bonusVariant.id}`,
             collection,
             owner: umiPublicKey(wallet),
-          }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+          }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
           const bonusAddress = bonusAsset.publicKey.toString();
           await db.from("chimp_milestones").insert({

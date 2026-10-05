@@ -89,7 +89,7 @@ export function CollectionAuthority() {
         collection: publicKey(ASTROCHIMPS_COLLECTION),
         plugin: { type: "Royalties" },
         newAuthority: { type: "None" },
-      }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
       setLockPhase("idle");
       await refresh();
     } catch (e) {
@@ -107,7 +107,7 @@ export function CollectionAuthority() {
       await addCollectionPlugin(umi, {
         collection: publicKey(ASTROCHIMPS_COLLECTION),
         plugin: { type: "UpdateDelegate", additionalDelegates: [publicKey(MINT_DELEGATE)] },
-      }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
       setDelegatePhase("idle");
       await refresh();
     } catch (e) {

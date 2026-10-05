@@ -67,7 +67,7 @@ export function CreatePropertyCollection() {
             ruleSet: { type: "None" },
           },
         ],
-      }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
       setAddress(collection.publicKey.toString());
       setPhase("done");

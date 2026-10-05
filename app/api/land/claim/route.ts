@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       collection,
       owner: umiPublicKey(wallet),
       plugins,
-    }).sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+    }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
     const assetAddress = asset.publicKey.toString();
 
