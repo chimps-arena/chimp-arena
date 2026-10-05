@@ -106,10 +106,17 @@ export function describeTxError(e: unknown): DescribedTxError {
     };
   }
 
+  // A bare, uninformative message like "Unexpected error" usually means the
+  // wallet's own bridge (often a mobile in-app browser) hit something it
+  // doesn't have a specific error for - frequently a flaky connection
+  // interrupting the wallet handshake, not a new failure mode.
+  const generic = !msg || /^unexpected error\.?$/i.test(msg.trim());
   return {
     category: "unknown",
     title: "Something went wrong",
-    detail: msg || "Unknown error.",
+    detail: generic
+      ? "Your wallet reported a generic error, often caused by a weak or dropped connection mid-approval. Check your connection and try again."
+      : msg,
     retryable: true,
   };
 }
