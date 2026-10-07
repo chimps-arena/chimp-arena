@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import bs58 from "bs58";
+import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
+import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
 import {
   addMemo,
   fetchToken,
@@ -130,20 +131,29 @@ export function LandMarket() {
         );
       }
 
-      const tx = await transferTokens(umi, {
+      // See components/chimp-mint.tsx's identical pattern for why this goes
+      // through wallet.sendTransaction() rather than Umi's sendAndConfirm -
+      // Phantom's mobile in-app browser doesn't properly support plain
+      // signTransaction (throws a generic error), only signAndSendTransaction.
+      const bh = await umi.rpc.getLatestBlockhash({ commitment: "confirmed" });
+      const unsignedTx = transferTokens(umi, {
         source: buyerAta,
         destination: astroAta,
         authority: umi.identity,
         amount: priceBase,
       })
         .add(addMemo(umi, { memo: propertyMintMemo(selected.id, owner) }))
-        .sendAndConfirm(umi, {
-          send: { maxRetries: 5 },
-          confirm: { commitment: "confirmed" },
-        });
-
-      paymentSignature = bs58.encode(tx.signature);
+        .setBlockhash(bh)
+        .build(umi);
+      const connection = new Connection(chainEndpoint(), "confirmed");
+      paymentSignature = await wallet.sendTransaction(toWeb3JsTransaction(unsignedTx), connection, {
+        maxRetries: 5,
+      });
       track(paymentSignature, "Land payment");
+      await connection.confirmTransaction(
+        { signature: paymentSignature, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+        "confirmed",
+      );
     } catch (e) {
       setError(describeTxError(e));
       setPhase("error");

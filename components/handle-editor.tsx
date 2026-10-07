@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import bs58 from "bs58";
+import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
+import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
 import {
   addMemo,
   fetchToken,
@@ -112,19 +113,29 @@ export function HandleEditor({
           );
         }
 
-        const tx = await transferTokens(umi, {
+        // See components/chimp-mint.tsx's identical pattern for why this
+        // goes through wallet.sendTransaction() rather than Umi's
+        // sendAndConfirm - Phantom's mobile in-app browser doesn't properly
+        // support plain signTransaction, only signAndSendTransaction.
+        const bh = await umi.rpc.getLatestBlockhash({ commitment: "confirmed" });
+        const unsignedTx = transferTokens(umi, {
           source: buyerAta,
           destination: astroAta,
           authority: umi.identity,
           amount: RENAME_PRICE_BASE,
         })
           .add(addMemo(umi, { memo: renameMemo(owner) }))
-          .sendAndConfirm(umi, {
-            send: { maxRetries: 5 },
-            confirm: { commitment: "confirmed" },
-          });
-        signature = bs58.encode(tx.signature);
+          .setBlockhash(bh)
+          .build(umi);
+        const connection = new Connection(chainEndpoint(), "confirmed");
+        signature = await wallet.sendTransaction(toWeb3JsTransaction(unsignedTx), connection, {
+          maxRetries: 5,
+        });
         track(signature, "Rename payment");
+        await connection.confirmTransaction(
+          { signature, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+          "confirmed",
+        );
       } catch (e) {
         setError(describeTxError(e).detail);
         setSaving(false);

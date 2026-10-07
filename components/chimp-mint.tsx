@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import bs58 from "bs58";
+import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
+import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
 import {
   addMemo,
   fetchToken,
@@ -165,20 +166,32 @@ export function ChimpMint() {
       // The server verifies this payment landed, then mints the NFT into the
       // collection (see app/api/mint/claim) - it can't be done client-side
       // since joining the collection needs the mint delegate's signature.
-      const tx = await transferTokens(umi, {
+      //
+      // Sent via wallet.sendTransaction() (wallet-adapter's own signer+send),
+      // NOT Umi's sendAndConfirm - that signs with wallet.signTransaction()
+      // and broadcasts via our own RPC, but Phantom's mobile in-app browser
+      // is built around signAndSendTransaction (sign+send in one call) and
+      // throws a generic, unhelpful error on plain signTransaction there
+      // (found 2026-10-07, mobile mints were failing 100% of the time).
+      const bh = await umi.rpc.getLatestBlockhash({ commitment: "confirmed" });
+      const unsignedTx = transferTokens(umi, {
         source: buyerAta,
         destination: astroAta,
         authority: umi.identity,
         amount: MINT_PRICE_BASE,
       })
         .add(addMemo(umi, { memo: mintMemo(owner) }))
-        .sendAndConfirm(umi, {
-          send: { maxRetries: 5 },
-          confirm: { commitment: "confirmed" },
-        });
-
-      paymentSignature = bs58.encode(tx.signature);
+        .setBlockhash(bh)
+        .build(umi);
+      const connection = new Connection(chainEndpoint(), "confirmed");
+      paymentSignature = await wallet.sendTransaction(toWeb3JsTransaction(unsignedTx), connection, {
+        maxRetries: 5,
+      });
       track(paymentSignature, "Mint payment");
+      await connection.confirmTransaction(
+        { signature: paymentSignature, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+        "confirmed",
+      );
     } catch (e) {
       setError(describeTxError(e));
       setPhase("error");
