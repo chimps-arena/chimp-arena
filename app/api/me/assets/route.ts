@@ -67,14 +67,34 @@ export async function GET() {
       const inOurCollection = (a: (typeof owned)[number]) =>
         a.updateAuthority.type === "Collection" &&
         a.updateAuthority.address?.toString() === ASTROCHIMPS_COLLECTION;
-      nfts = owned
-        .filter((a) => a.name === "Astrochimp" || inOurCollection(a))
-        .map((a) => ({
-          asset: a.publicKey.toString(),
-          name: a.name || "Astrochimp",
-          image: "/characters/astrochimp-512.png",
-          inCollection: inOurCollection(a),
-        }));
+      const matched = owned.filter((a) => a.name === "Astrochimp" || inOurCollection(a));
+
+      // Each asset's own uri points at its real metadata (see
+      // app/nft/chimp-metadata/*) - that's the only place that knows which
+      // of the 21 designs this specific NFT actually is. Fetched per-asset
+      // (not hardcoded to the generic mascot image, which every NFT used to
+      // show regardless of its real tier/style - found 2026-10-07) with a
+      // fallback so one slow/broken fetch doesn't blank the whole grid.
+      nfts = await Promise.all(
+        matched.map(async (a) => {
+          let image = "/characters/astrochimp-512.png";
+          try {
+            const res = await fetch(a.uri, { next: { revalidate: 300 } });
+            if (res.ok) {
+              const meta = (await res.json()) as { image?: string };
+              if (meta.image) image = meta.image;
+            }
+          } catch {
+            // keep the generic fallback
+          }
+          return {
+            asset: a.publicKey.toString(),
+            name: a.name || "Astrochimp",
+            image,
+            inCollection: inOurCollection(a),
+          };
+        }),
+      );
     } catch {
       // RPC hiccup - show properties regardless, NFTs just come back empty.
     }
