@@ -1,4 +1,7 @@
-export type MissionType = "reaction" | "trivia" | "astro-run" | "dodge";
+import type { ResourceKind } from "@/lib/game/mining";
+
+export type MissionType = "reaction" | "trivia" | "astro-run" | "dodge" | "mining";
+export type { ResourceKind };
 
 export interface Property {
   id: string;
@@ -68,6 +71,8 @@ export interface PlayerProfile {
   crewSlug: string | null;
   xp: number;
   gold: number;
+  resources: Record<ResourceKind, number>;
+  miningTool: number;
   createdAt: string;
   lastRenamedAt: string | null;
 }
@@ -174,4 +179,26 @@ export interface SubmitResult {
   };
   goldAwarded: number;
   totalGold?: number;
+  /** Present only for the mining mission - ore is paid per-permit, not
+   *  gated by alreadyClaimedToday like XP/Gold-from-XP are. */
+  mining?: {
+    depth: number;
+    zone: string;
+    permitId: string;
+    found: Record<"gold" | ResourceKind, number>;
+    totals: Record<"gold" | ResourceKind, number>;
+  };
+}
+
+/** GET /api/mining - the session wallet's mining status. */
+export interface MiningStatus {
+  realWallet: boolean;
+  toolTier: number;
+  permitPriceChimp: number;
+  permits: {
+    unstarted: number;
+    resumable: boolean;
+    startedToday: number;
+    dailyCap: number;
+  };
 }

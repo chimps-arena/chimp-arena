@@ -6,6 +6,7 @@
  * never take the payment without delivering the NFT.
  */
 import { PUBLIC_ENV } from "@/lib/env";
+import { MINING } from "@/lib/game/sinks";
 
 /** Live $CHIMP mint on mainnet. */
 export const CHIMP_MINT =
@@ -98,3 +99,13 @@ export const RENAME_COOLDOWN_DAYS = 3;
 export function renameMemo(wallet: string): string {
   return `ASTRORENAME:${wallet}`;
 }
+
+/**
+ * Mining permit + tool prices in base units - same BigInt pattern as
+ * RENAME_PRICE_BASE above, built from the whole-CHIMP numbers in
+ * lib/game/sinks.ts's MINING block (don't use lib/game/economy.ts's
+ * toBaseUnits() for this - it uses a stale CHIMP_DECIMALS=6, this file's
+ * value of 9 is the one verified on-chain).
+ */
+export const MINING_PERMIT_PRICE_BASE =
+  BigInt(MINING.permitPriceChimp) * 10n ** BigInt(CHIMP_DECIMALS);

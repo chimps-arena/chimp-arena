@@ -7,21 +7,37 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { GuestButton } from "@/components/guest-button";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
 
+type Resource = "gold" | "cobalt" | "palladium" | "crystal";
+
 interface LedgerRow {
-  id: number;
+  id: string;
+  resource: Resource;
   delta: number;
   reason: string;
   createdAt: string;
 }
 interface BankData {
   gold: number;
+  resources: { cobalt: number; palladium: number; crystal: number };
   ledger: LedgerRow[];
 }
+
+const RESOURCE_COLOR: Record<Resource, string> = {
+  gold: "var(--accent-2)",
+  cobalt: "var(--accent-violet)",
+  palladium: "var(--accent-violet)",
+  crystal: "var(--accent-violet)",
+};
 
 function friendlyReason(reason: string): string {
   const [kind, detail] = reason.split(":");
   if (kind === "mission") return `Mission cleared: ${detail}`;
   if (kind === "streak") return `Streak day ${detail}`;
+  if (kind === "mining") return "Deep Core haul";
+  if (kind === "tool") return `Tool upgrade (tier ${detail})`;
+  if (kind === "market" && detail === "list") return "Listed on market";
+  if (kind === "market" && detail === "cancel") return "Listing cancelled";
+  if (kind === "market" && detail === "buy") return "Bought on market";
   return reason;
 }
 
@@ -78,6 +94,8 @@ export default function BankPage() {
     );
   }
 
+  const player = me.player;
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 py-6">
       <div>
@@ -119,13 +137,35 @@ export default function BankPage() {
             Gold
           </div>
           <div className="mt-2 text-3xl font-bold text-accent-2">
-            {(bank?.gold ?? me.player.gold).toLocaleString()}
+            {(bank?.gold ?? player.gold).toLocaleString()}
           </div>
           <p className="mt-2 text-xs text-muted">
             Earned by playing. Off-chain, never a token. Boosts to spend it
             on are coming.
           </p>
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {(["cobalt", "palladium", "crystal"] as const).map((r) => (
+          <div key={r} className="card p-5">
+            <div className="text-xs uppercase tracking-[0.14em] text-muted">
+              {r}
+            </div>
+            <div className="mt-2 text-2xl font-bold text-accent-violet">
+              {(bank?.resources[r] ?? player.resources[r] ?? 0).toLocaleString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Link href="/missions/mining" className="btn btn-neon text-xs">
+          Mine for ore
+        </Link>
+        <Link href="/market/resources" className="btn btn-ghost text-xs">
+          Resource market
+        </Link>
       </div>
 
       <div className="card p-5">
@@ -142,8 +182,12 @@ export default function BankPage() {
                 className="flex items-center justify-between py-2 text-sm"
               >
                 <span className="text-muted">{friendlyReason(row.reason)}</span>
-                <span className="mono font-semibold text-accent-2">
-                  +{row.delta}
+                <span
+                  className="mono font-semibold"
+                  style={{ color: RESOURCE_COLOR[row.resource] }}
+                >
+                  {row.delta > 0 ? "+" : ""}
+                  {row.delta} {row.resource}
                 </span>
               </li>
             ))}

@@ -4,6 +4,8 @@ import {
   englishRecommendedTransformers,
 } from "obscenity";
 import type { Crew, MissionDef } from "@/lib/types";
+import { hash32, mulberry32 } from "@/lib/game/rng";
+import { maxDepthFor, TOOLS } from "@/lib/game/mining";
 
 /* ============================ CREWS ============================ */
 
@@ -82,6 +84,14 @@ export const MISSION_DEFS: MissionDef[] = [
     baseXp: 90,
     href: "/missions/debris-field",
   },
+  {
+    slug: "mining",
+    title: "Deep Core",
+    type: "mining",
+    blurb: "Buy a permit, dig through the strata. Deeper seams, rarer ore.",
+    baseXp: 90,
+    href: "/missions/mining",
+  },
 ];
 
 export function missionBySlug(slug: string): MissionDef | null {
@@ -95,27 +105,6 @@ export function utcDay(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** Deterministic 32-bit hash of a string (FNV-1a). */
-function hash32(str: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
-
-/** Seeded PRNG (mulberry32). */
-function mulberry32(seed: number) {
-  return function () {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export function seededShuffle<T>(items: T[], seed: string): T[] {
   const rand = mulberry32(hash32(seed));
   const arr = [...items];
@@ -127,8 +116,8 @@ export function seededShuffle<T>(items: T[], seed: string): T[] {
 }
 
 /**
- * The MVP has exactly three mini-games, so every day all three are active.
- * The helper still exists so the daily set can be narrowed later without
+ * The MVP runs every defined mission every day (no rotation yet). The
+ * helper still exists so the daily set can be narrowed later without
  * touching callers.
  */
 export function dailyMissions(day = utcDay()): MissionDef[] {
@@ -202,6 +191,22 @@ export const MISSION_RULES: Record<
       // the belt scrolls at most ~80 distance units / second
       score <= elapsed * 80 + 50,
     xp: (score, baseXp) => baseXp + Math.min(400, Math.floor(score / 10)),
+  },
+
+  // score = depth (meters) reached in the mining shaft (higher is better).
+  // This is a loose top-tier ceiling (best tool, TOOLS.length-1) since this
+  // function only sees (score, elapsed) - the precise per-tool ceiling is
+  // re-checked in the submit route, which has the tool tier from the signed
+  // start token.
+  mining: {
+    higherIsBetter: true,
+    validate: (score, elapsed) =>
+      Number.isInteger(score) &&
+      score >= 0 &&
+      elapsed >= 2 &&
+      elapsed <= 600 &&
+      score <= maxDepthFor(TOOLS.length - 1, elapsed),
+    xp: (score, baseXp) => baseXp + Math.min(400, Math.floor(score / 2)),
   },
 };
 

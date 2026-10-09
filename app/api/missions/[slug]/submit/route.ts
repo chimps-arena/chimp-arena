@@ -4,6 +4,7 @@ import { verifyShortLived } from "@/lib/auth/jwt";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { missionBySlug, MISSION_RULES, utcDay } from "@/lib/game/config";
 import { streakMultiplier, STREAK_MILESTONES } from "@/lib/game/economy";
+import { maxDepthFor, rollMiningYield, zoneNameFor } from "@/lib/game/mining";
 import type { StartTokenClaims, SubmitResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -42,7 +43,7 @@ function deriveScore(
     return { score: correct };
   }
 
-  if (type === "astro-run" || type === "dodge") {
+  if (type === "astro-run" || type === "dodge" || type === "mining") {
     const s = body.score;
     if (typeof s !== "number" || !Number.isFinite(s) || s < 0)
       return { error: "bad score" };
@@ -110,6 +111,61 @@ export async function POST(
   const day = utcDay();
   const xpForRun = rule.xp(score, mission.baseXp);
 
+  // Mining pays out per-permit, not gated by the once-per-day mission_runs
+  // insert below (XP/Gold-from-XP still are) - a paid permit used on an
+  // already-completed day would otherwise earn nothing. The server rolls
+  // the actual yield itself from depth + tool tier; the client never
+  // reports (or is trusted for) a resource haul.
+  let miningResult: SubmitResult["mining"];
+  if (mission.type === "mining") {
+    const permitId = claims.data?.permitId as string | undefined;
+    const toolTier = (claims.data?.toolTier as number | undefined) ?? 0;
+    if (!permitId) {
+      return NextResponse.json({ error: "missing permit - restart the mission" }, { status: 422 });
+    }
+    // Precise per-tool ceiling - MISSION_RULES.mining.validate() above only
+    // checked the loose best-tool ceiling since it doesn't see tool tier.
+    if (score > maxDepthFor(toolTier, elapsedSec)) {
+      return NextResponse.json({ error: "submission rejected as implausible" }, { status: 422 });
+    }
+
+    const haul = rollMiningYield(score, toolTier);
+    const { data: settled, error: settleErr } = await db
+      .rpc("settle_mining_run", {
+        p_permit_id: permitId,
+        p_wallet: session.wallet,
+        p_depth: score,
+        p_gold: haul.gold,
+        p_cobalt: haul.cobalt,
+        p_palladium: haul.palladium,
+        p_crystal: haul.crystal,
+      })
+      .maybeSingle<{ gold: number; cobalt: number; palladium: number; crystal: number }>();
+
+    if (settleErr || !settled) {
+      if (settleErr && /permit_used/.test(settleErr.message)) {
+        return NextResponse.json({ error: "this permit was already used" }, { status: 409 });
+      }
+      return NextResponse.json(
+        { error: settleErr?.message ?? "could not settle mining run" },
+        { status: 500 },
+      );
+    }
+
+    miningResult = {
+      depth: score,
+      zone: zoneNameFor(score),
+      permitId,
+      found: haul,
+      totals: {
+        gold: settled.gold,
+        cobalt: settled.cobalt,
+        palladium: settled.palladium,
+        crystal: settled.crystal,
+      },
+    };
+  }
+
   // Once-per-UTC-day XP gate via the unique (wallet, mission_slug, day) index.
   const { data: inserted, error: insErr } = await db
     .from("mission_runs")
@@ -157,6 +213,7 @@ export async function POST(
         alreadyClaimedToday: true,
         scoreAccepted: score,
         goldAwarded: 0,
+        mining: miningResult,
       };
       return NextResponse.json(result);
     }
@@ -232,6 +289,7 @@ export async function POST(
     streak: streakInfo,
     goldAwarded,
     totalGold: typeof newGold === "number" ? newGold : undefined,
+    mining: miningResult,
   };
   return NextResponse.json(result);
 }

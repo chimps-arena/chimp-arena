@@ -64,6 +64,60 @@ export const MARKETPLACE = {
  * self-documenting - same convention as ASTRODEED (primary property sale,
  * market-config.ts) and ASTROMINT (NFT mint, mint-config.ts).
  */
-export function resaleMemo(kind: "property" | "nft", id: string): string {
+export function resaleMemo(kind: "property" | "nft" | "resource", id: string): string {
   return `ASTROFEE:${kind}:${id}`;
 }
+
+/**
+ * Mining permit fee + tool tiers (Phase 1 "Core Loop" - founder plan,
+ * 2026-10-07, revised 2026-10-09 to a pool-priced market - see migration
+ * 0026). Tool costs are now resource QUANTITIES, not fixed $CHIMP - the
+ * actual $CHIMP cost is computed live from each resource's pool price at
+ * purchase time (lib/chain/mint-config.ts has no static tool price anymore
+ * for this reason). Gold is the one exception: debited directly from the
+ * player's own balance, never priced through the pool (Gold stays
+ * non-tradeable). All quantities are placeholders - founder to tune once
+ * real pool prices settle into something meaningful.
+ */
+export const MINING = {
+  /** Whole $CHIMP to start one mining run. */
+  permitPriceChimp: 10,
+  /** Most permits a wallet can *start* per UTC day - paid permits beyond
+   *  this roll over to the next day rather than being wasted. */
+  dailyPermitCap: 5,
+  /** Matches the mission start-token TTL - a reload within this window
+   *  resumes the same run instead of losing the permit. */
+  resumeWindowSec: 15 * 60,
+  /** Resource quantities to reach tool tier 1 or 2 (tier 0, Pickaxe, is
+   *  free/default - stays that way; the founder's reference numbers for a
+   *  Pickaxe assumed no free starting tool, which doesn't match how this
+   *  app already provisions new players, so that one wasn't carried over). */
+  tools: {
+    1: { gold: 1, cobalt: 3, palladium: 3, crystal: 1 }, // Drill
+    2: { gold: 0, cobalt: 6, palladium: 0, crystal: 6 }, // Plasma Cutter
+  },
+} as const;
+
+/** Tags a mining permit payment - same convention as ASTROMINT/ASTRORENAME. */
+export function miningPermitMemo(wallet: string): string {
+  return `ASTROPERMIT:${wallet}`;
+}
+
+/** Tags a tool-upgrade payment. */
+export function toolMemo(wallet: string, tier: number): string {
+  return `ASTROTOOL:${wallet}:${tier}`;
+}
+
+/**
+ * Pool-based resource market (migration 0026) - cobalt/palladium/crystal
+ * only, same Gold-stays-off-the-market rule as before. Superseded the
+ * player-listing market (0024): that was supply with no real demand since
+ * tool purchases just debited a player's own stash. Now tool purchases
+ * draw from this same shared pool, which is what actually moves price.
+ */
+export const RESOURCE_POOL = {
+  /** A buy that would ask for more than this fraction of current reserve
+   *  in one trade is rejected outright - crude circuit breaker against one
+   *  purchase crashing a resource's price (or draining it to nothing). */
+  maxTradeFractionOfReserve: 0.2,
+} as const;

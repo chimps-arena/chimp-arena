@@ -2,13 +2,14 @@
  * Brand-neutral marks that replace emoji in the UI.
  * All monochrome (currentColor) so callers set the tint.
  */
-import { Zap, Brain, Rocket, Shield, type LucideIcon } from "lucide-react";
+import { Zap, Brain, Rocket, Shield, Pickaxe, type LucideIcon } from "lucide-react";
 
 const MISSION_ICON: Record<string, LucideIcon> = {
   reaction: Zap,
   trivia: Brain,
   "astro-run": Rocket,
   dodge: Shield,
+  mining: Pickaxe,
 };
 
 export function MissionGlyph({

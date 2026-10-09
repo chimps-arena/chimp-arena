@@ -37,7 +37,7 @@ export async function GET() {
   const { data: row } = await supabaseAdmin()
     .from("players")
     .select(
-      "wallet, handle, crew_slug, xp, gold, created_at, last_renamed_at, streak_count, streak_best, last_active_day",
+      "wallet, handle, crew_slug, xp, gold, cobalt, palladium, crystal, mining_tool, created_at, last_renamed_at, streak_count, streak_best, last_active_day",
     )
     .eq("wallet", session.wallet)
     .maybeSingle();
@@ -95,6 +95,12 @@ export async function GET() {
       crewSlug: row.crew_slug,
       xp: row.xp,
       gold: row.gold ?? 0,
+      resources: {
+        cobalt: row.cobalt ?? 0,
+        palladium: row.palladium ?? 0,
+        crystal: row.crystal ?? 0,
+      },
+      miningTool: row.mining_tool ?? 0,
       createdAt: row.created_at,
       lastRenamedAt: row.last_renamed_at,
     },

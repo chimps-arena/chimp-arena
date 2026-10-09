@@ -9,6 +9,7 @@ const TYPE_COLOR: Record<string, string> = {
   trivia: "var(--accent-2)",
   "astro-run": "var(--accent-3)",
   dodge: "var(--accent-4)",
+  mining: "var(--accent-violet)",
 };
 
 export function MissionCard({ status }: { status: MissionStatus }) {
@@ -52,7 +53,7 @@ export function MissionCard({ status }: { status: MissionStatus }) {
       <div className="mt-auto flex items-center justify-between pt-2 text-sm">
         <span className="mono text-xs text-muted">
           {completed && bestScore != null
-            ? `Best today: ${bestScore}${def.type === "reaction" ? "ms" : ""}`
+            ? `Best today: ${bestScore}${def.type === "reaction" ? "ms" : def.type === "mining" ? " m" : ""}`
             : higherIsBetter
               ? "Higher score is better"
               : "Faster is better"}

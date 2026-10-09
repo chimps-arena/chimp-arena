@@ -20,12 +20,19 @@ export function GameShell({
   subtitle,
   instructions,
   renderGame,
+  prepareStart,
+  startLabel,
 }: {
   slug: string;
   title: string;
   subtitle: string;
   instructions: ReactNode;
   renderGame: (ctx: GameContext) => ReactNode;
+  /** Awaited before the /start fetch - e.g. mining's permit-purchase check.
+   *  Throwing shows the message in the error phase instead of starting. */
+  prepareStart?: () => Promise<void>;
+  /** Replaces the default "Start mission" button label. */
+  startLabel?: string;
 }) {
   const { refresh } = useSession();
   const [phase, setPhase] = useState<Phase>("intro");
@@ -37,6 +44,7 @@ export function GameShell({
     setError(null);
     setPhase("loading");
     try {
+      if (prepareStart) await prepareStart();
       const res = await fetch(`/api/missions/${slug}/start`, { method: "POST" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -48,7 +56,7 @@ export function GameShell({
       setError(e instanceof Error ? e.message : "Could not start");
       setPhase("error");
     }
-  }, [slug]);
+  }, [slug, prepareStart]);
 
   const complete = useCallback(
     async (payload: Record<string, unknown>) => {
@@ -99,7 +107,7 @@ export function GameShell({
           <div className="flex flex-col gap-4">
             <div className="text-sm text-muted">{instructions}</div>
             <button className="btn btn-primary w-fit" onClick={begin}>
-              Start mission
+              {startLabel ?? "Start mission"}
             </button>
           </div>
         )}
@@ -149,8 +157,9 @@ function ResultView({
       </div>
       {result.alreadyClaimedToday ? (
         <p className="text-sm text-muted">
-          You already claimed this mission today, so no XP this run. Come back
-          after 00:00 UTC. Your best score was updated if you beat it.
+          {result.mining
+            ? "XP already claimed today, but ore from this run is still banked."
+            : "You already claimed this mission today, so no XP this run. Come back after 00:00 UTC. Your best score was updated if you beat it."}
         </p>
       ) : (
         <div
@@ -183,6 +192,22 @@ function ResultView({
           }}
         >
           +{result.goldAwarded} Gold
+        </div>
+      )}
+      {result.mining && (
+        <div className="flex flex-col items-center gap-2">
+          <p className="mono text-xs text-muted">
+            Depth {result.mining.depth} m · {result.mining.zone}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {(Object.entries(result.mining.found) as [string, number][])
+              .filter(([key, n]) => n > 0 && key !== "gold")
+              .map(([key, n]) => (
+                <span key={key} className="chip mono text-accent-violet" style={{ borderColor: "color-mix(in srgb, var(--accent-violet) 45%, transparent)" }}>
+                  +{n} {key[0].toUpperCase() + key.slice(1)}
+                </span>
+              ))}
+          </div>
         </div>
       )}
       <div className="mono text-sm text-muted">
