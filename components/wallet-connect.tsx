@@ -9,6 +9,7 @@ import {
   getPhantom,
   phantomInstalled,
   PHANTOM_INSTALL_URL,
+  withPhantomTimeout,
 } from "@/lib/phantom";
 import { needsDeeplink, openInPhantomBrowser } from "@/lib/phantom-deeplink";
 
@@ -71,9 +72,9 @@ export function WalletConnect({
       setStatus("signing");
       const provider = getPhantom();
       if (!provider) throw new Error("Phantom not detected");
-      const { signature } = await provider.signMessage(
-        new TextEncoder().encode(message),
-        "utf8",
+      const { signature } = await withPhantomTimeout(
+        provider.signMessage(new TextEncoder().encode(message), "utf8"),
+        "sign message",
       );
 
       setStatus("verifying");

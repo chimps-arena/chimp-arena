@@ -21,6 +21,34 @@ interface PhantomProvider {
 
 export const PHANTOM_INSTALL_URL = "https://phantom.com/download";
 
+/**
+ * Phantom's injected provider calls can hang forever (not reject) when its
+ * background extension process is wedged - seen live as a "connecting..."
+ * button stuck with no way to recover but a reload. Race every provider call
+ * against a timeout so the UI always gets an actionable error back instead.
+ */
+export function withPhantomTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new Error(
+          `Phantom didn't respond to "${label}" - its extension background process may be stuck. Toggle Phantom off/on at chrome://extensions, then try again.`,
+        ),
+      );
+    }, 15000);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function getPhantom(): PhantomProvider | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as {
@@ -54,7 +82,7 @@ export async function connectPhantom(
 ): Promise<string> {
   const p = getPhantom();
   if (!p) throw new Error("Phantom not detected. Install it, then reload.");
-  const { publicKey } = await p.connect(opts);
+  const { publicKey } = await withPhantomTimeout(p.connect(opts), "connect");
   return publicKey.toString();
 }
 
@@ -70,9 +98,9 @@ export async function disconnectPhantom(): Promise<void> {
 export async function phantomSignMessage(message: string): Promise<string> {
   const p = getPhantom();
   if (!p) throw new Error("Phantom not detected");
-  const { signature } = await p.signMessage(
-    new TextEncoder().encode(message),
-    "utf8",
+  const { signature } = await withPhantomTimeout(
+    p.signMessage(new TextEncoder().encode(message), "utf8"),
+    "sign message",
   );
   return bs58.encode(signature);
 }
