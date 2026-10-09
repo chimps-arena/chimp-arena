@@ -13,8 +13,6 @@ const VISIBLE_ROWS = Math.ceil(CANVAS_H / TILE) + 1;
 const BASE_DIG_SEC = 0.5;
 const MOVE_COOLDOWN = 0.12;
 
-const ZONE_BG = ["#241b12", "#1a222c", "#20172e", "#0c2a2e"];
-
 type CellType = "rock" | "empty" | "ore" | "gas" | "air";
 
 interface Cell {
@@ -24,13 +22,123 @@ interface Cell {
   progress: number;
 }
 
-const CELL_COLOR: Record<CellType, string> = {
-  rock: "#4a3b2a",
-  empty: "#0b0d14",
-  ore: "#ffd23f",
-  gas: "#ff5470",
-  air: "#4ade80",
-};
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
+
+// [top, bottom] of a vertical gradient per zone - darker/cooler the deeper
+// the zone, same zone boundaries as the server's maxDepthFor/yield rolls.
+const ZONE_GRAD: Array<[string, string]> = [
+  ["#2b2116", "#1a1309"],
+  ["#1c2430", "#0f141c"],
+  ["#241a33", "#140d1f"],
+  ["#0d2a2d", "#071618"],
+];
+
+const ORE_GLOW = "#7dd3fc";
+const GAS_GLOW = "#ff5470";
+const AIR_GLOW = "#4ade80";
+const ROCK_BASE = "#473a2a";
+const ROCK_EDGE = "#2c2319";
+
+function cellHash(row: number, col: number): number {
+  const x = Math.sin(row * 374761393 + col * 668265263) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawOreGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  ctx.save();
+  ctx.shadowColor = ORE_GLOW;
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = ORE_GLOW;
+  for (const [dx, dy, sz] of [
+    [-5, 2, 1],
+    [5, -3, 0.8],
+    [1, 5, 0.65],
+  ] as const) {
+    ctx.save();
+    ctx.translate(cx + dx * (s / 20), cy + dy * (s / 20));
+    ctx.rotate(Math.PI / 4);
+    const r = (s / 7) * sz;
+    ctx.fillRect(-r / 2, -r / 2, r, r);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawGasGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  ctx.save();
+  ctx.shadowColor = GAS_GLOW;
+  ctx.shadowBlur = 9;
+  ctx.fillStyle = "rgba(255,84,112,0.85)";
+  for (const [dx, dy, r] of [
+    [0, -4, 4.5],
+    [-6, 4, 3.2],
+    [6, 4, 3.2],
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(cx + dx * (s / 20), cy + dy * (s / 20), r * (s / 24), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawAirGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number, t: number) {
+  ctx.save();
+  ctx.shadowColor = AIR_GLOW;
+  ctx.shadowBlur = 7;
+  ctx.strokeStyle = AIR_GLOW;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  const bob = Math.sin(t * 3) * 2;
+  for (const yOff of [-7, 3]) {
+    const y = cy + yOff + bob;
+    ctx.beginPath();
+    ctx.moveTo(cx - 7 * (s / 24), y + 4);
+    ctx.lineTo(cx, y - 4);
+    ctx.lineTo(cx + 7 * (s / 24), y + 4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCrack(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, progress: number, row: number, col: number) {
+  if (progress <= 0.08) return;
+  const h = cellHash(row, col);
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  const legs = progress > 0.55 ? 3 : progress > 0.3 ? 2 : 1;
+  for (let i = 0; i < legs; i++) {
+    const angle = h * Math.PI * 2 + (i * Math.PI * 2) / 3;
+    const len = size * 0.32 * Math.min(1, progress + 0.15);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 
 /**
  * Real tile-by-tile digging (move into rock = dig it, takes time based on
@@ -65,6 +173,29 @@ export function MiningGame({ start, complete }: GameContext) {
 
     const rand = mulberry32(seed);
     const grid = new Map<number, Cell[]>();
+    const particles: Particle[] = [];
+
+    function spawnBurst(row: number, col: number, type: CellType) {
+      const cx = col * TILE + TILE / 2;
+      const cy = row * TILE + TILE / 2; // screen-space, offset applied at draw time via camRow
+      const color =
+        type === "ore" ? ORE_GLOW : type === "gas" ? GAS_GLOW : type === "air" ? AIR_GLOW : "#8a7a5e";
+      const n = type === "rock" ? 6 : 10;
+      for (let i = 0; i < n; i++) {
+        const angle = rand() * Math.PI * 2;
+        const speed = 40 + rand() * 90;
+        particles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 40,
+          life: 0.4 + rand() * 0.3,
+          maxLife: 0.7,
+          color,
+          size: 2 + rand() * 2.5,
+        });
+      }
+    }
 
     function generateRow(row: number): Cell[] {
       const zone = zoneIndexFor(row);
@@ -101,6 +232,7 @@ export function MiningGame({ start, complete }: GameContext) {
     let digDir: { dr: number; dc: number } | null = null;
     let raf = 0;
     let last = performance.now();
+    let elapsed = 0;
 
     const keys = new Set<string>();
     const onKeyDown = (e: KeyboardEvent) => {
@@ -140,6 +272,7 @@ export function MiningGame({ start, complete }: GameContext) {
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
+      elapsed += dt;
       oxygen -= dt;
       if (oxygen <= 0) {
         end(maxRowReached);
@@ -171,6 +304,7 @@ export function MiningGame({ start, complete }: GameContext) {
           target.progress += dt * digSpeed;
           if (target.progress >= 1) {
             target.dug = true;
+            spawnBurst(targetRow, targetCol, target.type === "empty" ? "rock" : target.type);
             playerRow = targetRow;
             playerCol = targetCol;
             moveCooldown = MOVE_COOLDOWN;
@@ -186,58 +320,149 @@ export function MiningGame({ start, complete }: GameContext) {
 
       // ---- draw ----
       const zone = zoneIndexFor(playerRow);
-      ctx.fillStyle = ZONE_BG[zone] ?? ZONE_BG[0];
+      const [gTop, gBottom] = ZONE_GRAD[zone] ?? ZONE_GRAD[0];
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+      bgGrad.addColorStop(0, gTop);
+      bgGrad.addColorStop(1, gBottom);
+      ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       const camRow = playerRow - Math.floor(VISIBLE_ROWS / 3);
       for (let vr = 0; vr < VISIBLE_ROWS; vr++) {
         const row = camRow + vr;
         if (row < 0) continue;
-        const y = vr * TILE - ((camRow < 0 ? 0 : 0));
+        const y = vr * TILE;
         for (let c = 0; c < COLS; c++) {
           const cell = cellAt(row, c);
           const x = c * TILE;
           if (cell.dug) {
-            ctx.fillStyle = "#0b0d14";
+            ctx.fillStyle = "#0a0c12";
             ctx.fillRect(x, y, TILE, TILE);
-          } else {
-            ctx.fillStyle = CELL_COLOR[cell.type];
-            ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
-            if (cell.progress > 0) {
-              ctx.fillStyle = "rgba(255,255,255,0.35)";
-              ctx.fillRect(x + 1, y + TILE - 2 - (TILE - 2) * cell.progress, TILE - 2, (TILE - 2) * cell.progress);
-            }
+            ctx.strokeStyle = "rgba(255,255,255,0.03)";
+            ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+            continue;
           }
+
+          if (cell.type === "gas" || cell.type === "ore" || cell.type === "air") {
+            // Visible-but-undug special tiles sit in a slightly darker rock
+            // pocket so the glyph reads clearly against it.
+            ctx.fillStyle = ROCK_EDGE;
+            ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+          } else {
+            ctx.fillStyle = ROCK_BASE;
+            ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+            // cheap per-tile speckle texture, deterministic so it doesn't swim
+            const h = cellHash(row, c);
+            ctx.fillStyle = "rgba(0,0,0,0.12)";
+            ctx.fillRect(x + 6 + h * 10, y + 10 + h * 14, 5, 5);
+            ctx.fillRect(x + 24 + (1 - h) * 10, y + 24 + h * 8, 4, 4);
+          }
+          ctx.strokeStyle = "rgba(0,0,0,0.35)";
+          ctx.strokeRect(x + 1.5, y + 1.5, TILE - 3, TILE - 3);
+
+          const cx = x + TILE / 2;
+          const cy = y + TILE / 2;
+          if (cell.type === "ore") drawOreGlyph(ctx, cx, cy, TILE);
+          else if (cell.type === "gas") drawGasGlyph(ctx, cx, cy, TILE);
+          else if (cell.type === "air") drawAirGlyph(ctx, cx, cy, TILE, elapsed);
+
+          drawCrack(ctx, x, y, TILE, cell.progress, row, c);
         }
       }
 
-      // player
+      // particles (screen-space already, offset by camRow)
+      const camOffsetY = camRow * TILE;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        p.vy += 160 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - camOffsetY - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+
+      // player screen position
       const py = (playerRow - camRow) * TILE;
       const px = playerCol * TILE;
-      ctx.fillStyle = "#22d3ee";
-      ctx.strokeStyle = "#0b0f16";
+      const pcx = px + TILE / 2;
+      const pcy = py + TILE / 2;
+
+      // vignette: darken tiles far from the player, then a warm headlamp
+      // bloom near them - this is what gives the dig site actual depth/mood
+      // instead of flat, evenly-lit tiles.
+      const vignette = ctx.createRadialGradient(pcx, pcy, TILE * 0.8, pcx, pcy, TILE * 3.6);
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.62)");
+      ctx.fillStyle = vignette;
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.globalCompositeOperation = "source-over";
+
+      const bloom = ctx.createRadialGradient(pcx, pcy, 0, pcx, pcy, TILE * 2.1);
+      bloom.addColorStop(0, "rgba(255,214,140,0.28)");
+      bloom.addColorStop(1, "rgba(255,214,140,0)");
+      ctx.fillStyle = bloom;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.globalCompositeOperation = "source-over";
+
+      // player rig: rounded body + headlamp aimed at the dig/move direction
+      const bob = Math.sin(elapsed * 6) * 1.5;
+      const facing = digDir ?? dir ?? { dr: 0, dc: 0 };
+      ctx.save();
+      ctx.translate(pcx, pcy + bob);
+
+      ctx.shadowColor = "rgba(34,211,238,0.6)";
+      ctx.shadowBlur = 10;
+      const bodyGrad = ctx.createLinearGradient(0, -TILE * 0.3, 0, TILE * 0.3);
+      bodyGrad.addColorStop(0, "#5eead4");
+      bodyGrad.addColorStop(1, "#0e7490");
+      ctx.fillStyle = bodyGrad;
+      ctx.strokeStyle = "#07252b";
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(px + TILE / 2, py + TILE / 2, TILE * 0.32, 0, Math.PI * 2);
+      roundRect(ctx, -TILE * 0.26, -TILE * 0.26, TILE * 0.52, TILE * 0.52, 8);
       ctx.fill();
       ctx.stroke();
-      if (digDir) {
-        ctx.fillStyle = "rgba(34,211,238,0.5)";
-        ctx.fillRect(
-          px + TILE / 2 + digDir.dc * TILE * 0.5 - 4,
-          py + TILE / 2 + digDir.dr * TILE * 0.5 - 4,
-          8,
-          8,
-        );
-      }
+      ctx.shadowBlur = 0;
 
-      ctx.fillStyle = "#eef0f7";
-      ctx.font = "600 14px ui-monospace, monospace";
+      // headlamp cone in the facing direction
+      if (facing.dr !== 0 || facing.dc !== 0) {
+        const lampX = facing.dc * TILE * 0.3;
+        const lampY = facing.dr * TILE * 0.3;
+        ctx.fillStyle = "#fff6d8";
+        ctx.beginPath();
+        ctx.arc(lampX, lampY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ---- HUD ----
       ctx.textAlign = "left";
-      ctx.fillText(`${maxRowReached} m · ${zoneNameFor(maxRowReached)}`, 10, 22);
+      ctx.font = "600 13px ui-monospace, monospace";
+      const depthLabel = `${maxRowReached} m · ${zoneNameFor(maxRowReached)}`;
+      const depthW = ctx.measureText(depthLabel).width;
+      ctx.fillStyle = "rgba(10,12,18,0.72)";
+      roundRect(ctx, 6, 6, depthW + 16, 24, 7);
+      ctx.fill();
+      ctx.fillStyle = "#eef0f7";
+      ctx.fillText(depthLabel, 14, 22);
+
+      const oxyLabel = `O2 ${Math.max(0, Math.ceil(oxygen))}s`;
       ctx.textAlign = "right";
+      const oxyW = ctx.measureText(oxyLabel).width;
+      ctx.fillStyle = "rgba(10,12,18,0.72)";
+      roundRect(ctx, CANVAS_W - 10 - oxyW - 16, 6, oxyW + 16, 24, 7);
+      ctx.fill();
       ctx.fillStyle = oxygen < 15 ? "#ff5470" : "#eef0f7";
-      ctx.fillText(`O2 ${Math.max(0, Math.ceil(oxygen))}s`, CANVAS_W - 10, 22);
+      ctx.fillText(oxyLabel, CANVAS_W - 14, 22);
 
       setDepth(maxRowReached);
       raf = requestAnimationFrame(frame);
@@ -268,8 +493,8 @@ export function MiningGame({ start, complete }: GameContext) {
       )}
       {phase === "running" && (
         <p className="text-sm text-muted">
-          Yellow tiles are ore, red is gas (costs oxygen), green is air
-          (restores it). Dig toward what you want, around what you don&apos;t.
+          Blue shards are ore, red pockets cost oxygen, green chevrons restore
+          it. Dig toward what you want, around what you don&apos;t.
         </p>
       )}
       {phase === "done" && (

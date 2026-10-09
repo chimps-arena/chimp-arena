@@ -14,6 +14,7 @@ import { useSession } from "@/components/session-provider";
 import { GameShell } from "@/components/games/game-shell";
 import { MiningGame } from "@/components/games/mining-game";
 import { MiningIntro } from "@/components/mining/mining-intro";
+import { PriceTicker } from "@/components/mining/price-ticker";
 import { usePaidAction } from "@/components/mining/use-paid-action";
 import type { MiningStatus } from "@/lib/types";
 
@@ -113,29 +114,37 @@ export default function MiningMissionPage() {
   }, [wallet.publicKey, me, umi, stuckSignature, pay, setStuckSignature, loadStatus]);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <MiningIntro
-        status={status}
-        onChange={() => {
-          void loadStatus();
-        }}
-      />
-      <GameShell
-        slug="mining"
-        title="Deep Core"
-        subtitle="Buy a permit, dig through the strata. Deeper seams, rarer ore."
-        startLabel="Drop the rig"
-        instructions={
-          <ul className="list-disc space-y-1 pl-5">
-            <li>Costs {MINING.permitPriceChimp} $CHIMP per permit - paid once, used for one run.</li>
-            <li>Dodge red gas pockets (lose oxygen), grab green air pockets (gain oxygen).</li>
-            <li>Depth climbs on its own while you survive - better tools dig faster.</li>
-            <li>Deeper seams hold rarer ore. The run ends when oxygen runs out.</li>
-          </ul>
-        }
-        prepareStart={ensurePermit}
-        renderGame={(ctx) => <MiningGame {...ctx} />}
-      />
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="flex max-w-2xl flex-1 flex-col gap-6">
+        <MiningIntro
+          status={status}
+          onChange={() => {
+            void loadStatus();
+          }}
+        />
+        <GameShell
+          slug="mining"
+          title="Deep Core"
+          subtitle="Buy a permit, dig through the strata. Deeper seams, rarer ore."
+          startLabel="Drop the rig"
+          instructions={
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Costs {MINING.permitPriceChimp} $CHIMP per permit - paid once, used for one run.</li>
+              <li>Move into rock to dig it - better tools dig faster through harder depths.</li>
+              <li>Blue ore is worth digging toward; red gas costs oxygen, green air restores it.</li>
+              <li>Depth reached is your score. The run ends when oxygen runs out.</li>
+            </ul>
+          }
+          prepareStart={ensurePermit}
+          renderGame={(ctx) => <MiningGame {...ctx} />}
+        />
+      </div>
+      <div className="w-full lg:sticky lg:top-6 lg:w-64 lg:shrink-0">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+          Vein exchange
+        </div>
+        <PriceTicker compact />
+      </div>
     </div>
   );
 }
