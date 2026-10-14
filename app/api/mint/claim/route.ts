@@ -58,6 +58,12 @@ async function pickOneOfOne(db: SupabaseClient): Promise<{ id: string; name: str
  * just a random pick among whichever styles actually have art uploaded.
  * Returns null (falls back to the old shared per-tier placeholder) until
  * at least one style in that tier has real art.
+ *
+ * Excludes `retired` rows (migration 0029) - the original Sep-29 placeholder
+ * styles were restored so already-minted NFTs referencing them still
+ * resolve, but the founder's call (2026-10-14) was that they should never
+ * be handed out to a new mint again now that real named Common/Rare art
+ * exists.
  */
 async function pickStyleVariant(
   db: SupabaseClient,
@@ -67,6 +73,7 @@ async function pickStyleVariant(
     .from("chimp_style_variants")
     .select("id, name")
     .eq("tier", tier)
+    .eq("retired", false)
     .not("image_url", "is", null);
   if (!ready || ready.length === 0) return null;
   return ready[Math.floor(Math.random() * ready.length)];
