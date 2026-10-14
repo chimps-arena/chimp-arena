@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
@@ -12,11 +13,18 @@ import { MINING, miningPermitMemo } from "@/lib/game/sinks";
 import { describeTxError } from "@/lib/chain/tx-error";
 import { useSession } from "@/components/session-provider";
 import { GameShell } from "@/components/games/game-shell";
-import { MiningGame } from "@/components/games/mining-game";
 import { MiningIntro } from "@/components/mining/mining-intro";
 import { PriceTicker } from "@/components/mining/price-ticker";
 import { usePaidAction } from "@/components/mining/use-paid-action";
 import type { MiningStatus } from "@/lib/types";
+
+// The game is a real WebGL (react-three-fiber) scene now - load it client-only
+// so the build's static-prerender pass never touches three.js/canvas context
+// creation, and the bundle isn't pulled into every other page's chunk.
+const MiningGame = dynamic(
+  () => import("@/components/games/mining-game").then((m) => m.MiningGame),
+  { ssr: false, loading: () => <div className="card h-[280px] animate-pulse" /> },
+);
 
 export default function MiningMissionPage() {
   const wallet = useWallet();

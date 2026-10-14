@@ -1,17 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import type { GameContext } from "@/components/games/game-shell";
 import { mulberry32 } from "@/lib/game/rng";
 import { TOOLS, zoneIndexFor, zoneNameFor } from "@/lib/game/mining";
 
-const TILE = 48;
 const COLS = 9;
-const CANVAS_W = TILE * COLS;
-const CANVAS_H = 360;
-const VISIBLE_ROWS = Math.ceil(CANVAS_H / TILE) + 1;
+const TILE = 1.7;
+/** Rows kept alive in the mesh pool at once - a fixed-size viewing window,
+ *  not a streaming world (the grid itself is still generated on demand, same
+ *  as before; only this many rows are ever rendered at a time). */
+const POOL_ROWS = 9;
 const BASE_DIG_SEC = 0.5;
 const MOVE_COOLDOWN = 0.12;
+/** Visual movement smoothing rate - the sim is still grid-locked, this only
+ *  interpolates the rendered position between cells. */
+const LERP = 10;
 
 type CellType = "rock" | "empty" | "ore" | "gas" | "air";
 
@@ -23,136 +29,441 @@ interface Cell {
 }
 
 interface Particle {
-  x: number;
-  y: number;
+  mesh: THREE.Mesh;
   vx: number;
   vy: number;
+  vz: number;
   life: number;
   maxLife: number;
-  color: string;
-  size: number;
 }
 
-// [top, bottom] of a vertical gradient per zone - darker/cooler the deeper
-// the zone, same zone boundaries as the server's maxDepthFor/yield rolls.
-const ZONE_GRAD: Array<[string, string]> = [
-  ["#2b2116", "#1a1309"],
-  ["#1c2430", "#0f141c"],
-  ["#241a33", "#140d1f"],
-  ["#0d2a2d", "#071618"],
+// [background/fog color, fog far distance] per zone - deeper zones read
+// murkier and more claustrophobic, same zone boundaries the server's
+// maxDepthFor/yield rolls use.
+const ZONE_FOG: Array<[string, number]> = [
+  ["#241b12", 10],
+  ["#1a222c", 9],
+  ["#20172e", 8],
+  ["#0c2a2e", 7],
 ];
 
-const ORE_GLOW = "#7dd3fc";
-const GAS_GLOW = "#ff5470";
-const AIR_GLOW = "#4ade80";
-const ROCK_BASE = "#473a2a";
-const ROCK_EDGE = "#2c2319";
+const ORE_COLOR = "#7dd3fc";
+const GAS_COLOR = "#ff5470";
+const AIR_COLOR = "#4ade80";
+const ROCK_COLOR = "#5a4a34";
+const ROCK_DARK = "#2a2014";
 
-function cellHash(row: number, col: number): number {
-  const x = Math.sin(row * 374761393 + col * 668265263) * 43758.5453;
-  return x - Math.floor(x);
+function colWorldX(col: number) {
+  return (col - (COLS - 1) / 2) * TILE;
 }
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function drawOreGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
-  ctx.save();
-  ctx.shadowColor = ORE_GLOW;
-  ctx.shadowBlur = 8;
-  ctx.fillStyle = ORE_GLOW;
-  for (const [dx, dy, sz] of [
-    [-5, 2, 1],
-    [5, -3, 0.8],
-    [1, 5, 0.65],
-  ] as const) {
-    ctx.save();
-    ctx.translate(cx + dx * (s / 20), cy + dy * (s / 20));
-    ctx.rotate(Math.PI / 4);
-    const r = (s / 7) * sz;
-    ctx.fillRect(-r / 2, -r / 2, r, r);
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-function drawGasGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
-  ctx.save();
-  ctx.shadowColor = GAS_GLOW;
-  ctx.shadowBlur = 9;
-  ctx.fillStyle = "rgba(255,84,112,0.85)";
-  for (const [dx, dy, r] of [
-    [0, -4, 4.5],
-    [-6, 4, 3.2],
-    [6, 4, 3.2],
-  ] as const) {
-    ctx.beginPath();
-    ctx.arc(cx + dx * (s / 20), cy + dy * (s / 20), r * (s / 24), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawAirGlyph(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number, t: number) {
-  ctx.save();
-  ctx.shadowColor = AIR_GLOW;
-  ctx.shadowBlur = 7;
-  ctx.strokeStyle = AIR_GLOW;
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = "round";
-  const bob = Math.sin(t * 3) * 2;
-  for (const yOff of [-7, 3]) {
-    const y = cy + yOff + bob;
-    ctx.beginPath();
-    ctx.moveTo(cx - 7 * (s / 24), y + 4);
-    ctx.lineTo(cx, y - 4);
-    ctx.lineTo(cx + 7 * (s / 24), y + 4);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawCrack(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, progress: number, row: number, col: number) {
-  if (progress <= 0.08) return;
-  const h = cellHash(row, col);
-  const cx = x + size / 2;
-  const cy = y + size / 2;
-  ctx.save();
-  ctx.strokeStyle = "rgba(255,255,255,0.55)";
-  ctx.lineWidth = 1.4;
-  ctx.lineCap = "round";
-  const legs = progress > 0.55 ? 3 : progress > 0.3 ? 2 : 1;
-  for (let i = 0; i < legs; i++) {
-    const angle = h * Math.PI * 2 + (i * Math.PI * 2) / 3;
-    const len = size * 0.32 * Math.min(1, progress + 0.15);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
-    ctx.stroke();
-  }
-  ctx.restore();
+function rowWorldY(row: number) {
+  return -row * TILE;
 }
 
 /**
  * Real tile-by-tile digging (move into rock = dig it, takes time based on
- * tool power and tile hardness) - ore/gas/air tiles are visible before you
- * dig them, so reaching depth is an active, spatial choice (dig toward
- * visible ore, route around gas) rather than passively dodging falling
- * shapes. Depth (deepest row reached) is still the only thing that becomes
- * the mission score - ore sparkles here are cosmetic, the server rolls the
- * real resource payout from depth + tool tier at settlement.
+ * tool power and tile hardness) - identical rules to the previous 2D canvas
+ * version, now rendered as an actual 3D scene (React Three Fiber): real
+ * lighting (a headlamp point light on the player carves visibility out of
+ * the dark instead of a faked canvas vignette), fog for depth/atmosphere,
+ * and a chase camera. Depth (deepest row reached) is still the only thing
+ * that becomes the mission score - the server rolls the real resource
+ * payout from depth + tool tier at settlement, same as before.
  */
+const PING_INTERVAL_SEC = 4;
+
+/** Fire-and-forget proof-of-progress ping - best-effort, a dropped ping just
+ *  means a bigger (still correctly bounded) allowance on the next one. */
+function pingProgress(startToken: string, depth: number) {
+  void fetch("/api/mining/progress", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ startToken, depth }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function Shaft({
+  seed,
+  toolTier,
+  oxygenStart,
+  startToken,
+  onDepthChange,
+  onOxygenChange,
+  onEnd,
+}: {
+  seed: number;
+  toolTier: 0 | 1 | 2;
+  oxygenStart: number;
+  startToken: string | null;
+  onDepthChange: (d: number) => void;
+  onOxygenChange: (o: number) => void;
+  onEnd: (depth: number) => void;
+}) {
+  const { camera, scene } = useThree();
+  const tool = TOOLS[toolTier] ?? TOOLS[0];
+
+  const rockRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const crackRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const glyphRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const playerRef = useRef<THREE.Group>(null);
+  const lampRef = useRef<THREE.PointLight>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const particlePoolRef = useRef<THREE.Mesh[]>([]);
+
+  const simRef = useRef({
+    grid: new Map<number, Cell[]>(),
+    rand: mulberry32(seed),
+    playerRow: 0,
+    playerCol: Math.floor(COLS / 2),
+    visRow: 0,
+    visCol: Math.floor(COLS / 2),
+    maxRowReached: 0,
+    oxygen: oxygenStart,
+    moveCooldown: 0,
+    keys: new Set<string>(),
+    ended: false,
+    elapsed: 0,
+    hudTimer: 0,
+    pingTimer: 0,
+  });
+
+  const generateRow = useCallback((row: number): Cell[] => {
+    const sim = simRef.current;
+    const zone = zoneIndexFor(row);
+    const cells: Cell[] = [];
+    for (let c = 0; c < COLS; c++) {
+      const r = sim.rand();
+      let type: CellType = "rock";
+      if (r < 0.12) type = "empty";
+      else if (r < 0.22) type = "ore";
+      else if (r < 0.3) type = "gas";
+      else if (r < 0.38) type = "air";
+      cells.push({
+        type,
+        dug: type === "empty",
+        hardness: 1 + zone * 0.4 + sim.rand() * 0.6,
+        progress: 0,
+      });
+    }
+    sim.grid.set(row, cells);
+    return cells;
+  }, []);
+
+  const cellAt = useCallback(
+    (row: number, col: number): Cell => {
+      if (col < 0 || col >= COLS) return { type: "rock", dug: false, hardness: 999, progress: 0 };
+      const sim = simRef.current;
+      return (sim.grid.get(row) ?? generateRow(row))[col];
+    },
+    [generateRow],
+  );
+
+  useEffect(() => {
+    generateRow(0).forEach((c) => {
+      c.type = "empty";
+      c.dug = true;
+    });
+  }, [generateRow]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"].includes(e.code)) {
+        e.preventDefault();
+      }
+      simRef.current.keys.add(e.code);
+    };
+    const onKeyUp = (e: KeyboardEvent) => simRef.current.keys.delete(e.code);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  function currentDir(): { dr: number; dc: number } | null {
+    const k = simRef.current.keys;
+    if (k.has("ArrowDown") || k.has("KeyS")) return { dr: 1, dc: 0 };
+    if (k.has("ArrowLeft") || k.has("KeyA")) return { dr: 0, dc: -1 };
+    if (k.has("ArrowRight") || k.has("KeyD")) return { dr: 0, dc: 1 };
+    if (k.has("ArrowUp") || k.has("KeyW")) return { dr: -1, dc: 0 };
+    return null;
+  }
+
+  function applyEnterEffects(cell: Cell) {
+    const sim = simRef.current;
+    if (cell.type === "gas") sim.oxygen = Math.max(0, sim.oxygen - 8);
+    else if (cell.type === "air") sim.oxygen += 5;
+  }
+
+  function spawnBurst(row: number, col: number, type: CellType) {
+    const sim = simRef.current;
+    const color = type === "ore" ? ORE_COLOR : type === "gas" ? GAS_COLOR : type === "air" ? AIR_COLOR : ROCK_COLOR;
+    const pool = particlePoolRef.current;
+    const x = colWorldX(col);
+    const y = rowWorldY(row);
+    const n = type === "rock" ? 6 : 10;
+    for (let i = 0; i < n; i++) {
+      const mesh = pool.find((m) => !m.visible);
+      if (!mesh) break;
+      mesh.visible = true;
+      mesh.position.set(x, y, 0);
+      mesh.scale.setScalar(1);
+      (mesh.material as THREE.MeshBasicMaterial).color.set(color);
+      (mesh.material as THREE.MeshBasicMaterial).opacity = 1;
+      const angle = sim.rand() * Math.PI * 2;
+      const speed = 1.2 + sim.rand() * 2;
+      particlesRef.current.push({
+        mesh,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed + 1.5,
+        vz: (sim.rand() - 0.5) * 2,
+        life: 0.5 + sim.rand() * 0.3,
+        maxLife: 0.8,
+      });
+    }
+  }
+
+  // Mutating camera/scene straight out of useThree() inside useFrame is React
+  // Three Fiber's own documented pattern (it deliberately bypasses React's
+  // render cycle so animating hundreds of objects doesn't cost a re-render
+  // per frame) - not an accidental render-phase mutation, so the generic
+  // immutability lint rule doesn't apply to this callback.
+  /* eslint-disable react-hooks/immutability */
+  useFrame((_state, deltaRaw) => {
+    const sim = simRef.current;
+    if (sim.ended) return;
+    const dt = Math.min(0.05, deltaRaw);
+    sim.elapsed += dt;
+    sim.oxygen -= dt;
+    if (sim.oxygen <= 0) {
+      sim.ended = true;
+      // Final ping so the last few seconds of real progress aren't lost to
+      // the regular interval not having fired again before oxygen ran out -
+      // best-effort, the server clamp applies either way.
+      if (startToken) pingProgress(startToken, sim.maxRowReached);
+      onEnd(sim.maxRowReached);
+      return;
+    }
+
+    sim.moveCooldown = Math.max(0, sim.moveCooldown - dt);
+    const dir = currentDir();
+
+    if (dir && sim.moveCooldown <= 0) {
+      const targetRow = sim.playerRow + dir.dr;
+      const targetCol = sim.playerCol + dir.dc;
+      const target = cellAt(targetRow, targetCol);
+
+      if (target.dug) {
+        sim.playerRow = targetRow;
+        sim.playerCol = targetCol;
+        sim.moveCooldown = MOVE_COOLDOWN;
+        if (target.type === "gas" || target.type === "air") {
+          applyEnterEffects(target);
+          target.type = "empty";
+        }
+      } else if (dir.dr >= 0) {
+        // Only dig forward/down/sideways, never claw back upward through
+        // undug rock - this stays a one-way-deeper mining theme.
+        const digSpeed = tool.digPower / (target.hardness * BASE_DIG_SEC);
+        target.progress += dt * digSpeed;
+        if (target.progress >= 1) {
+          target.dug = true;
+          spawnBurst(targetRow, targetCol, target.type === "empty" ? "rock" : target.type);
+          sim.playerRow = targetRow;
+          sim.playerCol = targetCol;
+          sim.moveCooldown = MOVE_COOLDOWN;
+          applyEnterEffects(target);
+        }
+      }
+    }
+
+    sim.maxRowReached = Math.max(sim.maxRowReached, sim.playerRow);
+
+    // smooth visual position toward the grid-locked player cell
+    const rate = Math.min(1, LERP * dt);
+    sim.visCol += (sim.playerCol - sim.visCol) * rate;
+    sim.visRow += (sim.playerRow - sim.visRow) * rate;
+    const visX = colWorldX(sim.visCol);
+    const visY = rowWorldY(sim.visRow);
+    const bob = Math.sin(sim.elapsed * 6) * 0.05;
+
+    if (playerRef.current) {
+      playerRef.current.position.set(visX, visY + bob, 0.3);
+    }
+    if (lampRef.current) {
+      lampRef.current.position.set(visX, visY + 0.15, 0.7);
+    }
+
+    // chase camera - trails behind and slightly above, looking down the shaft
+    const camRate = Math.min(1, 6 * dt);
+    camera.position.x += (visX - camera.position.x) * camRate;
+    camera.position.y += (visY + 1.1 - camera.position.y) * camRate;
+    camera.position.z += (6.5 - camera.position.z) * camRate;
+    camera.lookAt(visX, visY - 1, 0);
+
+    // zone-tinted fog/background, set imperatively so it updates smoothly
+    // as depth crosses a zone boundary without forcing a React re-render
+    const zone = zoneIndexFor(sim.maxRowReached);
+    const [fogColor, fogFar] = ZONE_FOG[zone] ?? ZONE_FOG[0];
+    if (!scene.fog) scene.fog = new THREE.Fog(fogColor, 2, fogFar);
+    const fog = scene.fog as THREE.Fog;
+    fog.color.set(fogColor);
+    fog.far = fogFar;
+    if (!(scene.background instanceof THREE.Color)) scene.background = new THREE.Color(fogColor);
+    (scene.background as THREE.Color).set(fogColor);
+
+    // ---- pooled tile meshes ----
+    const camRow = sim.playerRow - 2;
+    for (let vr = 0; vr < POOL_ROWS; vr++) {
+      const row = camRow + vr;
+      for (let c = 0; c < COLS; c++) {
+        const idx = vr * COLS + c;
+        const rockMesh = rockRefs.current[idx];
+        const crackMesh = crackRefs.current[idx];
+        const glyphMesh = glyphRefs.current[idx];
+        if (!rockMesh) continue;
+
+        const x = colWorldX(c);
+        const y = rowWorldY(row);
+        rockMesh.position.set(x, y, 0);
+        if (crackMesh) crackMesh.position.set(x, y, 0);
+        if (glyphMesh) glyphMesh.position.set(x, y, 0.5);
+
+        const cell = row < 0 ? null : cellAt(row, c);
+        if (!cell || cell.dug) {
+          rockMesh.visible = false;
+          if (crackMesh) crackMesh.visible = false;
+          if (glyphMesh) glyphMesh.visible = false;
+          continue;
+        }
+
+        rockMesh.visible = true;
+        (rockMesh.material as THREE.MeshStandardMaterial).color.set(
+          cell.type === "rock" ? ROCK_COLOR : ROCK_DARK,
+        );
+
+        if (crackMesh) {
+          crackMesh.visible = cell.progress > 0.05;
+          (crackMesh.material as THREE.MeshBasicMaterial).opacity = Math.min(0.9, cell.progress);
+        }
+
+        if (glyphMesh) {
+          if (cell.type === "ore" || cell.type === "gas" || cell.type === "air") {
+            glyphMesh.visible = true;
+            const glyphColor = cell.type === "ore" ? ORE_COLOR : cell.type === "gas" ? GAS_COLOR : AIR_COLOR;
+            const mat = glyphMesh.material as THREE.MeshStandardMaterial;
+            mat.color.set(glyphColor);
+            mat.emissive.set(glyphColor);
+            mat.emissiveIntensity = 1.3 + Math.sin(sim.elapsed * 4 + idx) * 0.4;
+            if (cell.type === "air") {
+              glyphMesh.position.y = y + Math.sin(sim.elapsed * 3 + idx) * 0.08;
+            }
+          } else {
+            glyphMesh.visible = false;
+          }
+        }
+      }
+    }
+
+    // ---- particles ----
+    for (let i = particlesRef.current.length - 1; i >= 0; i--) {
+      const p = particlesRef.current[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        p.mesh.visible = false;
+        particlesRef.current.splice(i, 1);
+        continue;
+      }
+      p.vy -= 4 * dt;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      const alpha = Math.max(0, p.life / p.maxLife);
+      (p.mesh.material as THREE.MeshBasicMaterial).opacity = alpha;
+      p.mesh.scale.setScalar(0.4 + alpha * 0.6);
+    }
+
+    // ---- HUD (throttled - no need to re-render React 60x/sec) ----
+    sim.hudTimer -= dt;
+    if (sim.hudTimer <= 0) {
+      sim.hudTimer = 0.1;
+      onDepthChange(sim.maxRowReached);
+      onOxygenChange(Math.max(0, Math.ceil(sim.oxygen)));
+    }
+
+    // ---- proof-of-progress ping (see /api/mining/progress) ----
+    sim.pingTimer -= dt;
+    if (sim.pingTimer <= 0) {
+      sim.pingTimer = PING_INTERVAL_SEC;
+      if (startToken) pingProgress(startToken, sim.maxRowReached);
+    }
+  });
+  /* eslint-enable react-hooks/immutability */
+
+  return (
+    <>
+      <ambientLight intensity={0.25} />
+      <hemisphereLight intensity={0.2} groundColor={"#000000"} />
+      <pointLight ref={lampRef} intensity={6} distance={6} decay={2} color={"#ffd68c"} />
+
+      <group ref={playerRef}>
+        <mesh>
+          <capsuleGeometry args={[0.32, 0.3, 4, 8]} />
+          <meshStandardMaterial color="#5eead4" emissive="#0e7490" emissiveIntensity={0.6} />
+        </mesh>
+      </group>
+
+      {Array.from({ length: POOL_ROWS * COLS }).map((_, i) => (
+        <group key={i}>
+          <mesh
+            ref={(el) => {
+              rockRefs.current[i] = el;
+            }}
+          >
+            <boxGeometry args={[TILE * 0.92, TILE * 0.92, TILE * 0.7]} />
+            <meshStandardMaterial color={ROCK_COLOR} roughness={0.9} />
+          </mesh>
+          <mesh
+            ref={(el) => {
+              crackRefs.current[i] = el;
+            }}
+          >
+            <boxGeometry args={[TILE * 0.96, TILE * 0.96, TILE * 0.74]} />
+            <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0} />
+          </mesh>
+          <mesh
+            ref={(el) => {
+              glyphRefs.current[i] = el;
+            }}
+          >
+            <octahedronGeometry args={[0.18, 0]} />
+            <meshStandardMaterial color={ORE_COLOR} emissive={ORE_COLOR} emissiveIntensity={1.2} />
+          </mesh>
+        </group>
+      ))}
+
+      {Array.from({ length: 40 }).map((_, i) => (
+        <mesh
+          key={`p${i}`}
+          visible={false}
+          ref={(el) => {
+            if (el) particlePoolRef.current[i] = el;
+          }}
+        >
+          <boxGeometry args={[0.1, 0.1, 0.1]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={1} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 export function MiningGame({ start, complete }: GameContext) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [depth, setDepth] = useState(0);
+  const [oxygen, setOxygen] = useState(90);
   const finishedRef = useRef(false);
 
   const toolTier = (typeof start?.toolTier === "number" ? start.toolTier : 0) as 0 | 1 | 2;
@@ -160,316 +471,25 @@ export function MiningGame({ start, complete }: GameContext) {
   // Fallback is a fixed constant, not Date.now() - this only ever triggers on
   // malformed start data, and render must stay pure (no impure calls in the body).
   const seed = typeof start?.seed === "number" ? start.seed : 0x9e3779b9;
-  const tool = TOOLS[toolTier] ?? TOOLS[0];
+  const startToken = typeof start?.startToken === "string" ? start.startToken : null;
 
   const run = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
     finishedRef.current = false;
+    setDepth(0);
+    setOxygen(oxygenStart);
     setPhase("running");
+  }, [oxygenStart]);
 
-    const rand = mulberry32(seed);
-    const grid = new Map<number, Cell[]>();
-    const particles: Particle[] = [];
-
-    function spawnBurst(row: number, col: number, type: CellType) {
-      const cx = col * TILE + TILE / 2;
-      const cy = row * TILE + TILE / 2; // screen-space, offset applied at draw time via camRow
-      const color =
-        type === "ore" ? ORE_GLOW : type === "gas" ? GAS_GLOW : type === "air" ? AIR_GLOW : "#8a7a5e";
-      const n = type === "rock" ? 6 : 10;
-      for (let i = 0; i < n; i++) {
-        const angle = rand() * Math.PI * 2;
-        const speed = 40 + rand() * 90;
-        particles.push({
-          x: cx,
-          y: cy,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 40,
-          life: 0.4 + rand() * 0.3,
-          maxLife: 0.7,
-          color,
-          size: 2 + rand() * 2.5,
-        });
-      }
-    }
-
-    function generateRow(row: number): Cell[] {
-      const zone = zoneIndexFor(row);
-      const cells: Cell[] = [];
-      for (let c = 0; c < COLS; c++) {
-        const r = rand();
-        let type: CellType = "rock";
-        if (r < 0.12) type = "empty";
-        else if (r < 0.22) type = "ore";
-        else if (r < 0.3) type = "gas";
-        else if (r < 0.38) type = "air";
-        cells.push({ type, dug: type === "empty", hardness: 1 + zone * 0.4 + rand() * 0.6, progress: 0 });
-      }
-      grid.set(row, cells);
-      return cells;
-    }
-
-    function cellAt(row: number, col: number): Cell {
-      if (col < 0 || col >= COLS) return { type: "rock", dug: false, hardness: 999, progress: 0 };
-      return (grid.get(row) ?? generateRow(row))[col];
-    }
-
-    // Start on an open row so the player isn't boxed in immediately.
-    const startRow = 0;
-    generateRow(startRow).forEach((c) => {
-      c.type = "empty";
-      c.dug = true;
-    });
-    let playerRow = startRow;
-    let playerCol = Math.floor(COLS / 2);
-    let maxRowReached = 0;
-    let oxygen = oxygenStart;
-    let moveCooldown = 0;
-    let digDir: { dr: number; dc: number } | null = null;
-    let raf = 0;
-    let last = performance.now();
-    let elapsed = 0;
-
-    const keys = new Set<string>();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"].includes(e.code)) {
-        e.preventDefault();
-      }
-      keys.add(e.code);
-    };
-    const onKeyUp = (e: KeyboardEvent) => keys.delete(e.code);
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-
-    function currentDir(): { dr: number; dc: number } | null {
-      if (keys.has("ArrowDown") || keys.has("KeyS")) return { dr: 1, dc: 0 };
-      if (keys.has("ArrowLeft") || keys.has("KeyA")) return { dr: 0, dc: -1 };
-      if (keys.has("ArrowRight") || keys.has("KeyD")) return { dr: 0, dc: 1 };
-      if (keys.has("ArrowUp") || keys.has("KeyW")) return { dr: -1, dc: 0 };
-      return null;
-    }
-
-    function applyEnterEffects(cell: Cell) {
-      if (cell.type === "gas") oxygen = Math.max(0, oxygen - 8);
-      else if (cell.type === "air") oxygen += 5;
-    }
-
-    const end = (finalDepth: number) => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
+  const handleEnd = useCallback(
+    (finalDepth: number) => {
       if (finishedRef.current) return;
       finishedRef.current = true;
       setDepth(finalDepth);
       setPhase("done");
       setTimeout(() => complete({ score: finalDepth }), 900);
-    };
-
-    const frame = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      elapsed += dt;
-      oxygen -= dt;
-      if (oxygen <= 0) {
-        end(maxRowReached);
-        return;
-      }
-
-      moveCooldown = Math.max(0, moveCooldown - dt);
-      const dir = currentDir();
-
-      if (dir && moveCooldown <= 0) {
-        const targetRow = playerRow + dir.dr;
-        const targetCol = playerCol + dir.dc;
-        const target = cellAt(targetRow, targetCol);
-
-        if (target.dug) {
-          playerRow = targetRow;
-          playerCol = targetCol;
-          moveCooldown = MOVE_COOLDOWN;
-          digDir = null;
-          if (target.type === "gas" || target.type === "air") {
-            applyEnterEffects(target);
-            target.type = "empty"; // one-time effect, don't re-trigger
-          }
-        } else if (dir.dr >= 0) {
-          // Only dig forward/down/sideways, never claw back upward through
-          // undug rock - this stays a one-way-deeper mining theme.
-          digDir = dir;
-          const digSpeed = tool.digPower / (target.hardness * BASE_DIG_SEC);
-          target.progress += dt * digSpeed;
-          if (target.progress >= 1) {
-            target.dug = true;
-            spawnBurst(targetRow, targetCol, target.type === "empty" ? "rock" : target.type);
-            playerRow = targetRow;
-            playerCol = targetCol;
-            moveCooldown = MOVE_COOLDOWN;
-            digDir = null;
-            applyEnterEffects(target);
-          }
-        }
-      } else if (!dir) {
-        digDir = null;
-      }
-
-      maxRowReached = Math.max(maxRowReached, playerRow);
-
-      // ---- draw ----
-      const zone = zoneIndexFor(playerRow);
-      const [gTop, gBottom] = ZONE_GRAD[zone] ?? ZONE_GRAD[0];
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-      bgGrad.addColorStop(0, gTop);
-      bgGrad.addColorStop(1, gBottom);
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-      const camRow = playerRow - Math.floor(VISIBLE_ROWS / 3);
-      for (let vr = 0; vr < VISIBLE_ROWS; vr++) {
-        const row = camRow + vr;
-        if (row < 0) continue;
-        const y = vr * TILE;
-        for (let c = 0; c < COLS; c++) {
-          const cell = cellAt(row, c);
-          const x = c * TILE;
-          if (cell.dug) {
-            ctx.fillStyle = "#0a0c12";
-            ctx.fillRect(x, y, TILE, TILE);
-            ctx.strokeStyle = "rgba(255,255,255,0.03)";
-            ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
-            continue;
-          }
-
-          if (cell.type === "gas" || cell.type === "ore" || cell.type === "air") {
-            // Visible-but-undug special tiles sit in a slightly darker rock
-            // pocket so the glyph reads clearly against it.
-            ctx.fillStyle = ROCK_EDGE;
-            ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
-          } else {
-            ctx.fillStyle = ROCK_BASE;
-            ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
-            // cheap per-tile speckle texture, deterministic so it doesn't swim
-            const h = cellHash(row, c);
-            ctx.fillStyle = "rgba(0,0,0,0.12)";
-            ctx.fillRect(x + 6 + h * 10, y + 10 + h * 14, 5, 5);
-            ctx.fillRect(x + 24 + (1 - h) * 10, y + 24 + h * 8, 4, 4);
-          }
-          ctx.strokeStyle = "rgba(0,0,0,0.35)";
-          ctx.strokeRect(x + 1.5, y + 1.5, TILE - 3, TILE - 3);
-
-          const cx = x + TILE / 2;
-          const cy = y + TILE / 2;
-          if (cell.type === "ore") drawOreGlyph(ctx, cx, cy, TILE);
-          else if (cell.type === "gas") drawGasGlyph(ctx, cx, cy, TILE);
-          else if (cell.type === "air") drawAirGlyph(ctx, cx, cy, TILE, elapsed);
-
-          drawCrack(ctx, x, y, TILE, cell.progress, row, c);
-        }
-      }
-
-      // particles (screen-space already, offset by camRow)
-      const camOffsetY = camRow * TILE;
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.life -= dt;
-        if (p.life <= 0) {
-          particles.splice(i, 1);
-          continue;
-        }
-        p.vy += 160 * dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        const alpha = Math.max(0, p.life / p.maxLife);
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - p.size / 2, p.y - camOffsetY - p.size / 2, p.size, p.size);
-      }
-      ctx.globalAlpha = 1;
-
-      // player screen position
-      const py = (playerRow - camRow) * TILE;
-      const px = playerCol * TILE;
-      const pcx = px + TILE / 2;
-      const pcy = py + TILE / 2;
-
-      // vignette: darken tiles far from the player, then a warm headlamp
-      // bloom near them - this is what gives the dig site actual depth/mood
-      // instead of flat, evenly-lit tiles.
-      const vignette = ctx.createRadialGradient(pcx, pcy, TILE * 0.8, pcx, pcy, TILE * 3.6);
-      vignette.addColorStop(0, "rgba(0,0,0,0)");
-      vignette.addColorStop(1, "rgba(0,0,0,0.62)");
-      ctx.fillStyle = vignette;
-      ctx.globalCompositeOperation = "multiply";
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      ctx.globalCompositeOperation = "source-over";
-
-      const bloom = ctx.createRadialGradient(pcx, pcy, 0, pcx, pcy, TILE * 2.1);
-      bloom.addColorStop(0, "rgba(255,214,140,0.28)");
-      bloom.addColorStop(1, "rgba(255,214,140,0)");
-      ctx.fillStyle = bloom;
-      ctx.globalCompositeOperation = "lighter";
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      ctx.globalCompositeOperation = "source-over";
-
-      // player rig: rounded body + headlamp aimed at the dig/move direction
-      const bob = Math.sin(elapsed * 6) * 1.5;
-      const facing = digDir ?? dir ?? { dr: 0, dc: 0 };
-      ctx.save();
-      ctx.translate(pcx, pcy + bob);
-
-      ctx.shadowColor = "rgba(34,211,238,0.6)";
-      ctx.shadowBlur = 10;
-      const bodyGrad = ctx.createLinearGradient(0, -TILE * 0.3, 0, TILE * 0.3);
-      bodyGrad.addColorStop(0, "#5eead4");
-      bodyGrad.addColorStop(1, "#0e7490");
-      ctx.fillStyle = bodyGrad;
-      ctx.strokeStyle = "#07252b";
-      ctx.lineWidth = 2;
-      roundRect(ctx, -TILE * 0.26, -TILE * 0.26, TILE * 0.52, TILE * 0.52, 8);
-      ctx.fill();
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // headlamp cone in the facing direction
-      if (facing.dr !== 0 || facing.dc !== 0) {
-        const lampX = facing.dc * TILE * 0.3;
-        const lampY = facing.dr * TILE * 0.3;
-        ctx.fillStyle = "#fff6d8";
-        ctx.beginPath();
-        ctx.arc(lampX, lampY, 3.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // ---- HUD ----
-      ctx.textAlign = "left";
-      ctx.font = "600 13px ui-monospace, monospace";
-      const depthLabel = `${maxRowReached} m · ${zoneNameFor(maxRowReached)}`;
-      const depthW = ctx.measureText(depthLabel).width;
-      ctx.fillStyle = "rgba(10,12,18,0.72)";
-      roundRect(ctx, 6, 6, depthW + 16, 24, 7);
-      ctx.fill();
-      ctx.fillStyle = "#eef0f7";
-      ctx.fillText(depthLabel, 14, 22);
-
-      const oxyLabel = `O2 ${Math.max(0, Math.ceil(oxygen))}s`;
-      ctx.textAlign = "right";
-      const oxyW = ctx.measureText(oxyLabel).width;
-      ctx.fillStyle = "rgba(10,12,18,0.72)";
-      roundRect(ctx, CANVAS_W - 10 - oxyW - 16, 6, oxyW + 16, 24, 7);
-      ctx.fill();
-      ctx.fillStyle = oxygen < 15 ? "#ff5470" : "#eef0f7";
-      ctx.fillText(oxyLabel, CANVAS_W - 14, 22);
-
-      setDepth(maxRowReached);
-      raf = requestAnimationFrame(frame);
-    };
-
-    raf = requestAnimationFrame(frame);
-  }, [complete, oxygenStart, seed, tool]);
+    },
+    [complete],
+  );
 
   useEffect(() => {
     return () => {
@@ -479,13 +499,37 @@ export function MiningGame({ start, complete }: GameContext) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        className="w-full rounded-xl border border-border bg-background"
-        style={{ maxWidth: CANVAS_W, aspectRatio: `${CANVAS_W} / ${CANVAS_H}`, touchAction: "none" }}
-      />
+      <div
+        className="relative w-full overflow-hidden rounded-xl border border-border bg-background"
+        style={{ aspectRatio: "9 / 7", maxWidth: 520 }}
+      >
+        {phase === "running" && (
+          <Canvas camera={{ fov: 50, position: [0, 1, 6.5] }} dpr={[1, 1.5]}>
+            <Shaft
+              seed={seed}
+              toolTier={toolTier}
+              oxygenStart={oxygenStart}
+              startToken={startToken}
+              onDepthChange={setDepth}
+              onOxygenChange={setOxygen}
+              onEnd={handleEnd}
+            />
+          </Canvas>
+        )}
+        {phase === "running" && (
+          <>
+            <div className="absolute left-2 top-2 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-foreground">
+              {depth} m · {zoneNameFor(depth)}
+            </div>
+            <div
+              className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 font-mono text-xs"
+              style={{ color: oxygen < 15 ? "#ff5470" : undefined }}
+            >
+              O2 {oxygen}s
+            </div>
+          </>
+        )}
+      </div>
       {phase === "idle" && (
         <button className="btn btn-primary" onClick={run}>
           Drop in. Arrow keys or WASD - move into rock to dig it
@@ -493,7 +537,7 @@ export function MiningGame({ start, complete }: GameContext) {
       )}
       {phase === "running" && (
         <p className="text-sm text-muted">
-          Blue shards are ore, red pockets cost oxygen, green chevrons restore
+          Blue shards are ore, red pockets cost oxygen, green glow restores
           it. Dig toward what you want, around what you don&apos;t.
         </p>
       )}

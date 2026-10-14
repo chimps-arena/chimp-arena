@@ -99,7 +99,7 @@ export async function POST(
   if ("error" in derived)
     return NextResponse.json({ error: derived.error }, { status: 400 });
 
-  const score = derived.score;
+  let score = derived.score;
   if (!rule.validate(score, elapsedSec)) {
     return NextResponse.json(
       { error: "submission rejected as implausible" },
@@ -109,7 +109,6 @@ export async function POST(
 
   const db = supabaseAdmin();
   const day = utcDay();
-  const xpForRun = rule.xp(score, mission.baseXp);
 
   // Mining pays out per-permit, not gated by the once-per-day mission_runs
   // insert below (XP/Gold-from-XP still are) - a paid permit used on an
@@ -123,8 +122,28 @@ export async function POST(
     if (!permitId) {
       return NextResponse.json({ error: "missing permit - restart the mission" }, { status: 422 });
     }
-    // Precise per-tool ceiling - MISSION_RULES.mining.validate() above only
-    // checked the loose best-tool ceiling since it doesn't see tool tier.
+
+    // The client's own reported score is NOT trusted for mining at all - it
+    // was only used above for the generic rule.validate() fast-fail. The
+    // real depth is whatever the proof-of-progress pings actually
+    // accumulated server-side (see /api/mining/progress, migration 0028),
+    // which is immune to "wait offline then submit the max" since growth
+    // there is bounded by real elapsed time between accepted pings, not a
+    // single end-of-run elapsed-time check.
+    const { data: permitRow, error: permitErr } = await db
+      .from("mining_permits")
+      .select("max_depth_seen")
+      .eq("id", permitId)
+      .eq("wallet", session.wallet)
+      .maybeSingle();
+    if (permitErr || !permitRow) {
+      return NextResponse.json({ error: "missing permit - restart the mission" }, { status: 422 });
+    }
+    score = permitRow.max_depth_seen;
+
+    // Defense in depth - the accumulated depth should already be bounded by
+    // the pings, but this independently catches anything that shouldn't be
+    // possible even in principle for this tool tier and time elapsed.
     if (score > maxDepthFor(toolTier, elapsedSec)) {
       return NextResponse.json({ error: "submission rejected as implausible" }, { status: 422 });
     }
@@ -165,6 +184,11 @@ export async function POST(
       },
     };
   }
+
+  // Computed after the mining branch (not before) since score is replaced
+  // there with the server-tracked authoritative depth - XP must be earned
+  // from that corrected value too, not whatever the client originally claimed.
+  const xpForRun = rule.xp(score, mission.baseXp);
 
   // Once-per-UTC-day XP gate via the unique (wallet, mission_slug, day) index.
   const { data: inserted, error: insErr } = await db

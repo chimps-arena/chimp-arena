@@ -1,57 +1,71 @@
 /**
- * Uploads Astrochimp character art + metadata to Arweave (permanent) and
- * writes each result into Supabase - one_of_one ids go into chimp_variants
- * (the finite, claimable catalog, migration 0014/0015), standard/rare ids
- * go into chimp_style_variants (the reusable, non-scarce art pool,
- * migration 0016). /api/mint/claim picks these up automatically once
- * image_url is set - nothing else needs to change to go live.
+ * Uploads real named Astrochimp character art (Common/Rare/One of One) to
+ * Arweave via Irys and sets each row's image_url in Supabase - same wallet
+ * and permanence tradeoffs as scripts/upload-property-art.mjs, but simpler:
+ * these NFTs' metadata is served dynamically from the DB
+ * (app/nft/chimp-metadata/...), not a separately-uploaded JSON file, so only
+ * the image itself needs a permanent URL.
  *
- * Same Irys pipeline as scripts/upload-property-art.mjs, same funding
- * wallet, same "arweave.net only catches up later, gateway.irys.xyz
- * resolves immediately" fix already baked in from the start this time.
+ * Expects a base directory containing three subfolders exactly named
+ * "Common", "Rare", and "One of One", each holding <Character Name>.png
+ * files - matches migration 0027's row ids via the same slugify() used to
+ * generate them there (lowercase, non-alphanumeric runs -> "-").
  *
  * Usage:
- *   1. Drop art into scripts/chimp-art/, named exactly after the id in
- *      scripts/chimp-manifest.json - e.g. std-ember.png.
- *   2. node --env-file=.env.local scripts/upload-chimp-art.mjs
+ *   node --env-file=.env.local scripts/upload-chimp-art.mjs "<path to folder with Common/Rare/One of One>"
+ *   (add --force to re-upload rows that already have an image_url)
  *
- * An id with no matching art file yet is skipped, not errored - drop the
- * rest in later and re-run. Safe to re-run: ids that already have art are
- * skipped unless --force is passed.
+ * Safe to re-run: a row that already has image_url is skipped unless
+ * --force is passed. Files in SKIP_FILES below are never uploaded until
+ * removed from that list (see migration 0027's note on Asher.png).
  */
-import { existsSync, readFileSync } from "node:fs";
-import { extname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readdirSync, statSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import bs58 from "bs58";
 import { Uploader } from "@irys/upload";
 import { Solana } from "@irys/upload-solana";
 import { createClient } from "@supabase/supabase-js";
 
-const MANIFEST_PATH = fileURLToPath(new URL("./chimp-manifest.json", import.meta.url));
-const ART_DIR = fileURLToPath(new URL("./chimp-art/", import.meta.url));
 const FORCE = process.argv.includes("--force");
+const BASE_DIR = process.argv.find((a, i) => i >= 2 && !a.startsWith("--"));
 
-const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".webp"];
-const MIME_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+// Relative path ("<Tier folder>/<file>.png") -> reason it's held back.
+// Remove an entry here once replacement art lands, then re-run.
+const SKIP_FILES = new Map([
+  ["Common/Asher.png", "visible Nike swoosh logo on the sneakers - flagged for legal review before this goes on-chain permanently"],
+]);
 
-function findArtFile(id) {
-  for (const ext of IMAGE_EXTS) {
-    const candidate = join(ART_DIR, `${id}${ext}`);
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
+const TIER_FOLDERS = [
+  { folder: "Common", tier: "standard", idPrefix: "std-", table: "chimp_style_variants" },
+  { folder: "Rare", tier: "rare", idPrefix: "rare-", table: "chimp_style_variants" },
+  { folder: "One of One", tier: "one_of_one", idPrefix: "chimp-1of1-", table: "chimp_variants" },
+];
+
+function slugify(name) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
+
+const MIME_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 function requireEnv(name) {
   const v = process.env[name];
   if (!v) {
-    console.error(`Missing ${name} - run with: node --env-file=.env.local scripts/upload-chimp-art.mjs`);
+    console.error(`Missing ${name} - run with: node --env-file=.env.local scripts/upload-chimp-art.mjs <dir>`);
     process.exit(1);
   }
   return v;
 }
 
 async function main() {
+  if (!BASE_DIR) {
+    console.error('Usage: node --env-file=.env.local scripts/upload-chimp-art.mjs "<path to folder with Common/Rare/One of One>" [--force]');
+    process.exit(1);
+  }
+
   const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
   const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const delegateSecret = requireEnv("MPL_CORE_MINT_DELEGATE_SECRET");
@@ -61,111 +75,105 @@ async function main() {
   const secretKey = bs58.decode(delegateSecret);
 
   const irys = await Uploader(Solana).withWallet(secretKey).withRpc(rpcUrl).mainnet();
+  console.log("Irys node address:", irys.address);
   console.log("Irys balance:", irys.utils.fromAtomic(await irys.getLoadedBalance()).toString(), "SOL");
 
-  const manifestRaw = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
-  const manifest = manifestRaw.map((p) => ({ ...p, image: findArtFile(p.id) }));
-  const ready = manifest.filter((p) => p.image);
-  const notReady = manifest.length - ready.length;
-  if (notReady > 0) {
-    console.log(`Skipping ${notReady} id${notReady === 1 ? "" : "s"} with no matching art file yet.`);
+  // ---- gather every candidate file across the three tier folders ----
+  const jobs = [];
+  for (const { folder, tier, idPrefix, table } of TIER_FOLDERS) {
+    const dir = join(BASE_DIR, folder);
+    let files;
+    try {
+      files = readdirSync(dir);
+    } catch {
+      console.log(`Skipping "${folder}" - folder not found at ${dir}`);
+      continue;
+    }
+    for (const file of files) {
+      const ext = extname(file).toLowerCase();
+      if (!MIME_TYPES[ext]) continue; // skips .DS_Store etc.
+      const name = basename(file, ext).trim();
+      const relPath = `${folder}/${file}`;
+      if (SKIP_FILES.has(relPath)) {
+        console.log(`  skip ${relPath.padEnd(40)} ${SKIP_FILES.get(relPath)}`);
+        continue;
+      }
+      jobs.push({ path: join(dir, file), ext, contentType: MIME_TYPES[ext], id: `${idPrefix}${slugify(name)}`, name, tier, table });
+    }
   }
-  if (ready.length === 0) {
-    console.log("Nothing ready - drop art into scripts/chimp-art/<id>.png first.");
+
+  if (jobs.length === 0) {
+    console.log("Nothing to upload.");
     return;
   }
 
+  // ---- drop rows that already have art, unless --force ----
+  let ready = jobs;
   if (!FORCE) {
-    const oneOfOneIds = ready.filter((p) => p.tier === "one_of_one").map((p) => p.id);
-    const styleIds = ready.filter((p) => p.tier !== "one_of_one").map((p) => p.id);
-    const skip = new Set();
-    if (oneOfOneIds.length) {
-      const { data } = await db.from("chimp_variants").select("id").in("id", oneOfOneIds).not("image_url", "is", null);
-      (data ?? []).forEach((r) => skip.add(r.id));
+    const byTable = new Map();
+    for (const j of jobs) {
+      if (!byTable.has(j.table)) byTable.set(j.table, []);
+      byTable.get(j.table).push(j.id);
     }
-    if (styleIds.length) {
-      const { data } = await db.from("chimp_style_variants").select("id").in("id", styleIds).not("image_url", "is", null);
-      (data ?? []).forEach((r) => skip.add(r.id));
+    const alreadySet = new Set();
+    for (const [table, ids] of byTable) {
+      const { data } = await db.from(table).select("id").in("id", ids).not("image_url", "is", null);
+      for (const row of data ?? []) alreadySet.add(row.id);
     }
-    if (skip.size > 0) {
-      console.log(`Skipping ${skip.size} already-uploaded (pass --force to redo): ${[...skip].join(", ")}`);
+    if (alreadySet.size > 0) {
+      console.log(`Skipping ${alreadySet.size} already uploaded (pass --force to redo): ${[...alreadySet].join(", ")}`);
     }
-    for (let i = ready.length - 1; i >= 0; i--) {
-      if (skip.has(ready[i].id)) ready.splice(i, 1);
-    }
+    ready = jobs.filter((j) => !alreadySet.has(j.id));
   }
+
   if (ready.length === 0) {
-    console.log("Nothing left to upload.");
+    console.log("Nothing left to upload (everything either skipped or already done).");
     return;
   }
 
-  const estimatedBytes = ready.length * 400_000; // rough per-image guess, funding tops up if short
+  // Irys needs its own prepaid balance, separate from the wallet's SOL.
+  const estimatedBytes = ready.reduce((sum, j) => {
+    try {
+      return sum + statSync(j.path).size;
+    } catch {
+      return sum;
+    }
+  }, 0);
   const price = await irys.getPrice(estimatedBytes);
   const loaded = await irys.getLoadedBalance();
   if (loaded.isLessThan(price)) {
     const topUp = price.minus(loaded).multipliedBy(1.1);
-    console.log(`Funding Irys with ~${irys.utils.fromAtomic(topUp).toString()} SOL...`);
+    console.log(`Funding Irys with ~${irys.utils.fromAtomic(topUp).toString()} SOL to cover this batch...`);
     await irys.fund(topUp.integerValue());
   }
 
-  console.log(`Uploading ${ready.length} chimp${ready.length === 1 ? "" : "s"}...`);
+  console.log(`Uploading ${ready.length} character image${ready.length === 1 ? "" : "s"}...`);
+
   let uploaded = 0;
   let failed = 0;
-
-  for (const p of ready) {
+  for (const j of ready) {
     try {
-      const ext = extname(p.image).toLowerCase();
-      const contentType = MIME_TYPES[ext];
-      if (!contentType) throw new Error(`unrecognized image extension: ${ext}`);
-
-      const imageReceipt = await irys.uploadFile(p.image, {
+      const receipt = await irys.uploadFile(j.path, {
         tags: [
-          { name: "Content-Type", value: contentType },
+          { name: "Content-Type", value: j.contentType },
           { name: "App", value: "chimp-arena" },
-          { name: "Chimp-Id", value: p.id },
+          { name: "Chimp-Variant-Id", value: j.id },
         ],
       });
-      const imageUri = `https://gateway.irys.xyz/${imageReceipt.id}`;
+      const imageUri = `https://gateway.irys.xyz/${receipt.id}`;
 
-      const tierLabel = p.tier === "one_of_one" ? "One of One" : p.tier === "rare" ? "Rare" : "Standard";
-      const metadata = {
-        name: p.name,
-        symbol: "ACHMP",
-        description: `An Astrochimp from the Astrochimpz mint (${tierLabel} tier).`,
-        image: imageUri,
-        external_url: "https://astrochimpz.com",
-        attributes: [{ trait_type: "Tier", value: tierLabel }],
-        properties: { files: [{ uri: imageUri, type: contentType }], category: "image" },
-      };
-
-      const metadataReceipt = await irys.upload(JSON.stringify(metadata), {
-        tags: [
-          { name: "Content-Type", value: "application/json" },
-          { name: "App", value: "chimp-arena" },
-          { name: "Chimp-Id", value: p.id },
-        ],
-      });
-      const metadataUri = `https://gateway.irys.xyz/${metadataReceipt.id}`;
-
-      const table = p.tier === "one_of_one" ? "chimp_variants" : "chimp_style_variants";
-      const { error } = await db
-        .from(table)
-        .update({ image_url: imageUri, metadata_uri: metadataUri })
-        .eq("id", p.id);
+      const { error } = await db.from(j.table).update({ image_url: imageUri }).eq("id", j.id);
       if (error) throw new Error(`db update failed: ${error.message}`);
 
-      console.log(`  ok  ${p.id.padEnd(28)} image=${imageReceipt.id.slice(0, 12)}...`);
+      console.log(`  ok  ${j.id.padEnd(32)} ${receipt.id.slice(0, 12)}...`);
       uploaded++;
     } catch (e) {
-      console.error(`  FAIL ${p.id}: ${e.message}`);
+      console.log(`  FAIL ${j.id.padEnd(32)} ${e instanceof Error ? e.message : e}`);
       failed++;
     }
   }
 
-  console.log(`\nDone: ${uploaded} uploaded, ${failed} failed.`);
+  console.log(`\nDone. ${uploaded} uploaded, ${failed} failed.`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main();
