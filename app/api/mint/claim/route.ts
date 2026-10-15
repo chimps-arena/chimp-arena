@@ -217,19 +217,55 @@ export async function POST(req: Request) {
     }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
     const assetAddress = asset.publicKey.toString();
-    await db
-      .from("nft_mint_claims")
-      .update({
-        asset_address: assetAddress,
+    const mintSignature = bs58.encode(mintTx.signature);
+
+    // The NFT is real and irreversible from here on - a transient failure
+    // recording it must never fall into the outer catch below, which
+    // deletes the claim row and reports "mint failed". That combination
+    // (same shape found and fixed in app/api/land/claim) would tell a buyer
+    // who already received an NFT that nothing happened, inviting them to
+    // pay again for a second one.
+    let recordErr: unknown;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        // supabase-js returns { error } on a query failure rather than
+        // throwing, so it must be checked explicitly - an unchecked error
+        // here would silently look like success while leaving this mint
+        // unrecorded (see app/api/land/claim's identical, already-confirmed
+        // version of this bug).
+        const { error } = await db
+          .from("nft_mint_claims")
+          .update({ asset_address: assetAddress, tier, mint_number: mintNumber })
+          .eq("tx_signature", signature);
+        if (error) throw error;
+        recordErr = null;
+        break;
+      } catch (e) {
+        recordErr = e;
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    if (recordErr) {
+      console.error(
+        "mint claim: mint succeeded but recording it failed - needs a manual DB fix",
+        { wallet, signature, assetAddress, tier, mintNumber },
+        recordErr,
+      );
+      return NextResponse.json({
+        ok: true,
+        asset: assetAddress,
+        signature: mintSignature,
         tier,
-        mint_number: mintNumber,
-      })
-      .eq("tx_signature", signature);
+        name,
+        warning:
+          "minted successfully, but we couldn't record it due to a server error - contact support with this transaction signature",
+      });
+    }
 
     const result: Record<string, unknown> = {
       ok: true,
       asset: assetAddress,
-      signature: bs58.encode(mintTx.signature),
+      signature: mintSignature,
       tier,
       name,
     };

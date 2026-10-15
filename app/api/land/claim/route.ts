@@ -163,48 +163,98 @@ export async function POST(req: Request) {
     }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
 
     const assetAddress = asset.publicKey.toString();
+    const mintSignature = bs58.encode(mintTx.signature);
 
-    // Reserve the property atomically - if it's already sold (asset_address
-    // set by a concurrent request), this update matches zero rows.
-    const { data: updated } = await db
-      .from("properties")
-      .update({
-        owner_wallet: wallet,
-        asset_address: assetAddress,
-        tx_signature: signature,
-        acquired_at: new Date().toISOString(),
-      })
-      .eq("id", propertyId)
-      .is("asset_address", null)
-      .select("id")
-      .maybeSingle();
+    // From here on, the NFT is real and irreversible - a failure in the two
+    // DB writes below must NEVER be treated the same as a failed mint (the
+    // outer catch's "delete the claim, tell the buyer to retry" is only
+    // correct for failures *before* this point). Getting that wrong is a
+    // real bug this route had: a transient Supabase failure here used to
+    // fall into the outer catch, which deleted the claim guard and
+    // returned "minting failed" even though the asset already existed -
+    // leaving properties.asset_address null so a second wallet could
+    // legitimately buy (and mint a second real NFT for) the same listing.
+    try {
+      // Reserve the property atomically - if it's already sold (asset_address
+      // set by a concurrent request), this update matches zero rows. Retried
+      // a few times since this specific write is the one thing standing
+      // between "sold" and "still looks available" - worth not giving up on
+      // the first transient network blip.
+      let updated: { id: string } | null = null;
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 4 && !updated; attempt++) {
+        try {
+          const { data, error } = await db
+            .from("properties")
+            .update({
+              owner_wallet: wallet,
+              asset_address: assetAddress,
+              tx_signature: signature,
+              acquired_at: new Date().toISOString(),
+            })
+            .eq("id", propertyId)
+            .is("asset_address", null)
+            .select("id")
+            .maybeSingle();
+          // supabase-js returns { data: null, error } on a query failure - it
+          // does NOT throw, so this must be checked explicitly. Conflating a
+          // real error with "zero rows matched" (a legitimate, error-less
+          // outcome meaning someone else's claim already won) is exactly
+          // what let the first mint of this kind go unrecorded while still
+          // reporting success - the second request two days later had every
+          // reason to believe the property was still available.
+          if (error) throw error;
+          updated = data;
+          lastErr = null;
+          break;
+        } catch (e) {
+          lastErr = e;
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        }
+      }
 
-    if (!updated) {
-      // Lost the race after minting - the NFT exists and belongs to this
-      // buyer regardless, just not reflected in our index. Not a payment
-      // loss; flag for a manual DB fix rather than losing the mint record.
+      if (lastErr) throw lastErr;
+
+      if (!updated) {
+        // Lost the race after minting - the NFT exists and belongs to this
+        // buyer regardless, just not reflected in our index. Not a payment
+        // loss; flag for a manual DB fix rather than losing the mint record.
+        await db
+          .from("property_mint_claims")
+          .update({ asset_address: assetAddress })
+          .eq("tx_signature", signature);
+        return NextResponse.json({
+          ok: true,
+          asset: assetAddress,
+          signature: mintSignature,
+          warning: "minted but the property row was already claimed - contact support",
+        });
+      }
+
       await db
         .from("property_mint_claims")
         .update({ asset_address: assetAddress })
         .eq("tx_signature", signature);
+
+      return NextResponse.json({ ok: true, asset: assetAddress, signature: mintSignature });
+    } catch (e) {
+      // The mint is real and already belongs to the buyer - this is purely a
+      // bookkeeping failure. Never delete the claim row here (that would
+      // reopen the property to a second buyer) and never report this as a
+      // failed mint to the client.
+      console.error(
+        "land claim: mint succeeded but recording it failed - needs a manual DB fix",
+        { propertyId, wallet, signature, assetAddress },
+        e,
+      );
       return NextResponse.json({
         ok: true,
         asset: assetAddress,
-        signature: bs58.encode(mintTx.signature),
-        warning: "minted but the property row was already claimed - contact support",
+        signature: mintSignature,
+        warning:
+          "minted successfully, but we couldn't record the sale due to a server error - contact support with this transaction signature so we can fix it manually",
       });
     }
-
-    await db
-      .from("property_mint_claims")
-      .update({ asset_address: assetAddress })
-      .eq("tx_signature", signature);
-
-    return NextResponse.json({
-      ok: true,
-      asset: assetAddress,
-      signature: bs58.encode(mintTx.signature),
-    });
   } catch (e) {
     await db.from("property_mint_claims").delete().eq("tx_signature", signature);
     // See app/api/mint/claim's identical catch block for why this doesn't
