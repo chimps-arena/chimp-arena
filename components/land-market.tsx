@@ -15,7 +15,7 @@ import {
   mplToolbox,
   transferTokens,
 } from "@metaplex-foundation/mpl-toolbox";
-import { publicKey } from "@metaplex-foundation/umi";
+import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import { ASTRO_CORP_WALLET, CHIMP_MINT, CHIMP_DECIMALS } from "@/lib/chain/mint-config";
@@ -119,8 +119,11 @@ export function LandMarket() {
       let held: bigint;
       try {
         held = (await fetchToken(umi, buyerAta)).amount;
-      } catch {
-        throw new Error("This wallet holds no $CHIMP.");
+      } catch (e) {
+        if (e instanceof AccountNotFoundError) {
+          throw new Error("This wallet holds no $CHIMP.");
+        }
+        throw new Error("Couldn't check your $CHIMP balance - the chain RPC may be having trouble. Try again shortly.");
       }
       if (held < priceBase) {
         throw new Error(

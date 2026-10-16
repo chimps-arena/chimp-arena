@@ -14,7 +14,7 @@ import {
   mplToolbox,
   transferTokens,
 } from "@metaplex-foundation/mpl-toolbox";
-import { publicKey } from "@metaplex-foundation/umi";
+import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint } from "@/lib/chain/connection";
 import { HANDLE_RULES, validateHandle } from "@/lib/game/config";
 import { describeTxError } from "@/lib/chain/tx-error";
@@ -101,8 +101,11 @@ export function HandleEditor({
         let held: bigint;
         try {
           held = (await fetchToken(umi, buyerAta)).amount;
-        } catch {
-          throw new Error("This wallet holds no $CHIMP.");
+        } catch (e) {
+          if (e instanceof AccountNotFoundError) {
+            throw new Error("This wallet holds no $CHIMP.");
+          }
+          throw new Error("Couldn't check your $CHIMP balance - the chain RPC may be having trouble. Try again shortly.");
         }
         if (held < RENAME_PRICE_BASE) {
           throw new Error(

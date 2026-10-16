@@ -14,7 +14,7 @@ import {
   mplToolbox,
   transferTokens,
 } from "@metaplex-foundation/mpl-toolbox";
-import { publicKey } from "@metaplex-foundation/umi";
+import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
@@ -96,8 +96,11 @@ export function ChimpMint() {
       });
       const tok = await fetchToken(umi, ata);
       setBalance(Number(tok.amount) / 10 ** CHIMP_DECIMALS);
-    } catch {
-      setBalance(0);
+    } catch (e) {
+      // AccountNotFoundError (no ATA yet) genuinely means zero - any other
+      // failure is an RPC problem, not a real balance, so leave it unset
+      // ("check balance") rather than confidently showing a wrong 0.
+      setBalance(e instanceof AccountNotFoundError ? 0 : null);
     }
   }
 
@@ -145,12 +148,18 @@ export function ChimpMint() {
         owner: publicKey(ASTRO_CORP_WALLET),
       });
 
-      // Preflight: enough $CHIMP?
+      // Preflight: enough $CHIMP? AccountNotFoundError (no ATA yet) genuinely
+      // means zero - any other failure is an RPC problem and must not be
+      // reported as an empty wallet, which would block a real holder from
+      // minting and look identical to a genuinely empty one.
       let held: bigint;
       try {
         held = (await fetchToken(umi, buyerAta)).amount;
-      } catch {
-        throw new Error("This wallet holds no $CHIMP.");
+      } catch (e) {
+        if (e instanceof AccountNotFoundError) {
+          throw new Error("This wallet holds no $CHIMP.");
+        }
+        throw new Error("Couldn't check your $CHIMP balance - the chain RPC may be having trouble. Try again shortly.");
       }
       if (held < MINT_PRICE_BASE) {
         throw new Error(

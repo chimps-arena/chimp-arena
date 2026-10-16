@@ -6,7 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { addMemo, fetchToken, findAssociatedTokenPda, mplToolbox, transferTokens } from "@metaplex-foundation/mpl-toolbox";
-import { publicKey } from "@metaplex-foundation/umi";
+import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint } from "@/lib/chain/connection";
 import { ASTRO_CORP_WALLET, CHIMP_MINT, MINING_PERMIT_PRICE_BASE } from "@/lib/chain/mint-config";
 import { MINING, miningPermitMemo } from "@/lib/game/sinks";
@@ -83,8 +83,15 @@ export default function MiningMissionPage() {
       let held: bigint;
       try {
         held = (await fetchToken(umi, buyerAta)).amount;
-      } catch {
-        throw new Error("This wallet holds no $CHIMP.");
+      } catch (e) {
+        // AccountNotFoundError (no ATA yet) genuinely means zero - anything
+        // else is an RPC problem (timeout, rate limit, provider outage) and
+        // must not be reported as "you have no $CHIMP", which blocks a real
+        // holder from paying and looks identical to a real empty wallet.
+        if (e instanceof AccountNotFoundError) {
+          throw new Error("This wallet holds no $CHIMP.");
+        }
+        throw new Error("Couldn't check your $CHIMP balance - the chain RPC may be having trouble. Try again shortly.");
       }
       if (held < MINING_PERMIT_PRICE_BASE) {
         throw new Error(`Need ${MINING.permitPriceChimp} $CHIMP for a permit.`);
