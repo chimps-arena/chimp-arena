@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
-import { getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { TokenAccountNotFoundError, getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { PUBLIC_ENV } from "@/lib/env";
 import { CHIMP_DECIMALS, CHIMP_MINT } from "@/lib/chain/mint-config";
 
@@ -18,7 +18,18 @@ const conn = new Connection(endpoint, "confirmed");
 /**
  * GET ?wallet=<address> -> { raw, uiAmount }
  * On-chain $CHIMP balance for a wallet. Guests / bad addresses return 0.
- * No ATA (never held $CHIMP) also returns 0.
+ * No ATA (never held $CHIMP) also returns 0 - that's the one case getAccount
+ * throwing actually means "zero", and is the only one treated that way.
+ *
+ * A real RPC failure (timeout, rate limit, provider outage) used to be
+ * caught by the same generic handler and ALSO reported as a confident "0" -
+ * a wallet that genuinely held real $CHIMP would display 0 for however long
+ * the RPC was unhappy, with no way to tell "really zero" apart from
+ * "couldn't check". Found live: a real wallet verified (via a second,
+ * independent RPC) to hold over 1M $CHIMP was showing 0 on-site. Now only
+ * TokenAccountNotFoundError (the specific, legitimate "never held this
+ * token" case) returns zero; anything else is a real 503, so the UI can
+ * show "couldn't load balance" instead of a confidently wrong number.
  */
 export async function GET(req: Request) {
   const wallet = new URL(req.url).searchParams.get("wallet");
@@ -43,11 +54,17 @@ export async function GET(req: Request) {
       },
       { headers: { "cache-control": "public, max-age=20" } },
     );
-  } catch {
-    // TokenAccountNotFoundError or RPC hiccup -> treat as zero.
+  } catch (e) {
+    if (e instanceof TokenAccountNotFoundError) {
+      return NextResponse.json(
+        { raw: "0", uiAmount: 0 },
+        { headers: { "cache-control": "public, max-age=20" } },
+      );
+    }
+    console.error("chimp-balance: RPC lookup failed (not a real zero)", wallet, e);
     return NextResponse.json(
-      { raw: "0", uiAmount: 0 },
-      { headers: { "cache-control": "public, max-age=20" } },
+      { error: "could not reach the chain right now - try again shortly" },
+      { status: 503 },
     );
   }
 }
