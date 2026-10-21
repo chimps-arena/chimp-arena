@@ -10,6 +10,7 @@
     "lint": "eslint",
     "verify:db": "node scripts/verify-supabase.mjs",
     "test:shared": "npm run test --workspace=shared",
+    "test:server": "npm run test --workspace=server",
     "typecheck:shared": "npm run typecheck --workspace=shared",
     "typecheck:server": "npm run typecheck --workspace=server",
     "server:dev": "npm run dev --workspace=server"

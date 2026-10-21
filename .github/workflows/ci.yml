@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint (client)
+        run: npm run lint
+
+      - name: Typecheck shared/
+        run: npm run typecheck:shared
+
+      - name: Typecheck server/
+        run: npm run typecheck:server
+
+      - name: shared/ tests (includes the seed-determinism test, B2)
+        run: npm run test:shared
+
+      - name: server/ tests (room + exploit suite, once they exist)
+        run: npm run test:server --if-present
+
+      - name: Build client (also typechecks the Next.js app itself)
+        run: npm run build
+        env:
+          # Placeholder values so the build step doesn't fail on missing env -
+          # this job never deploys or touches a real database, it only needs
+          # the app to compile. Not real secrets - safe to commit.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          JWT_SECRET: placeholder
+          MPL_CORE_MINT_DELEGATE_SECRET: placeholder
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

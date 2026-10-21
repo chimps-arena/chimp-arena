@@ -12,6 +12,13 @@ export interface MoveMessage {
   z: number;
 }
 
+/** Client -> server: ask for one chunk's generated content. Request/response,
+ *  not a push on join - see MiningRoom's own note on why. */
+export interface RequestChunkMessage {
+  cx: number;
+  cy: number;
+}
+
 /** Client -> server: start digging a specific deposit. Server validates the
  *  claimed position against its own record of where that player actually is (B4). */
 export interface DigStartMessage {

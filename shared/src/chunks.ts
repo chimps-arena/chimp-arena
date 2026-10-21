@@ -25,6 +25,7 @@ export function toChunk(x: number, z: number): ChunkCoord {
  * heightmap generation lands - callers should already be written against
  * this signature so that swap-in is just this function's body changing.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function heightAt(_x: number, _z: number): number {
   return 0;
 }
