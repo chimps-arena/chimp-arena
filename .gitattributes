@@ -1,8 +1,11 @@
 # Normalize line endings: store and check out text files with LF everywhere.
 * text=auto eol=lf
-
 # Binary assets - never touch
 *.ico   binary
 *.png   binary
 *.jpg   binary
 *.woff2 binary
+*.gltf filter=lfs diff=lfs merge=lfs -text
+*.ktx2 filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text

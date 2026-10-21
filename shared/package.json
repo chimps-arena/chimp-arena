@@ -1,0 +1,17 @@
+{
+  "name": "@chimp-arena/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chunk math, world generation, message types and item definitions shared between the Next.js client and the Colyseus server (see B2, task briefs 2026-10-20).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}

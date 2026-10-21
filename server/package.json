@@ -1,0 +1,19 @@
+{
+  "name": "@chimp-arena/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Colyseus server - rooms, dig validation, persistence (B3-B9). Currently a stub proving the shared/ workspace link resolves end-to-end (B1); the real MiningRoom lands in B3.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chimp-arena/shared": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "typescript": "^5",
+    "@types/node": "^20"
+  }
+}

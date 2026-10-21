@@ -2,14 +2,20 @@
   "name": "chimp-arena",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["shared", "server"],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verify:db": "node scripts/verify-supabase.mjs"
+    "verify:db": "node scripts/verify-supabase.mjs",
+    "test:shared": "npm run test --workspace=shared",
+    "typecheck:shared": "npm run typecheck --workspace=shared",
+    "typecheck:server": "npm run typecheck --workspace=server",
+    "server:dev": "npm run dev --workspace=server"
   },
   "dependencies": {
+    "@chimp-arena/shared": "*",
     "@irys/upload": "^0.0.15",
     "@irys/upload-solana": "^0.1.8",
     "@metaplex-foundation/mpl-core": "^1.10.0",
