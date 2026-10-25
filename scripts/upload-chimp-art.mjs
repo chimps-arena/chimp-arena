@@ -162,7 +162,10 @@ async function main() {
       });
       const imageUri = `https://gateway.irys.xyz/${receipt.id}`;
 
-      const { error } = await db.from(j.table).update({ image_url: imageUri }).eq("id", j.id);
+      const { error } = await db
+        .from(j.table)
+        .update({ image_url: imageUri, mime_type: j.contentType })
+        .eq("id", j.id);
       if (error) throw new Error(`db update failed: ${error.message}`);
 
       console.log(`  ok  ${j.id.padEnd(32)} ${receipt.id.slice(0, 12)}...`);

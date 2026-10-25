@@ -24,7 +24,7 @@ export async function GET(
 
   const { data: style } = await supabaseAdmin()
     .from("chimp_style_variants")
-    .select("name, tier, image_url")
+    .select("name, tier, image_url, mime_type")
     .eq("id", styleId)
     .maybeSingle();
 
@@ -46,7 +46,7 @@ export async function GET(
         { trait_type: "Style", value: style.name },
       ],
       properties: {
-        files: [{ uri: style.image_url, type: "image/png" }],
+        files: [{ uri: style.image_url, type: style.mime_type || "image/png" }],
         category: "image",
       },
     },

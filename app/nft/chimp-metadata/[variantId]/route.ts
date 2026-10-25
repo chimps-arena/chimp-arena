@@ -28,7 +28,7 @@ export async function GET(
 
   const { data: variant } = await supabaseAdmin()
     .from("chimp_variants")
-    .select("name, tier, blurb, image_url")
+    .select("name, tier, blurb, image_url, mime_type")
     .eq("id", variantId)
     .maybeSingle();
 
@@ -37,6 +37,9 @@ export async function GET(
   }
 
   const image = variant.image_url ?? `${origin}/characters/astrochimp-512.png`;
+  // The static fallback above is a real PNG regardless of this row's
+  // mime_type - only trust the DB's mime_type when actually serving its own image_url.
+  const imageType = variant.image_url ? variant.mime_type || "image/png" : "image/png";
 
   return NextResponse.json(
     {
@@ -51,7 +54,7 @@ export async function GET(
         { trait_type: "Tier", value: TIER_LABEL[variant.tier] ?? variant.tier },
       ],
       properties: {
-        files: [{ uri: image, type: "image/png" }],
+        files: [{ uri: image, type: imageType }],
         category: "image",
       },
     },
