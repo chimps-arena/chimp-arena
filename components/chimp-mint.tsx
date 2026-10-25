@@ -36,6 +36,7 @@ interface Milestone {
   mintNumber: number;
   asset: string;
   name: string;
+  imageUrl?: string;
 }
 
 interface Result {
@@ -43,6 +44,7 @@ interface Result {
   signature: string;
   tier?: string;
   name?: string;
+  imageUrl?: string;
   milestone?: Milestone;
 }
 
@@ -56,6 +58,70 @@ const TIER_STYLE: Record<string, string> = {
   rare: "text-accent-3",
   one_of_one: "text-accent",
 };
+
+/** A short synthesized chime - no licensed audio asset needed, and safe to
+ *  autoplay since it only ever fires right after the buyer's own mint click.
+ *  A richer four-note run for the milestone bonus, a plain two-note one
+ *  otherwise. Swallows failures (unsupported/blocked Web Audio) since the
+ *  reveal is still complete visually without sound. */
+function playMintChime(bonus: boolean) {
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const notes = bonus ? [523.25, 659.25, 783.99, 1046.5] : [523.25, 783.99];
+    notes.forEach((freq, i) => {
+      const start = now + i * 0.1;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.6);
+    });
+    setTimeout(() => void ctx.close(), (notes.length * 100 + 700));
+  } catch {
+    // Web Audio unsupported/blocked - reveal still works without sound.
+  }
+}
+
+/** The mint result's reveal beat: a brief pause (builds anticipation) then
+ *  the actual art scales/fades/glows in, with the chime timed to the same
+ *  moment - replaces an instant plain-text result. */
+function MintReveal({ result }: { result: Result }) {
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setRevealed(true);
+      playMintChime(!!result.milestone);
+    }, 550);
+    return () => clearTimeout(t);
+  }, [result]);
+
+  return (
+    <div
+      className={`mx-auto h-48 w-48 overflow-hidden rounded-2xl border-2 border-accent transition-all duration-700 ease-out ${
+        revealed ? "glow-yellow scale-100 opacity-100" : "scale-75 opacity-0"
+      }`}
+    >
+      {result.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={result.imageUrl}
+          alt={result.name ?? "Astrochimp"}
+          className="h-full w-full object-cover"
+        />
+      )}
+    </div>
+  );
+}
 
 export function ChimpMint() {
   const wallet = useWallet();
@@ -127,6 +193,7 @@ export function ChimpMint() {
       signature: claim.signature,
       tier: claim.tier,
       name: claim.name,
+      imageUrl: claim.imageUrl,
       milestone: claim.milestone,
     });
     setPhase("done");
@@ -361,10 +428,11 @@ export function ChimpMint() {
       )}
 
       {phase === "done" && result && (
-        <div className="flex flex-col gap-2 rounded-xl border border-good/40 bg-good/10 p-4 text-sm">
-          <p className="font-semibold text-good">Minted.</p>
+        <div className="flex flex-col gap-3 rounded-xl border border-good/40 bg-good/10 p-4 text-sm">
+          <p className="text-center font-semibold text-good">Minted.</p>
+          <MintReveal key={result.asset} result={result} />
           {result.tier && (
-            <p className={`text-lg font-black ${TIER_STYLE[result.tier] ?? ""}`}>
+            <p className={`text-center text-lg font-black ${TIER_STYLE[result.tier] ?? ""}`}>
               {result.name} · {TIER_LABEL[result.tier] ?? result.tier}
             </p>
           )}
@@ -385,11 +453,21 @@ export function ChimpMint() {
             transaction ↗
           </a>
           {result.milestone && (
-            <div className="mt-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
+            <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
               <p className="font-black text-accent">
                 🎉 You&apos;re mint #{result.milestone.mintNumber.toLocaleString()}:
                 bonus One of One!
               </p>
+              {result.milestone.imageUrl && (
+                <div className="glow-magenta h-28 w-28 overflow-hidden rounded-xl border-2 border-accent-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={result.milestone.imageUrl}
+                    alt={result.milestone.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
               <p className="mt-1 font-semibold text-accent">{result.milestone.name}</p>
               <a
                 href={explorerAddress(result.milestone.asset)}

@@ -47,8 +47,10 @@ function rollTier(): Exclude<ChimpTier, "one_of_one"> {
  * a "The Founder". chimp_milestones (not chimp_variants) is the real
  * record of who got which design and when.
  */
-async function pickOneOfOne(db: SupabaseClient): Promise<{ id: string; name: string } | null> {
-  const { data: variants } = await db.from("chimp_variants").select("id, name");
+async function pickOneOfOne(
+  db: SupabaseClient,
+): Promise<{ id: string; name: string; image_url: string | null } | null> {
+  const { data: variants } = await db.from("chimp_variants").select("id, name, image_url");
   if (!variants || variants.length === 0) return null;
   return variants[Math.floor(Math.random() * variants.length)];
 }
@@ -68,16 +70,23 @@ async function pickOneOfOne(db: SupabaseClient): Promise<{ id: string; name: str
 async function pickStyleVariant(
   db: SupabaseClient,
   tier: "standard" | "rare",
-): Promise<{ id: string; name: string } | null> {
+): Promise<{ id: string; name: string; image_url: string } | null> {
   const { data: ready } = await db
     .from("chimp_style_variants")
-    .select("id, name")
+    .select("id, name, image_url")
     .eq("tier", tier)
     .eq("retired", false)
     .not("image_url", "is", null);
   if (!ready || ready.length === 0) return null;
   return ready[Math.floor(Math.random() * ready.length)];
 }
+
+/** Shared per-tier placeholder, used only when no style in that tier has
+ *  real art uploaded yet - see pickStyleVariant. */
+const TIER_PLACEHOLDER_IMAGE: Record<"standard" | "rare", string> = {
+  standard: "/characters/astrochimp-512.png",
+  rare: "/characters/astrochimp-512.png",
+};
 
 /**
  * POST { wallet, signature } -> { ok, asset, signature, tier, name, milestone? }
@@ -207,6 +216,7 @@ export async function POST(req: Request) {
     const uri = style
       ? `${SITE_URL}/nft/chimp-metadata/style/${style.id}`
       : `${SITE_URL}/nft/chimp-metadata/tier/${tier}`;
+    const imageUrl = style?.image_url || TIER_PLACEHOLDER_IMAGE[tier];
 
     const mintTx = await createCoreAsset(umi, {
       asset,
@@ -257,6 +267,7 @@ export async function POST(req: Request) {
         signature: mintSignature,
         tier,
         name,
+        imageUrl,
         warning:
           "minted successfully, but we couldn't record it due to a server error - contact support with this transaction signature",
       });
@@ -268,6 +279,7 @@ export async function POST(req: Request) {
       signature: mintSignature,
       tier,
       name,
+      imageUrl,
     };
 
     // Best-effort bonus: the paid mint above already succeeded regardless of
@@ -299,6 +311,7 @@ export async function POST(req: Request) {
             mintNumber,
             asset: bonusAddress,
             name: bonusVariant.name,
+            imageUrl: bonusVariant.image_url || "/characters/astrochimp-512.png",
             signature: bs58.encode(bonusTx.signature),
           };
         } catch {
