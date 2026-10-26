@@ -168,14 +168,24 @@ export async function POST(req: Request) {
         asset,
         name,
         uri,
-        // No collection here on purpose - see this route's top comment.
-        // updateAuthority (not a signer, just a recorded pubkey) is the
-        // delegate's, so it alone can move this asset into the collection
-        // later in app/api/mint/confirm's own separate transaction.
+        // No collection, and deliberately no updateAuthority override
+        // either - the buyer ends up fully owning and controlling a
+        // perfectly ordinary standalone asset, nothing handed to anyone
+        // else. The delegate still moves it into the Astrochimps
+        // collection afterward (app/api/mint/confirm's own transaction),
+        // but that permission comes from the collection's own
+        // UpdateDelegate plugin (see components/collection-authority.tsx -
+        // MINT_DELEGATE is an additionalDelegate ON THE COLLECTION), not
+        // from anything recorded on this individual asset. An earlier
+        // version of this route did set updateAuthority to the delegate,
+        // which - on top of being unnecessary - is exactly the kind of
+        // "this new NFT's control was handed to a stranger" pattern wallet
+        // scanners (Phantom/Blowfish) are built to flag as a likely scam,
+        // and did (2026-10-26, escalating from a soft warning to a hard
+        // block on repeated attempts).
         owner: buyer,
         payer: buyerSigner,
         authority: buyerSigner,
-        updateAuthority: umi.identity.publicKey,
       }),
     );
 
