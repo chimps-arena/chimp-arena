@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { create as createCoreAsset, fetchCollection } from "@metaplex-foundation/mpl-core";
+import { create as createCoreAsset, fetchCollection, updateV2 } from "@metaplex-foundation/mpl-core";
 import { generateSigner, publicKey as umiPublicKey } from "@metaplex-foundation/umi";
 import bs58 from "bs58";
 import { PUBLIC_ENV } from "@/lib/env";
@@ -39,6 +39,49 @@ async function pickOneOfOne(
   const { data: variants } = await db.from("chimp_variants").select("id, name, image_url");
   if (!variants || variants.length === 0) return null;
   return variants[Math.floor(Math.random() * variants.length)];
+}
+
+/**
+ * Moves a just-minted (standalone) asset into the Astrochimps collection -
+ * the second half of the buyer-pays-rent split (see app/api/mint/prepare's
+ * top comment for why this is a separate transaction rather than bundled
+ * into the buyer's). This is the delegate's OWN transaction - it pays and
+ * signs alone, the buyer never sees or signs it, so there's nothing here
+ * for a wallet scanner to flag. authority must be passed explicitly (same
+ * lesson as the create fix): an omitted authority is dropped to a
+ * non-signer placeholder rather than defaulting to the delegate.
+ *
+ * Retries a few times before giving up - unlike the milestone bonus below,
+ * this isn't a nice-to-have: every mint needs to land in the collection for
+ * the 3% resale royalty to actually apply to it. A failure here still never
+ * unwinds the mint itself (already final on-chain) - it only means a manual
+ * fix is needed, surfaced via the console.error below and the response's
+ * collectionJoined flag.
+ */
+async function joinCollection(assetAddress: string): Promise<boolean> {
+  const umi = mintDelegateUmi();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await updateV2(umi, {
+        asset: umiPublicKey(assetAddress),
+        payer: umi.identity,
+        authority: umi.identity,
+        newCollection: umiPublicKey(ASTROCHIMPS_COLLECTION),
+      }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
+      return true;
+    } catch (e) {
+      if (attempt === 2) {
+        console.error(
+          "mint confirm: collection-join failed after 3 attempts - needs a manual fix",
+          assetAddress,
+          e,
+        );
+        return false;
+      }
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  return false;
 }
 
 /**
@@ -171,6 +214,8 @@ export async function POST(req: Request) {
 
   await db.from("pending_chimp_mints").delete().eq("wallet", wallet);
 
+  const collectionJoined = await joinCollection(pending.asset_address);
+
   const result: Record<string, unknown> = {
     ok: true,
     asset: pending.asset_address,
@@ -179,6 +224,13 @@ export async function POST(req: Request) {
     name: pending.name,
     imageUrl: pending.image_url,
   };
+  if (!collectionJoined) {
+    // The NFT is real and the buyer's regardless - this only means it isn't
+    // grouped under Astrochimps (and isn't covered by the 3% resale
+    // royalty) until someone manually re-runs the collection-join step.
+    result.warning =
+      "Minted successfully, but joining the collection is still pending - contact support with this transaction signature.";
+  }
 
   // Best-effort bonus, unchanged from the old claim route: the paid mint
   // above already succeeded regardless of what happens here, and it's still

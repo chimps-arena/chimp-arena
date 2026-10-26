@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
-import { create as createCoreAsset, fetchCollection } from "@metaplex-foundation/mpl-core";
+import { create as createCoreAsset } from "@metaplex-foundation/mpl-core";
 import { createNoopSigner, generateSigner, publicKey as umiPublicKey } from "@metaplex-foundation/umi";
 import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
 import { addMemo, findAssociatedTokenPda, transferTokens } from "@metaplex-foundation/mpl-toolbox";
@@ -55,18 +55,32 @@ async function pickStyleVariant(
  * POST { wallet } -> { transaction, tier, name, imageUrl, mintNumber }
  *
  * Builds ONE transaction containing both the $CHIMP payment and the NFT
- * creation, with the buyer's own wallet as fee payer for the whole thing -
- * they cover their own mint's real SOL rent instead of the mint delegate
- * (see migration 0031). The buyer isn't available to sign server-side, so a
- * createNoopSigner stands in for their pubkey while building; the delegate
- * (to authorize joining the collection) and the brand-new asset keypair (a
- * new account must sign its own creation) sign here, leaving the buyer's
- * slot an all-zero placeholder for their wallet to fill in client-side (see
- * components/chimp-mint.tsx). Because the delegate signs over the FULL,
- * final message, the buyer's wallet cannot alter a single instruction
- * (amount, destination, asset) without invalidating that signature and
- * making the whole transaction fail outright - so this is strictly safer
- * than trusting a client-reported payment, not weaker.
+ * creation, with the buyer's own wallet as the ONLY signer - they cover
+ * their own mint's real SOL rent instead of the mint delegate (see
+ * migration 0031). The buyer isn't available to sign server-side, so a
+ * createNoopSigner stands in for their pubkey while building; the brand-new
+ * asset keypair (a new account must sign its own creation - the same
+ * ordinary pattern every Solana NFT mint already uses) signs here, leaving
+ * the buyer's slot an all-zero placeholder for their wallet to fill in
+ * client-side (see components/chimp-mint.tsx).
+ *
+ * Deliberately does NOT join the Astrochimps collection here, and does NOT
+ * have the mint delegate co-sign at all (first version of this route did -
+ * see git history) - a transaction arriving pre-signed by a second,
+ * unrecognized wallet is exactly the shape Phantom's Blowfish scanner flags
+ * as a likely drainer pattern, and it did, on the very first real test mint
+ * (2026-10-26). The asset is created standalone instead, with its
+ * updateAuthority set to the delegate's pubkey (not a required signer here,
+ * just who's recorded as allowed to update it later) - app/api/mint/confirm
+ * then moves it into the collection afterward in the delegate's OWN
+ * separate transaction, which the buyer never sees or signs, so there's
+ * nothing left for a wallet scanner to flag.
+ *
+ * Because the delegate's recorded updateAuthority is what the LATER
+ * collection-join step checks against, not anything in this transaction,
+ * the buyer's wallet still can't alter the amount, destination, or which
+ * asset gets created without invalidating the asset keypair's own
+ * signature and making the whole thing fail outright.
  *
  * Tier/style/mint-number are rolled here (not at confirm time) because
  * they're baked into the asset's on-chain name/uri before the buyer ever
@@ -126,7 +140,6 @@ export async function POST(req: Request) {
 
   try {
     const umi = mintDelegateUmi();
-    const collection = await fetchCollection(umi, umiPublicKey(ASTROCHIMPS_COLLECTION));
     const asset = generateSigner(umi);
     const buyer = umiPublicKey(wallet);
     const buyerSigner = createNoopSigner(buyer);
@@ -155,18 +168,14 @@ export async function POST(req: Request) {
         asset,
         name,
         uri,
-        collection,
+        // No collection here on purpose - see this route's top comment.
+        // updateAuthority (not a signer, just a recorded pubkey) is the
+        // delegate's, so it alone can move this asset into the collection
+        // later in app/api/mint/confirm's own separate transaction.
         owner: buyer,
         payer: buyerSigner,
-        // Explicit, not relied-on-by-omission: when authority isn't passed,
-        // the generated instruction just drops it to a non-signer
-        // placeholder (verified directly in the installed SDK) rather than
-        // defaulting to the delegate - the OLD code only worked because the
-        // delegate happened to also be the fee payer back then. Now that
-        // the buyer is fee payer, the delegate must be named here or it's
-        // simply not a required signer at all (reproduced locally - this
-        // exact omission is what broke the first real test mint attempt).
-        authority: umi.identity,
+        authority: buyerSigner,
+        updateAuthority: umi.identity.publicKey,
       }),
     );
 
@@ -174,7 +183,6 @@ export async function POST(req: Request) {
 
     let tx = builder.build(umi);
     tx = await asset.signTransaction(tx);
-    tx = await umi.identity.signTransaction(tx);
 
     const serialized = Buffer.from(toWeb3JsTransaction(tx).serialize()).toString("base64");
 
