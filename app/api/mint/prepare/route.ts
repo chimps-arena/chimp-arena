@@ -158,6 +158,15 @@ export async function POST(req: Request) {
         collection,
         owner: buyer,
         payer: buyerSigner,
+        // Explicit, not relied-on-by-omission: when authority isn't passed,
+        // the generated instruction just drops it to a non-signer
+        // placeholder (verified directly in the installed SDK) rather than
+        // defaulting to the delegate - the OLD code only worked because the
+        // delegate happened to also be the fee payer back then. Now that
+        // the buyer is fee payer, the delegate must be named here or it's
+        // simply not a required signer at all (reproduced locally - this
+        // exact omission is what broke the first real test mint attempt).
+        authority: umi.identity,
       }),
     );
 
