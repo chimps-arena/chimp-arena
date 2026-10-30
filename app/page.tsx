@@ -162,7 +162,7 @@ export default function Home() {
                   className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border transition group-hover:scale-110"
                   style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
                 >
-                  <CrewMark color={c.color} size={44} />
+                  <CrewMark slug={c.slug} color={c.color} size={44} />
                 </div>
                 <div className="mt-3 font-semibold" style={{ color: c.color }}>
                   {c.name}

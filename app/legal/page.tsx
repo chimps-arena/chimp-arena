@@ -13,7 +13,7 @@ export const metadata: Metadata = {
  */
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="mt-12 scroll-mt-24">
+    <section id={id} className="mt-12 scroll-mt-28">
       <h2 className="font-display text-2xl font-black md:text-3xl">{title}</h2>
       {children}
     </section>

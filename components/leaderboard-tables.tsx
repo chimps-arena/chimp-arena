@@ -3,24 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { crewBySlug } from "@/lib/game/config";
+import { Flame } from "lucide-react";
 import { CrewMark } from "@/components/glyphs";
+import { Lamp, tint } from "@/components/hud";
 import { shortWallet } from "@/lib/format";
 import type { LeaderboardResponse } from "@/lib/types";
 
 type Tab = "players" | "crews";
 
 const RANK_COLOR: Record<number, string> = {
-  1: "#ffd23f",
+  1: "#ffc23a",
   2: "#cbd5e1",
   3: "#e0894f",
 };
-function rankStyle(rank: number) {
-  const c = RANK_COLOR[rank];
-  return c
-    ? { color: c, textShadow: `0 0 12px color-mix(in srgb, ${c} 60%, transparent)` }
-    : undefined;
-}
-
 export function LeaderboardTables({
   initial,
   highlightWallet,
@@ -81,131 +76,107 @@ export function LeaderboardTables({
     };
   }, [load, scheduleLoad]);
 
-  if (!data) return <div className="h-64 animate-pulse rounded-2xl bg-surface-2" />;
+  if (!data) return <div className="hud-panel h-64 animate-pulse" />;
+
+  const topCrewXp = Math.max(1, ...data.crews.map((c) => c.totalXp));
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-xl border border-border bg-surface-2 p-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="hud-switch" role="group" aria-label="Leaderboard">
           {(["crews", "players"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${
-                tab === t ? "text-[#241a00]" : "text-muted hover:text-foreground"
-              }`}
-              style={
-                tab === t
-                  ? {
-                      background:
-                        "linear-gradient(180deg, #ffde6b, var(--accent))",
-                      boxShadow: "var(--glow-yellow)",
-                    }
-                  : undefined
-              }
-            >
+            <button key={t} onClick={() => setTab(t)} aria-pressed={tab === t}>
               {t}
             </button>
           ))}
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 text-xs ${
-            live ? "text-good" : "text-muted"
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              live ? "bg-good" : "bg-muted"
-            } ${flash ? "pulse-ring" : ""}`}
-          />
-          {live ? "Live" : "Polling"}
+        <span className="hud-label flex items-center gap-1.5">
+          <Lamp color={live ? "var(--good)" : "var(--muted)"} live={live} />
+          <span style={{ color: live ? "var(--good)" : undefined }}>{live ? "Live" : "Polling"}</span>
         </span>
-        <span className="mono ml-auto text-[11px] text-muted">
+        <span className={`mono ml-auto text-[11px] transition-colors ${flash ? "text-good" : "text-muted"}`}>
           updated {new Date(data.updatedAt).toLocaleTimeString()}
         </span>
       </div>
 
       {tab === "crews" ? (
-        <div className="card divide-y divide-border/60">
+        <div className="hud-panel">
           {data.crews.map((c) => (
-            <div key={c.slug} className="flex items-center gap-4 p-4">
-              <span
-                className="mono w-8 text-center text-lg font-black text-muted"
-                style={rankStyle(c.rank)}
-              >
-                {c.rank}
-              </span>
-              <CrewMark color={c.color} size={32} />
+            <div key={c.slug} className="hud-row flex items-center gap-4 p-4 sm:p-5">
+              <RankTag rank={c.rank} />
+              <CrewMark slug={c.slug} color={c.color} size={40} />
               <div className="min-w-0 flex-1">
-                <div className="font-bold" style={{ color: c.color }}>
-                  {c.name}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                  <div className="font-bold uppercase tracking-wide" style={{ color: c.color, fontFamily: "var(--font-hud)" }}>
+                    {c.name}
+                  </div>
+                  <div className="hud-value text-lg">
+                    {c.totalXp.toLocaleString()}
+                    <span className="ml-1 text-xs font-normal text-muted">XP</span>
+                  </div>
                 </div>
-                <div className="text-xs text-muted">
+                <div className="hud-gauge mt-2 !h-2.5 !p-[1px]">
+                  <div
+                    className="hud-gauge-fill"
+                    style={{
+                      width: `${(c.totalXp / topCrewXp) * 100}%`,
+                      background: c.color,
+                      filter: `drop-shadow(0 0 6px ${c.color})`,
+                    }}
+                  />
+                </div>
+                <div className="mono mt-1 text-[11px] text-muted">
                   {c.members} member{c.members === 1 ? "" : "s"}
                 </div>
-              </div>
-              <div className="mono text-right text-lg font-bold">
-                {c.totalXp.toLocaleString()}
-                <span className="ml-1 text-xs font-normal text-muted">XP</span>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="card divide-y divide-border/60">
+        <>
+        {data.players.length >= 3 && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[data.players[1], data.players[0], data.players[2]].map((p) => (
+              <Podium key={p.wallet} player={p} isMe={p.wallet === highlightWallet} />
+            ))}
+          </div>
+        )}
+        <div className="hud-panel">
           {data.players.length === 0 && (
             <div className="p-6 text-center text-sm text-muted">
               No players yet. Be the first on the board.
             </div>
           )}
-          {data.players.map((p) => {
+          {data.players.slice(data.players.length >= 3 ? 3 : 0).map((p) => {
             const crew = crewBySlug(p.crewSlug);
             const isMe = highlightWallet && p.wallet === highlightWallet;
             return (
-              <div
-                key={p.wallet}
-                className="flex items-center gap-4 p-3.5"
-                style={
-                  isMe
-                    ? {
-                        background:
-                          "color-mix(in srgb, var(--accent-2) 10%, transparent)",
-                        boxShadow:
-                          "inset 3px 0 0 0 var(--accent-2)",
-                      }
-                    : undefined
-                }
-              >
-                <span
-                  className="mono w-8 text-center font-black text-muted"
-                  style={rankStyle(p.rank)}
-                >
-                  {p.rank}
-                </span>
+              <div key={p.wallet} className={`hud-row flex items-center gap-4 px-4 py-3${isMe ? " hud-row-me" : ""}`}>
+                <RankTag rank={p.rank} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">
-                    {p.handle}
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-semibold">{p.handle}</span>
                     {p.streak >= 2 && (
                       <span
-                        className="mono ml-2 text-xs"
-                        style={{ color: "var(--accent)" }}
+                        className="mono inline-flex shrink-0 items-center gap-0.5 text-xs text-[color:var(--hud-amber)]"
                         title={`${p.streak}-day streak`}
                       >
-                        🔥{p.streak}
+                        <Flame className="h-3 w-3" aria-hidden="true" />
+                        {p.streak}
                       </span>
                     )}
                     {isMe && (
-                      <span className="ml-2 text-xs text-accent-2">you</span>
+                      <span className="hud-tag !py-0 shrink-0" style={tint("var(--hud-cyan)")}>
+                        you
+                      </span>
                     )}
                   </div>
                   <div className="mono text-xs text-muted">
                     {shortWallet(p.wallet)}
-                    {crew && (
-                      <span style={{ color: crew.color }}> · {crew.name}</span>
-                    )}
+                    {crew && <span style={{ color: crew.color }}> · {crew.name}</span>}
                   </div>
                 </div>
-                <div className="mono text-right font-bold">
+                <div className="hud-value text-right">
                   {p.xp.toLocaleString()}
                   <span className="ml-1 text-xs font-normal text-muted">XP</span>
                 </div>
@@ -213,7 +184,66 @@ export function LeaderboardTables({
             );
           })}
         </div>
+        </>
       )}
     </div>
+  );
+}
+
+/** A top-3 pilot. First place sits in the middle and stands tallest. */
+function Podium({ player: p, isMe }: { player: LeaderboardResponse["players"][number]; isMe: boolean }) {
+  const color = RANK_COLOR[p.rank] ?? "var(--hud-cyan)";
+  const crew = crewBySlug(p.crewSlug);
+  return (
+    <div
+      className={`hud-panel hud-panel-hot flex flex-col items-center gap-2 p-5 text-center ${
+        p.rank === 1 ? "sm:order-none sm:-mt-0 sm:pt-8" : "sm:mt-6"
+      } ${p.rank === 1 ? "order-first" : ""}`}
+      style={{ ...tint(color), "--cut": "18px" } as React.CSSProperties}
+    >
+      <span className="hud-label" style={{ color }}>
+        {p.rank === 1 ? "Top pilot" : `Rank ${String(p.rank).padStart(2, "0")}`}
+      </span>
+      <span className="hud-value text-5xl" style={{ color, textShadow: `0 0 24px ${color}` }}>
+        {String(p.rank).padStart(2, "0")}
+      </span>
+      <div className="flex max-w-full items-center gap-2">
+        <span className="truncate text-lg font-bold" style={{ fontFamily: "var(--font-hud)" }}>
+          {p.handle}
+        </span>
+        {isMe && (
+          <span className="hud-tag !py-0 shrink-0" style={tint("var(--hud-cyan)")}>
+            you
+          </span>
+        )}
+      </div>
+      <div className="mono text-xs text-muted">
+        {shortWallet(p.wallet)}
+        {crew && <span style={{ color: crew.color }}> · {crew.name}</span>}
+      </div>
+      <div className="mt-1 border-t pt-2" style={{ borderColor: "var(--hud-edge)" }}>
+        <span className="hud-value text-xl">{p.xp.toLocaleString()}</span>
+        <span className="ml-1 text-xs text-muted">XP</span>
+        {p.streak >= 2 && (
+          <span className="mono ml-2 inline-flex items-center gap-0.5 text-xs text-[color:var(--hud-amber)]">
+            <Flame className="h-3 w-3" aria-hidden="true" />
+            {p.streak}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** [ #01 ] - gold, silver and bronze for the podium. */
+function RankTag({ rank }: { rank: number }) {
+  const color = RANK_COLOR[rank];
+  return (
+    <span
+      className="hud-tag w-12 shrink-0 justify-center !text-sm font-bold"
+      style={color ? { ...tint(color), boxShadow: `0 0 14px -6px ${color}` } : undefined}
+    >
+      {String(rank).padStart(2, "0")}
+    </span>
   );
 }

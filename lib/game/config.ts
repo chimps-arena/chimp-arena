@@ -91,6 +91,9 @@ export const MISSION_DEFS: MissionDef[] = [
     blurb: "Buy a permit, dig through the strata. Deeper seams, rarer ore.",
     baseXp: 90,
     href: "/missions/mining",
+    // Taken offline until the game is fixed. The mining page shows a holding
+    // panel, so no permit (real $CHIMP) can be bought meanwhile.
+    comingSoon: true,
   },
 ];
 

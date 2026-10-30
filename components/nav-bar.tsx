@@ -9,6 +9,8 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { shortWallet } from "@/lib/format";
 import { disconnectPhantom } from "@/lib/phantom";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
+import { Flame } from "lucide-react";
+import { Lamp, tint } from "@/components/hud";
 
 const LINKS = [
   { href: "/dashboard", label: "Mission Control" },
@@ -53,12 +55,15 @@ export function NavBar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+    <header
+      className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl"
+      style={{ borderColor: "var(--hud-edge)" }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2.5 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-[0.08em]"
-          style={{ fontFamily: "var(--font-display), sans-serif" }}
+          className="flex items-center gap-2.5 text-[15px] font-bold uppercase tracking-[0.12em]"
+          style={{ fontFamily: "var(--font-hud), sans-serif" }}
         >
           <Image
             src="/brand/chimp-logo.png"
@@ -71,45 +76,15 @@ export function NavBar() {
           <span>CHIMP Arena</span>
         </Link>
 
-        <nav className="ml-4 hidden gap-1 sm:flex">
-          {LINKS.map((l) => {
-            const active =
-              pathname === l.href || pathname.startsWith(l.href + "/");
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-lg px-3 py-1.5 text-sm transition ${
-                  active
-                    ? "bg-surface-2 text-foreground"
-                    : "text-muted hover:text-foreground"
-                }`}
-                style={
-                  active
-                    ? {
-                        boxShadow:
-                          "inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent)",
-                      }
-                    : undefined
-                }
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
-
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : player ? (
             <>
               {me && me.streak.count >= 2 && (
                 <span
-                  className="chip mono hidden sm:inline-flex"
+                  className="hud-tag hidden sm:inline-flex"
                   style={{
-                    color: "var(--accent)",
-                    borderColor: me.streak.atRisk
-                      ? "color-mix(in srgb, var(--accent) 65%, transparent)"
-                      : "color-mix(in srgb, var(--accent) 30%, transparent)",
+                    ...tint("var(--hud-amber)"),
+                    ...(me.streak.atRisk ? { boxShadow: "0 0 12px -4px var(--hud-amber)" } : {}),
                   }}
                   title={
                     me.streak.atRisk
@@ -117,19 +92,16 @@ export function NavBar() {
                       : `${me.streak.count}-day streak`
                   }
                 >
-                  🔥 {me.streak.count}
+                  <Flame className="h-3 w-3" aria-hidden="true" /> {me.streak.count}
                 </span>
               )}
               {realWallet && (
                 <span
-                  className="chip mono hidden text-accent sm:inline-flex"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--accent) 40%, transparent)",
-                  }}
+                  className="hud-tag hidden sm:inline-flex"
+                  style={tint("var(--hud-amber)")}
                   title={`Your ${TOKEN_SYMBOL} balance`}
                 >
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                  <Lamp color="var(--hud-amber)" />
                   {chimp == null
                     ? "…"
                     : chimp.toLocaleString(undefined, {
@@ -139,13 +111,16 @@ export function NavBar() {
                 </span>
               )}
               <div className="hidden text-right sm:block">
-                <div className="text-sm font-semibold">{player.handle}</div>
+                <div className="text-sm font-bold" style={{ fontFamily: "var(--font-hud), sans-serif" }}>
+                  {player.handle}
+                </div>
                 <div className="mono text-xs text-muted">
                   {player.xp.toLocaleString()} XP · {shortWallet(player.wallet)}
                 </div>
               </div>
               <button
-                className="btn btn-ghost hidden text-sm sm:inline-flex"
+                className="hud-btn hud-btn-ghost hidden !px-3 !py-2 !text-[0.7rem] sm:inline-flex"
+                style={tint("var(--muted)")}
                 onClick={() => fullDisconnect()}
               >
                 Disconnect
@@ -156,7 +131,8 @@ export function NavBar() {
                 type="button"
                 aria-label="Disconnect"
                 onClick={() => fullDisconnect()}
-                className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-2 text-muted sm:hidden"
+                className="grid h-9 w-9 place-items-center border bg-surface-2 text-muted sm:hidden"
+                style={{ borderColor: "var(--hud-edge)" }}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 2H3.5A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14H6" />
@@ -177,7 +153,8 @@ export function NavBar() {
             aria-label="Menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-2 sm:hidden"
+            className="grid h-9 w-9 place-items-center border bg-surface-2 sm:hidden"
+            style={{ borderColor: "var(--hud-edge)" }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
               {menuOpen ? (
@@ -197,9 +174,40 @@ export function NavBar() {
         </div>
       </div>
 
+      {/* desktop: console tab strip */}
+      <nav
+        className="hidden border-t sm:block"
+        style={{ borderColor: "color-mix(in srgb, var(--hud-edge) 55%, transparent)" }}
+      >
+        <div className="mx-auto flex max-w-6xl overflow-x-auto px-4 sm:px-6">
+          {LINKS.map((l) => {
+            const active =
+              pathname === l.href || pathname.startsWith(l.href + "/");
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`hud-label relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2.5 transition-colors ${
+                  active ? "!text-[color:var(--hud-amber)]" : "hover:!text-foreground"
+                }`}
+              >
+                {active && <Lamp color="var(--hud-amber)" />}
+                {l.label}
+                {active && (
+                  <span
+                    className="absolute inset-x-3 bottom-0 h-[2px]"
+                    style={{ background: "var(--hud-amber)", boxShadow: "0 0 10px var(--hud-amber)" }}
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* mobile dropdown */}
       {menuOpen && (
-        <div className="border-t border-border/60 bg-background/95 px-4 py-3 sm:hidden">
+        <div className="border-t bg-background/95 px-4 py-3 sm:hidden" style={{ borderColor: "var(--hud-edge)" }}>
           <nav className="flex flex-col gap-1">
             {LINKS.map((l) => {
               const active =
@@ -208,18 +216,25 @@ export function NavBar() {
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`rounded-lg px-3 py-2 text-sm ${
-                    active
-                      ? "bg-surface-2 text-foreground"
-                      : "text-muted"
+                  className={`hud-label flex items-center gap-2 px-3 py-2.5 ${
+                    active ? "!text-[color:var(--hud-amber)]" : ""
                   }`}
+                  style={
+                    active
+                      ? {
+                          boxShadow: "inset 2px 0 0 var(--hud-amber)",
+                          background: "color-mix(in srgb, var(--hud-amber) 7%, transparent)",
+                        }
+                      : undefined
+                  }
                 >
+                  {active && <Lamp color="var(--hud-amber)" />}
                   {l.label}
                 </Link>
               );
             })}
           </nav>
-          <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3">
+          <div className="mt-3 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--hud-edge)" }}>
             {player ? (
               <>
                 <div className="text-sm">
@@ -240,7 +255,8 @@ export function NavBar() {
                   </div>
                 </div>
                 <button
-                  className="btn btn-ghost text-sm"
+                  className="hud-btn hud-btn-ghost !px-3 !py-2 !text-[0.7rem]"
+                  style={tint("var(--muted)")}
                   onClick={() => fullDisconnect()}
                 >
                   Disconnect

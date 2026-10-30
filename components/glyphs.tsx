@@ -2,7 +2,7 @@
  * Brand-neutral marks that replace emoji in the UI.
  * All monochrome (currentColor) so callers set the tint.
  */
-import { Zap, Brain, Rocket, Shield, Pickaxe, type LucideIcon } from "lucide-react";
+import { Zap, Brain, Rocket, Shield, Pickaxe, Satellite, Orbit, type LucideIcon } from "lucide-react";
 
 const MISSION_ICON: Record<string, LucideIcon> = {
   reaction: Zap,
@@ -23,33 +23,61 @@ export function MissionGlyph({
   return <Icon className={className} strokeWidth={2} aria-hidden="true" />;
 }
 
+const CREW_ICON: Record<string, LucideIcon> = {
+  "banana-bloc": Satellite,
+  "jungle-syndicate": Orbit,
+  "rocket-primates": Rocket,
+  "thunder-apes": Zap,
+};
+
 /**
- * A crew's identity mark: a flat gradient colour swatch. No letter, no
- * default glow — glow is reserved for `active` (the player's own crew) so it
+ * A crew's insignia: its icon inside a two-ring hex badge in the crew
+ * colour. Extra glow is reserved for `active` (the player's own crew) so it
  * reads as a signal, not decoration.
  */
 export function CrewMark({
+  slug,
   color,
   size = 40,
   active = false,
 }: {
+  slug: string;
   color: string;
   size?: number;
   active?: boolean;
 }) {
+  const Icon = CREW_ICON[slug] ?? Shield;
   return (
     <span
-      className="block shrink-0 rounded-lg"
+      className="relative grid shrink-0 place-items-center"
       style={{
         width: size,
         height: size,
-        background: `linear-gradient(155deg, ${color}, color-mix(in srgb, ${color} 45%, #05060f))`,
-        border: `1px solid color-mix(in srgb, ${color} 65%, #05060f)`,
-        boxShadow: active
-          ? `0 0 24px -8px ${color}, inset 0 1px 0 rgba(255,255,255,0.16)`
-          : "inset 0 1px 0 rgba(255,255,255,0.12)",
+        color,
+        filter: `drop-shadow(0 0 ${active ? 14 : 8}px color-mix(in srgb, ${color} ${active ? 70 : 40}%, transparent))`,
       }}
-    />
+    >
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
+        <polygon
+          points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"
+          fill="color-mix(in srgb, currentColor 16%, #070a16)"
+          stroke="currentColor"
+          strokeWidth="4"
+          strokeLinejoin="round"
+        />
+        <polygon
+          points="50,14 81.5,32 81.5,68 50,86 18.5,68 18.5,32"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.35"
+          strokeWidth="2"
+        />
+        {/* rivets at the flat sides */}
+        <circle cx="91" cy="50" r="3.2" fill="currentColor" />
+        <circle cx="9" cy="50" r="3.2" fill="currentColor" />
+      </svg>
+      <Icon className="relative" style={{ width: size * 0.46, height: size * 0.46 }} strokeWidth={2.2} aria-hidden="true" />
+    </span>
   );
 }
 

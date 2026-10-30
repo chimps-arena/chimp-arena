@@ -17,6 +17,9 @@ import { MiningIntro } from "@/components/mining/mining-intro";
 import { PriceTicker } from "@/components/mining/price-ticker";
 import { usePaidAction } from "@/components/mining/use-paid-action";
 import type { MiningStatus } from "@/lib/types";
+import Link from "next/link";
+import { missionBySlug } from "@/lib/game/config";
+import { Lamp, tint } from "@/components/hud";
 
 // The game is a real WebGL (react-three-fiber) scene now - load it client-only
 // so the build's static-prerender pass never touches three.js/canvas context
@@ -27,6 +30,30 @@ const MiningGame = dynamic(
 );
 
 export default function MiningMissionPage() {
+  if (missionBySlug("mining")?.comingSoon) return <MiningComingSoon />;
+  return <MiningMission />;
+}
+
+function MiningComingSoon() {
+  return (
+    <div className="hud">
+      <div className="hud-panel mx-auto mt-10 max-w-lg p-8 text-center" style={tint("var(--accent-violet)")}>
+        <div className="hud-label flex items-center justify-center gap-2">
+          <Lamp color="var(--hud-amber)" live /> Shaft offline · maintenance
+        </div>
+        <h1 className="mt-2 text-3xl font-bold uppercase">Deep Core</h1>
+        <p className="mt-2 text-sm text-muted">
+          The mining shaft is being rebuilt. Deep Core is coming soon - nothing to buy or pay for until it&apos;s back.
+        </p>
+        <Link href="/dashboard" className="hud-btn mt-6">
+          Back to Mission Control ▸
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function MiningMission() {
   const wallet = useWallet();
   const { me } = useSession();
   const { pay, stuckSignature, setStuckSignature } = usePaidAction("chimp:stuck:mining-permit");

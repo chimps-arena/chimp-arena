@@ -22,6 +22,13 @@
   --glow-cyan: 0 0 28px -6px rgba(34, 211, 238, 0.7);
   --glow-magenta: 0 0 28px -6px rgba(246, 92, 232, 0.7);
   --glow-yellow: 0 0 26px -6px rgba(255, 210, 63, 0.75);
+
+  /* HUD theme (see `.hud` below) */
+  --hud-amber: #ffc23a; /* banana pushed toward hazard amber */
+  --hud-cyan: #3be0ff;
+  --hud-edge: color-mix(in srgb, var(--hud-cyan) 26%, var(--border));
+  --hud-panel: color-mix(in srgb, #0c1124 90%, transparent);
+  --cut: 14px;
 }
 
 @theme inline {
@@ -382,6 +389,251 @@ h3 {
 }
 @media (prefers-reduced-motion: reduce) {
   .float-y {
+    animation: none;
+  }
+}
+
+/* ---------- HUD theme ----------
+   Ship-console look: chamfered panels, corner brackets, tick rulers,
+   monospace readouts. Pages opt in by wrapping in `.hud` (grid backdrop +
+   squared heading font); the `.hud-*` pieces work anywhere. Being rolled
+   out page by page - unconverted pages still use the neon-glass classes
+   above. Shapes are plain clip-path, no library. */
+.hud {
+  position: relative;
+}
+.hud h1,
+.hud h2,
+.hud h3 {
+  font-family: var(--font-hud), var(--font-sans), sans-serif;
+  letter-spacing: 0.02em;
+}
+/* faint engineering grid + scanlines over the nebula */
+.hud::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    linear-gradient(color-mix(in srgb, var(--hud-cyan) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--hud-cyan) 7%, transparent) 1px, transparent 1px);
+  background-size: 100% 3px, 48px 48px, 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 85%);
+}
+
+/* chamfered panel. ::before is the glass fill (plus the corner brackets on
+   the two uncut corners), ::after is ONLY the 1px edge - a ring cut out with
+   an evenodd clip-path. The edge must not sit behind the see-through fill,
+   or its colour hazes the whole panel. */
+.hud-panel {
+  --edge: var(--hud-edge);
+  position: relative;
+  isolation: isolate;
+  clip-path: polygon(
+    var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)
+  );
+}
+.hud-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  --b: color-mix(in srgb, var(--edge) 40%, var(--hud-cyan));
+  background:
+    linear-gradient(var(--b), var(--b)) top right / 16px 2px no-repeat,
+    linear-gradient(var(--b), var(--b)) top right / 2px 16px no-repeat,
+    linear-gradient(var(--b), var(--b)) bottom left / 16px 2px no-repeat,
+    linear-gradient(var(--b), var(--b)) bottom left / 2px 16px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 35%),
+    var(--hud-panel);
+  backdrop-filter: blur(12px);
+}
+.hud-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--edge);
+  /* outer chamfered outline, then the same shape 1px in (0.41px = 1px
+     along a 45deg cut) - evenodd leaves just the ring between them */
+  clip-path: polygon(
+    evenodd,
+    var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut), var(--cut) 0,
+    calc(var(--cut) + 0.41px) 1px, calc(100% - 1px) 1px,
+    calc(100% - 1px) calc(100% - var(--cut) - 0.41px),
+    calc(100% - var(--cut) - 0.41px) calc(100% - 1px), 1px calc(100% - 1px),
+    1px calc(var(--cut) + 0.41px), calc(var(--cut) + 0.41px) 1px
+  );
+  transition: background 0.2s ease;
+}
+a.hud-panel:hover,
+.hud-panel-hot {
+  --edge: color-mix(in srgb, var(--tint, var(--hud-cyan)) 70%, transparent);
+}
+
+/* tiny letter-spaced console label */
+.hud-label {
+  font-family: var(--font-hud), var(--font-sans), sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+.hud-value {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* section rule with tick marks: // TITLE ─┼─┼─┼─ */
+.hud-rule {
+  flex: 1;
+  height: 7px;
+  align-self: center;
+  border-bottom: 1px solid var(--hud-edge);
+  background: repeating-linear-gradient(90deg, var(--hud-edge) 0 1px, transparent 1px 12px) bottom / 100% 5px no-repeat;
+}
+
+/* square status lamp */
+.hud-lamp {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--lamp, var(--muted));
+  box-shadow: 0 0 8px var(--lamp, transparent);
+}
+.hud-lamp-live {
+  animation: hud-blink 1.8s steps(2, jump-none) infinite;
+}
+@keyframes hud-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* segmented gauge (XP bar) */
+.hud-gauge {
+  height: 12px;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  border: 1px solid var(--hud-edge);
+  padding: 2px;
+}
+.hud-gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--hud-cyan), var(--hud-amber));
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
+  mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--hud-cyan) 60%, transparent));
+  transition: width 0.5s ease;
+}
+
+/* square-cut icon well */
+.hud-well {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  color: var(--tint, var(--hud-cyan));
+  background: color-mix(in srgb, var(--tint, var(--hud-cyan)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint, var(--hud-cyan)) 45%, transparent);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+/* console tag: [ MSN-01 ] */
+.hud-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tint, var(--muted));
+  border: 1px solid color-mix(in srgb, var(--tint, var(--border)) 45%, transparent);
+  background: color-mix(in srgb, var(--tint, var(--surface-2)) 8%, transparent);
+}
+
+/* segmented switch (tabs) */
+.hud-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--hud-edge);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.hud-switch button {
+  padding: 0.4rem 0.95rem;
+  font-family: var(--font-hud), var(--font-sans), sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: color 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+.hud-switch button:hover {
+  color: var(--foreground);
+}
+.hud-switch button[aria-pressed="true"] {
+  color: #1d1400;
+  background: var(--hud-amber);
+}
+
+/* chamfered console button: amber primary, outlined secondary */
+.hud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem;
+  font-family: var(--font-hud), var(--font-sans), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #1d1400;
+  background: linear-gradient(180deg, #ffd56e, var(--hud-amber));
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  transition: filter 0.15s ease, transform 0.08s ease;
+  cursor: pointer;
+}
+.hud-btn:hover:not(:disabled) {
+  filter: brightness(1.1) drop-shadow(0 0 10px color-mix(in srgb, var(--hud-amber) 60%, transparent));
+}
+.hud-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.hud-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.hud-btn-ghost {
+  color: var(--tint, var(--hud-cyan));
+  background: color-mix(in srgb, var(--tint, var(--hud-cyan)) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint, var(--hud-cyan)) 50%, transparent);
+}
+
+/* table-like list of rows inside a panel */
+.hud-row + .hud-row {
+  border-top: 1px solid color-mix(in srgb, var(--hud-edge) 60%, transparent);
+}
+.hud-row-me {
+  background: color-mix(in srgb, var(--hud-cyan) 9%, transparent);
+  box-shadow: inset 3px 0 0 0 var(--hud-cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-lamp-live {
     animation: none;
   }
 }

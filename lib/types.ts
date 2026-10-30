@@ -63,6 +63,8 @@ export interface MissionDef {
   blurb: string;
   baseXp: number;
   href: string;
+  /** Shown on the dashboard but not playable yet (card + page say "coming soon"). */
+  comingSoon?: boolean;
 }
 
 export interface PlayerProfile {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PriceTicker } from "@/components/mining/price-ticker";
+import { missionBySlug } from "@/lib/game/config";
 
 export default function ResourceMarketPage() {
   return (
@@ -25,9 +26,13 @@ export default function ResourceMarketPage() {
 
       <PriceTicker />
 
-      <Link href="/missions/mining" className="btn btn-neon w-fit text-xs">
-        Mine for ore
-      </Link>
+      {missionBySlug("mining")?.comingSoon ? (
+        <span className="btn btn-ghost w-fit cursor-default text-xs">Mining · coming soon</span>
+      ) : (
+        <Link href="/missions/mining" className="btn btn-neon w-fit text-xs">
+          Mine for ore
+        </Link>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Sora, Space_Mono, Unbounded } from "next/font/google";
+import { Chakra_Petch, Sora, Space_Mono, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/session-provider";
 import { WalletSessionGuard } from "@/components/wallet-session-guard";
@@ -24,6 +24,14 @@ const displayFont = Unbounded({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["400", "600", "700", "800"],
+});
+
+// HUD theme headings and console labels (globals.css "HUD theme") -
+// squared-off, engineered.
+const hudFont = Chakra_Petch({
+  variable: "--font-hud",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -58,7 +66,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} ${hudFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AppScene />
