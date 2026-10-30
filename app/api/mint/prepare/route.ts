@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { create as createCoreAsset } from "@metaplex-foundation/mpl-core";
-import { createNoopSigner, generateSigner, publicKey as umiPublicKey } from "@metaplex-foundation/umi";
-import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
+import { createNoopSigner, publicKey as umiPublicKey } from "@metaplex-foundation/umi";
 import { addMemo, findAssociatedTokenPda, transferTokens } from "@metaplex-foundation/mpl-toolbox";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { mintDelegateUmi } from "@/lib/chain/mint-delegate";
+import { delegateHealth } from "@/lib/chain/delegate-health";
+import { SimulationFailed, walletReadyTransaction } from "@/lib/chain/wallet-ready-tx";
 import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
@@ -52,35 +53,26 @@ async function pickStyleVariant(
 }
 
 /**
- * POST { wallet } -> { transaction, tier, name, imageUrl, mintNumber }
+ * POST { wallet, asset } -> { transaction, tier, name, imageUrl, mintNumber }
  *
  * Builds ONE transaction containing both the $CHIMP payment and the NFT
- * creation, with the buyer's own wallet as the ONLY signer - they cover
- * their own mint's real SOL rent instead of the mint delegate (see
- * migration 0031). The buyer isn't available to sign server-side, so a
- * createNoopSigner stands in for their pubkey while building; the brand-new
- * asset keypair (a new account must sign its own creation - the same
- * ordinary pattern every Solana NFT mint already uses) signs here, leaving
- * the buyer's slot an all-zero placeholder for their wallet to fill in
- * client-side (see components/chimp-mint.tsx).
+ * creation, paid for by the buyer's own wallet - they cover their own
+ * mint's SOL rent instead of the mint delegate (see migration 0031).
  *
- * Deliberately does NOT join the Astrochimps collection here, and does NOT
- * have the mint delegate co-sign at all (first version of this route did -
- * see git history) - a transaction arriving pre-signed by a second,
- * unrecognized wallet is exactly the shape Phantom's Blowfish scanner flags
- * as a likely drainer pattern, and it did, on the very first real test mint
- * (2026-10-26). The asset is created standalone instead, with its
- * updateAuthority set to the delegate's pubkey (not a required signer here,
- * just who's recorded as allowed to update it later) - app/api/mint/confirm
- * then moves it into the collection afterward in the delegate's OWN
- * separate transaction, which the buyer never sees or signs, so there's
- * nothing left for a wallet scanner to flag.
+ * Returned completely UNSIGNED. `asset` is the public key of the new NFT's
+ * address keypair, generated in the buyer's browser: the buyer's wallet
+ * signs first, then the browser adds that keypair's signature
+ * (lib/chain/wallet-signs-first.ts). Phantom's documented requirement for
+ * transactions it can simulate - when this route signed with the asset
+ * keypair server-side, Phantom showed no balance changes and flagged the
+ * site as possibly malicious (2026-10-26 to 10-30). It's also simulated
+ * here first with an explicit compute limit (lib/chain/wallet-ready-tx.ts).
  *
- * Because the delegate's recorded updateAuthority is what the LATER
- * collection-join step checks against, not anything in this transaction,
- * the buyer's wallet still can't alter the amount, destination, or which
- * asset gets created without invalidating the asset keypair's own
- * signature and making the whole thing fail outright.
+ * The delegate never signs anything here; it's only recorded as the NFT's
+ * update authority so app/api/mint/confirm can move it into the collection
+ * in the delegate's own separate transaction. Because the buyer's browser
+ * holds the asset keypair, confirm checks the NFT that landed matches what
+ * was staged here (lib/chain/verify-created-asset.ts).
  *
  * Tier/style/mint-number are rolled here (not at confirm time) because
  * they're baked into the asset's on-chain name/uri before the buyer ever
@@ -90,15 +82,15 @@ async function pickStyleVariant(
  * next_chimp_mint_number's own comments, not dense).
  */
 export async function POST(req: Request) {
-  let body: { wallet?: unknown };
+  let body: { wallet?: unknown; asset?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
-  const { wallet } = body;
-  if (typeof wallet !== "string") {
-    return NextResponse.json({ error: "missing wallet" }, { status: 400 });
+  const { wallet, asset: assetAddress } = body;
+  if (typeof wallet !== "string" || typeof assetAddress !== "string") {
+    return NextResponse.json({ error: "missing wallet or asset" }, { status: 400 });
   }
   if (!ASTROCHIMPS_COLLECTION) {
     return NextResponse.json({ error: "collection not configured" }, { status: 500 });
@@ -106,8 +98,19 @@ export async function POST(req: Request) {
 
   try {
     new PublicKey(wallet);
+    new PublicKey(assetAddress);
   } catch {
-    return NextResponse.json({ error: "bad wallet" }, { status: 400 });
+    return NextResponse.json({ error: "bad wallet or asset" }, { status: 400 });
+  }
+
+  // Refuse BEFORE the buyer pays if the delegate can't afford its own
+  // follow-up transaction (the collection move in app/api/mint/confirm).
+  const health = await delegateHealth();
+  if (!health.available) {
+    return NextResponse.json(
+      { error: "Minting is temporarily unavailable - please try again shortly.", unavailable: true },
+      { status: 503 },
+    );
   }
 
   const db = supabaseAdmin();
@@ -140,7 +143,7 @@ export async function POST(req: Request) {
 
   try {
     const umi = mintDelegateUmi();
-    const asset = generateSigner(umi);
+    const asset = createNoopSigner(umiPublicKey(assetAddress));
     const buyer = umiPublicKey(wallet);
     const buyerSigner = createNoopSigner(buyer);
 
@@ -168,37 +171,26 @@ export async function POST(req: Request) {
         asset,
         name,
         uri,
-        // No collection, and deliberately no updateAuthority override
-        // either - the buyer ends up fully owning and controlling a
-        // perfectly ordinary standalone asset, nothing handed to anyone
-        // else. The delegate still moves it into the Astrochimps
-        // collection afterward (app/api/mint/confirm's own transaction),
-        // but that permission comes from the collection's own
-        // UpdateDelegate plugin (see components/collection-authority.tsx -
-        // MINT_DELEGATE is an additionalDelegate ON THE COLLECTION), not
-        // from anything recorded on this individual asset. An earlier
-        // version of this route did set updateAuthority to the delegate,
-        // which - on top of being unnecessary - is exactly the kind of
-        // "this new NFT's control was handed to a stranger" pattern wallet
-        // scanners (Phantom/Blowfish) are built to flag as a likely scam,
-        // and did (2026-10-26, escalating from a soft warning to a hard
-        // block on repeated attempts).
+        // No collection yet, but the delegate is recorded as update
+        // authority (just a pubkey, not a signer here) - Core only lets an
+        // asset's CURRENT update authority move it into a collection, so
+        // without this app/api/mint/confirm's move fails with 0x1a and the
+        // NFT never joins Astrochimps (what happened to #54-#63,
+        // 2026-10-29). Phantom's warning persisted with and without this
+        // field, so it was never the cause.
+        updateAuthority: umi.identity.publicKey,
         owner: buyer,
         payer: buyerSigner,
         authority: buyerSigner,
       }),
     );
 
-    builder = builder.setFeePayer(buyerSigner).setBlockhash(bh);
-
-    let tx = builder.build(umi);
-    tx = await asset.signTransaction(tx);
-
-    const serialized = Buffer.from(toWeb3JsTransaction(tx).serialize()).toString("base64");
+    const serialized = await walletReadyTransaction(umi, builder.setFeePayer(buyerSigner).setBlockhash(bh));
 
     const { error: pendingErr } = await db.from("pending_chimp_mints").insert({
       wallet,
-      asset_address: asset.publicKey.toString(),
+      asset_address: assetAddress,
+      uri,
       tier,
       mint_number: mintNumber,
       name,
@@ -223,6 +215,9 @@ export async function POST(req: Request) {
       mintNumber,
     });
   } catch (e) {
+    if (e instanceof SimulationFailed) {
+      return NextResponse.json({ error: e.message }, { status: 422 });
+    }
     console.error("mint prepare failed", wallet, e);
     return NextResponse.json({ error: "could not prepare the mint transaction" }, { status: 500 });
   }

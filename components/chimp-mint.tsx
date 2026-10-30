@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Connection, VersionedTransaction } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
@@ -11,8 +11,10 @@ import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
+import { decodeTransaction, newAssetKeypair, walletSignsFirst } from "@/lib/chain/wallet-signs-first";
 import { TxErrorBanner } from "@/components/tx-error-banner";
 import { useTxTracker } from "@/components/tx-tracker";
+import { SALES_UNAVAILABLE_MESSAGE, useSalesAvailability } from "@/components/use-sales-availability";
 import {
   ASTRO_CORP_WALLET,
   CHIMP_MINT,
@@ -38,6 +40,8 @@ interface Result {
   name?: string;
   imageUrl?: string;
   milestone?: Milestone;
+  /** Minted fine, but a follow-up step (collection join) didn't finish. */
+  warning?: string;
 }
 
 const TIER_LABEL: Record<string, string> = {
@@ -118,6 +122,7 @@ function MintReveal({ result }: { result: Result }) {
 export function ChimpMint() {
   const wallet = useWallet();
   const { track } = useTxTracker();
+  const salesAvailable = useSalesAvailability();
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<DescribedTxError | null>(null);
@@ -188,6 +193,7 @@ export function ChimpMint() {
       name: confirmed.name,
       imageUrl: confirmed.imageUrl,
       milestone: confirmed.milestone,
+      warning: confirmed.warning,
     });
     setPhase("done");
     void checkBalance();
@@ -227,33 +233,25 @@ export function ChimpMint() {
         );
       }
 
-      // The server builds ONE transaction containing both the $CHIMP
-      // payment and the NFT creation, with this wallet as fee payer for the
-      // whole thing (see app/api/mint/prepare) - the buyer covers their own
-      // mint's real SOL rent instead of the mint delegate. The delegate and
-      // the new asset keypair have already signed; this wallet's signature
-      // is the only one still missing.
+      // The server builds ONE unsigned transaction containing both the
+      // $CHIMP payment and the NFT creation, with this wallet as fee payer -
+      // the buyer covers their own mint's SOL rent (see
+      // app/api/mint/prepare). The new NFT's address keypair is made here
+      // and never leaves the browser; this wallet signs first, then that
+      // keypair (Phantom's requirement for a clean, simulated preview).
+      const assetKeypair = newAssetKeypair();
       const prepRes = await fetch("/api/mint/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet: owner }),
+        body: JSON.stringify({ wallet: owner, asset: assetKeypair.publicKey.toBase58() }),
       });
       const prepared = await prepRes.json().catch(() => ({}));
       if (!prepRes.ok) {
         throw new Error(prepared.error || "Could not prepare the mint - try again.");
       }
 
-      const txBytes = Uint8Array.from(atob(prepared.transaction), (c) => c.charCodeAt(0));
-      const versionedTx = VersionedTransaction.deserialize(txBytes);
-
-      // Sent via wallet.sendTransaction() (wallet-adapter's own signer+send),
-      // NOT Umi's sendAndConfirm - that signs with wallet.signTransaction()
-      // and broadcasts via our own RPC, but Phantom's mobile in-app browser
-      // is built around signAndSendTransaction (sign+send in one call) and
-      // throws a generic, unhelpful error on plain signTransaction there
-      // (found 2026-10-07, mobile mints were failing 100% of the time).
       const connection = new Connection(chainEndpoint(), "confirmed");
-      signature = await wallet.sendTransaction(versionedTx, connection, { maxRetries: 5 });
+      signature = await walletSignsFirst(wallet, connection, decodeTransaction(prepared.transaction), assetKeypair);
       track(signature, "Mint");
       await connection.confirmTransaction(
         {
@@ -348,9 +346,19 @@ export function ChimpMint() {
         </div>
       </div>
 
+      {phase === "idle" && salesAvailable === false && (
+        <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+          {SALES_UNAVAILABLE_MESSAGE}
+        </p>
+      )}
+
       {phase === "idle" && (
-        <button className="btn btn-primary" onClick={() => setPhase("confirm")}>
-          Mint an Astrochimp
+        <button
+          className="btn btn-primary"
+          disabled={salesAvailable === false}
+          onClick={() => setPhase("confirm")}
+        >
+          {salesAvailable === false ? "Minting temporarily unavailable" : "Mint an Astrochimp"}
         </button>
       )}
 
@@ -429,6 +437,11 @@ export function ChimpMint() {
       {phase === "done" && result && (
         <div className="flex flex-col gap-3 rounded-xl border border-good/40 bg-good/10 p-4 text-sm">
           <p className="text-center font-semibold text-good">Minted.</p>
+          {result.warning && (
+            <p className="rounded-lg border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
+              {result.warning}
+            </p>
+          )}
           <MintReveal key={result.asset} result={result} />
           {result.tier && (
             <p className={`text-center text-lg font-black ${TIER_STYLE[result.tier] ?? ""}`}>

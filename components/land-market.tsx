@@ -7,22 +7,16 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
-import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
-import {
-  addMemo,
-  fetchToken,
-  findAssociatedTokenPda,
-  mplToolbox,
-  transferTokens,
-} from "@metaplex-foundation/mpl-toolbox";
+import { fetchToken, findAssociatedTokenPda, mplToolbox } from "@metaplex-foundation/mpl-toolbox";
 import { AccountNotFoundError, publicKey } from "@metaplex-foundation/umi";
 import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connection";
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
-import { ASTRO_CORP_WALLET, CHIMP_MINT, CHIMP_DECIMALS } from "@/lib/chain/mint-config";
-import { propertyMintMemo } from "@/lib/chain/property-mint-config";
+import { CHIMP_MINT, CHIMP_DECIMALS } from "@/lib/chain/mint-config";
 import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
+import { decodeTransaction, newAssetKeypair, walletSignsFirst } from "@/lib/chain/wallet-signs-first";
 import { TxErrorBanner } from "@/components/tx-error-banner";
 import { useTxTracker } from "@/components/tx-tracker";
+import { SALES_UNAVAILABLE_MESSAGE, useSalesAvailability } from "@/components/use-sales-availability";
 import type { LandProperty } from "@/lib/types";
 
 type Phase = "idle" | "confirm" | "buying" | "done" | "error" | "stuck";
@@ -61,8 +55,9 @@ export function LandMarket() {
   const { track } = useTxTracker();
   const [selected, setSelected] = useState<LandProperty | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
+  const salesAvailable = useSalesAvailability();
   const [error, setError] = useState<DescribedTxError | null>(null);
-  const [result, setResult] = useState<{ asset: string; signature: string } | null>(null);
+  const [result, setResult] = useState<{ asset: string; signature: string; warning?: string } | null>(null);
   const [stuckPayment, setStuckPayment] = useState<{ signature: string } | null>(null);
 
   const walletKey = wallet.publicKey?.toBase58() ?? null;
@@ -83,22 +78,29 @@ export function LandMarket() {
   }
 
   /** Shared by a fresh purchase and by retrying a stuck one without paying
-   *  again - see components/chimp-mint.tsx's identical split for why. */
-  async function claimWithSignature(owner: string, paymentSignature: string) {
+   *  again - see components/chimp-mint.tsx's identical split for why. By
+   *  now the property NFT is already in the buyer's wallet; this is our
+   *  bookkeeping plus the collection move (app/api/land/confirm). */
+  async function confirmWithSignature(owner: string, signature: string) {
     if (!selected) return;
-    const claimRes = await fetch("/api/land/claim", {
+    const confirmRes = await fetch("/api/land/confirm", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ propertyId: selected.id, wallet: owner, signature: paymentSignature }),
+      body: JSON.stringify({ propertyId: selected.id, wallet: owner, signature }),
     });
-    const claim = await claimRes.json().catch(() => ({}));
-    if (!claimRes.ok) {
-      setStuckPayment({ signature: paymentSignature });
+    const confirmed = await confirmRes.json().catch(() => ({}));
+    if (!confirmRes.ok) {
+      setStuckPayment({ signature });
       setPhase("stuck");
       return;
     }
+    finish(confirmed);
+  }
+
+  function finish(done: { asset: string; signature: string; warning?: string }) {
+    if (!selected) return;
     setStuckPayment(null);
-    setResult({ asset: claim.asset, signature: claim.signature });
+    setResult({ asset: done.asset, signature: done.signature, warning: done.warning });
     setPhase("done");
     setProperties((prev) => prev.filter((p) => p.id !== selected.id));
   }
@@ -107,13 +109,11 @@ export function LandMarket() {
     if (!selected || !wallet.publicKey) return;
     setPhase("buying");
     setError(null);
-    const owner = publicKey(wallet.publicKey.toBase58());
+    const owner = wallet.publicKey.toBase58();
 
-    let paymentSignature: string;
+    let signature: string;
     try {
-      const mint = publicKey(CHIMP_MINT);
-      const buyerAta = findAssociatedTokenPda(umi, { mint, owner });
-      const astroAta = findAssociatedTokenPda(umi, { mint, owner: publicKey(ASTRO_CORP_WALLET) });
+      const buyerAta = findAssociatedTokenPda(umi, { mint: publicKey(CHIMP_MINT), owner: publicKey(owner) });
       const priceBase = BigInt(selected.priceChimp) * 10n ** BigInt(CHIMP_DECIMALS);
 
       let held: bigint;
@@ -134,27 +134,34 @@ export function LandMarket() {
         );
       }
 
-      // See components/chimp-mint.tsx's identical pattern for why this goes
-      // through wallet.sendTransaction() rather than Umi's sendAndConfirm -
-      // Phantom's mobile in-app browser doesn't properly support plain
-      // signTransaction (throws a generic error), only signAndSendTransaction.
-      const bh = await umi.rpc.getLatestBlockhash({ commitment: "confirmed" });
-      const unsignedTx = transferTokens(umi, {
-        source: buyerAta,
-        destination: astroAta,
-        authority: umi.identity,
-        amount: priceBase,
-      })
-        .add(addMemo(umi, { memo: propertyMintMemo(selected.id, owner) }))
-        .setBlockhash(bh)
-        .build(umi);
-      const connection = new Connection(chainEndpoint(), "confirmed");
-      paymentSignature = await wallet.sendTransaction(toWeb3JsTransaction(unsignedTx), connection, {
-        maxRetries: 5,
+      // The server builds ONE transaction with the $CHIMP payment and the
+      // property NFT's creation, this wallet as the only signer and fee
+      // payer - the buyer covers the NFT's own SOL rent (see
+      // app/api/land/prepare). Refused up front (nothing charged) if sales
+      // are temporarily unavailable or someone else is mid-purchase.
+      // The new NFT's address keypair never leaves the browser - see
+      // components/chimp-mint.tsx and lib/chain/wallet-signs-first.ts.
+      const assetKeypair = newAssetKeypair();
+      const prepRes = await fetch("/api/land/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ propertyId: selected.id, wallet: owner, asset: assetKeypair.publicKey.toBase58() }),
       });
-      track(paymentSignature, "Land payment");
+      const prepared = await prepRes.json().catch(() => ({}));
+      if (!prepRes.ok) {
+        throw new Error(prepared.error || "Could not prepare the purchase - try again.");
+      }
+      if (prepared.completed) {
+        // An earlier attempt from this wallet had already paid and landed.
+        finish(prepared);
+        return;
+      }
+
+      const connection = new Connection(chainEndpoint(), "confirmed");
+      signature = await walletSignsFirst(wallet, connection, decodeTransaction(prepared.transaction), assetKeypair);
+      track(signature, "Property purchase");
       await connection.confirmTransaction(
-        { signature: paymentSignature, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+        { signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight },
         "confirmed",
       );
     } catch (e) {
@@ -163,7 +170,7 @@ export function LandMarket() {
       return;
     }
 
-    await claimWithSignature(owner, paymentSignature);
+    await confirmWithSignature(owner, signature);
   }
 
   if (!mounted) return null;
@@ -244,11 +251,22 @@ export function LandMarket() {
                 <h2 className="text-lg font-bold">{selected.name}</h2>
                 <p className="text-sm text-muted">
                   {selected.priceChimp.toLocaleString()} $CHIMP, one transaction, straight to
-                  Astro Corp. This can&apos;t be undone.
+                  Astro Corp. This can&apos;t be undone. You&apos;ll also need a
+                  small amount of SOL (a few thousandths) for the network fee and
+                  the NFT&apos;s on-chain storage rent.
                 </p>
+                {salesAvailable === false && (
+                  <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+                    {SALES_UNAVAILABLE_MESSAGE}
+                  </p>
+                )}
                 <div className="flex gap-2">
-                  <button className="btn btn-primary flex-1" onClick={() => void buy()}>
-                    Confirm &amp; sign
+                  <button
+                    className="btn btn-primary flex-1"
+                    disabled={salesAvailable === false}
+                    onClick={() => void buy()}
+                  >
+                    {salesAvailable === false ? "Temporarily unavailable" : "Confirm & sign"}
                   </button>
                   <button className="btn btn-ghost" onClick={() => setSelected(null)}>
                     Cancel
@@ -273,12 +291,12 @@ export function LandMarket() {
               <div className="flex flex-col gap-3">
                 <div className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">
                   <div className="font-semibold text-bad">
-                    Payment went through, minting didn&apos;t
+                    Your property NFT is yours - we just need to record it
                   </div>
                   <p className="mt-0.5 text-muted">
-                    This is on our end, not your wallet - your $CHIMP
-                    wasn&apos;t lost. Retry below and we&apos;ll finish with
-                    the payment you already sent.
+                    The transaction already landed, so the NFT is in your
+                    wallet right now - this is only our bookkeeping catching
+                    up. Retry below, nothing will be charged again.
                   </p>
                   <a
                     href={explorerTx(stuckPayment.signature)}
@@ -286,7 +304,7 @@ export function LandMarket() {
                     rel="noreferrer"
                     className="mono mt-2 inline-block text-xs underline"
                   >
-                    payment transaction ↗
+                    transaction ↗
                   </a>
                 </div>
                 <button
@@ -294,7 +312,7 @@ export function LandMarket() {
                   onClick={async () => {
                     if (!wallet.publicKey) return;
                     setPhase("buying");
-                    await claimWithSignature(wallet.publicKey.toBase58(), stuckPayment.signature);
+                    await confirmWithSignature(wallet.publicKey.toBase58(), stuckPayment.signature);
                   }}
                 >
                   Retry (no extra payment)
@@ -304,6 +322,11 @@ export function LandMarket() {
             {phase === "done" && result && (
               <div className="flex flex-col gap-2">
                 <p className="font-semibold text-good">Sold. Welcome to {selected.name}.</p>
+                {result.warning && (
+                  <p className="rounded-lg border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
+                    {result.warning}
+                  </p>
+                )}
                 <a
                   href={explorerAddress(result.asset)}
                   target="_blank"

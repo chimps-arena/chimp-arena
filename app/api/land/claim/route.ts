@@ -70,6 +70,21 @@ export async function POST(req: Request) {
   if (property.asset_address) {
     return NextResponse.json({ error: "already sold" }, { status: 409 });
   }
+  // New purchases go through app/api/land/prepare + confirm (buyer pays
+  // rent); this route only remains to finish payments made under the old
+  // flow. Never delegate-mint a property while a buyer-pays purchase of it
+  // is in flight - both could land and the property would exist twice.
+  const { data: lock } = await db
+    .from("pending_property_mints")
+    .select("property_id")
+    .eq("property_id", propertyId)
+    .maybeSingle();
+  if (lock) {
+    return NextResponse.json(
+      { error: "this property is mid-purchase - try again in a minute" },
+      { status: 409 },
+    );
+  }
 
   let buyerPk: PublicKey;
   try {
