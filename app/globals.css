@@ -569,7 +569,8 @@ a.hud-panel:hover,
   border: 1px solid var(--hud-edge);
   background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
-.hud-switch button {
+.hud-switch button,
+.hud-switch a {
   padding: 0.4rem 0.95rem;
   font-family: var(--font-hud), var(--font-sans), sans-serif;
   font-size: 0.74rem;
@@ -581,10 +582,12 @@ a.hud-panel:hover,
   transition: color 0.15s ease, background 0.15s ease;
   cursor: pointer;
 }
-.hud-switch button:hover {
+.hud-switch button:hover,
+.hud-switch a:hover {
   color: var(--foreground);
 }
-.hud-switch button[aria-pressed="true"] {
+.hud-switch button[aria-pressed="true"],
+.hud-switch a[aria-current="page"] {
   color: #1d1400;
   background: var(--hud-amber);
 }

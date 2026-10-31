@@ -274,12 +274,12 @@ export function ChimpMint() {
   }
 
   if (!mounted) {
-    return <div className="card h-40 animate-pulse p-6" />;
+    return <div className="hud-panel h-40 animate-pulse p-6" />;
   }
 
   if (!connected) {
     return (
-      <div className="card p-6 text-center">
+      <div className="hud-panel p-6 text-center">
         <p className="text-sm text-muted">Connect the wallet holding your $CHIMP.</p>
         <div className="mt-4 flex justify-center">
           <WalletMultiButton />
@@ -289,9 +289,9 @@ export function ChimpMint() {
   }
 
   return (
-    <div className="card flex flex-col gap-4 p-6">
+    <div className="hud-panel flex flex-col gap-4 p-6">
       {!onMainnet && (
-        <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+        <p className="border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
           App is not on mainnet (`NEXT_PUBLIC_SOLANA_CLUSTER`). This mint moves
           real $CHIMP and needs mainnet.
         </p>
@@ -299,12 +299,12 @@ export function ChimpMint() {
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted">Your $CHIMP</span>
-        <button className="btn btn-ghost text-xs" onClick={checkBalance}>
+        <button className="hud-btn hud-btn-ghost text-xs" onClick={checkBalance}>
           {balance == null ? "check balance" : balance.toLocaleString()}
         </button>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm">
+      <div className="border border-border bg-surface-2/50 p-4 text-sm">
         <div className="flex justify-between">
           <span className="text-muted">Price</span>
           <span className="font-semibold">
@@ -348,14 +348,14 @@ export function ChimpMint() {
       </div>
 
       {phase === "idle" && salesAvailable === false && (
-        <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+        <p className="border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
           {SALES_UNAVAILABLE_MESSAGE}
         </p>
       )}
 
       {phase === "idle" && (
         <button
-          className="btn btn-primary"
+          className="hud-btn"
           disabled={salesAvailable === false}
           onClick={() => setPhase("confirm")}
         >
@@ -374,11 +374,11 @@ export function ChimpMint() {
             on-chain storage rent.
           </p>
           <div className="flex gap-2">
-            <button className="btn btn-primary flex-1" onClick={mint}>
+            <button className="hud-btn flex-1" onClick={mint}>
               Confirm &amp; sign
             </button>
             <button
-              className="btn btn-ghost"
+              className="hud-btn hud-btn-ghost"
               onClick={() => setPhase("idle")}
             >
               Cancel
@@ -388,7 +388,7 @@ export function ChimpMint() {
       )}
 
       {phase === "minting" && (
-        <button className="btn btn-primary" disabled>
+        <button className="hud-btn" disabled>
           {stuckPayment ? "Finishing up…" : "Minting… approve in your wallet"}
         </button>
       )}
@@ -396,7 +396,7 @@ export function ChimpMint() {
       {phase === "error" && error && (
         <div className="flex flex-col gap-3">
           <TxErrorBanner error={error} />
-          <button className="btn btn-ghost" onClick={() => setPhase("idle")}>
+          <button className="hud-btn hud-btn-ghost" onClick={() => setPhase("idle")}>
             Try again
           </button>
         </div>
@@ -404,7 +404,7 @@ export function ChimpMint() {
 
       {phase === "stuck" && stuckPayment && (
         <div className="flex flex-col gap-3">
-          <div className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">
+          <div className="border border-bad/40 bg-bad/10 p-3 text-sm">
             <div className="font-semibold text-bad">
               Your NFT minted - we just need a second to record it
             </div>
@@ -423,7 +423,7 @@ export function ChimpMint() {
             </a>
           </div>
           <button
-            className="btn btn-primary"
+            className="hud-btn"
             onClick={async () => {
               if (!wallet.publicKey) return;
               setPhase("minting");
@@ -436,10 +436,10 @@ export function ChimpMint() {
       )}
 
       {phase === "done" && result && (
-        <div className="flex flex-col gap-3 rounded-xl border border-good/40 bg-good/10 p-4 text-sm">
+        <div className="flex flex-col gap-3 border border-good/40 bg-good/10 p-4 text-sm">
           <p className="text-center font-semibold text-good">Minted.</p>
           {result.warning && (
-            <p className="rounded-lg border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
+            <p className="border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
               {result.warning}
             </p>
           )}
@@ -466,7 +466,7 @@ export function ChimpMint() {
             transaction ↗
           </a>
           {result.milestone && (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
+            <div className="mt-2 flex flex-col items-center gap-2 border border-accent/40 bg-accent/10 p-3">
               <p className="font-black text-accent">
                 🎉 Hidden bonus found: a One of One!
               </p>
@@ -493,7 +493,7 @@ export function ChimpMint() {
             </div>
           )}
           <button
-            className="btn btn-ghost mt-2"
+            className="hud-btn hud-btn-ghost mt-2"
             onClick={() => {
               setResult(null);
               setPhase("idle");

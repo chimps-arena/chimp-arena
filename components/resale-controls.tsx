@@ -52,7 +52,7 @@ export function ResaleControls({
           </span>
         </p>
         <button
-          className="btn btn-ghost text-xs"
+          className="hud-btn hud-btn-ghost text-xs"
           disabled={busy}
           onClick={() => void submit(null)}
         >
@@ -72,10 +72,10 @@ export function ResaleControls({
           placeholder="Price in $CHIMP"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="w-full rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs text-foreground"
+          className="w-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-foreground"
         />
         <button
-          className="btn btn-ghost shrink-0 text-xs"
+          className="hud-btn hud-btn-ghost shrink-0 text-xs"
           disabled={busy || !price || Number(price) <= 0}
           onClick={() => void submit(Number(price))}
         >

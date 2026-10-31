@@ -90,7 +90,7 @@ export function PriceTicker({ compact = false }: { compact?: boolean }) {
     return (
       <div className={compact ? "flex flex-col gap-2" : "grid gap-4 sm:grid-cols-3"}>
         {[0, 1, 2].map((i) => (
-          <div key={i} className={`card animate-pulse ${compact ? "h-16" : "h-32"}`} />
+          <div key={i} className={`hud-panel animate-pulse ${compact ? "h-16" : "h-32"}`} />
         ))}
       </div>
     );
@@ -108,7 +108,7 @@ export function PriceTicker({ compact = false }: { compact?: boolean }) {
 
         if (compact) {
           return (
-            <div key={p.resource} className="card flex items-center gap-3 p-3">
+            <div key={p.resource} className="hud-panel flex items-center gap-3 p-3">
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ background: RESOURCE_DOT[p.resource] }}
@@ -136,7 +136,7 @@ export function PriceTicker({ compact = false }: { compact?: boolean }) {
         }
 
         return (
-          <div key={p.resource} className="card p-5">
+          <div key={p.resource} className="hud-panel p-5">
             <div className="flex items-center justify-between">
               <div className="text-xs uppercase tracking-[0.14em] text-muted">
                 {RESOURCE_LABEL[p.resource]}

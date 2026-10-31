@@ -178,7 +178,7 @@ export function LandMarket() {
   return (
     <div className="flex flex-col gap-6">
       {!wallet.publicKey && (
-        <div className="card p-6 text-center">
+        <div className="hud-panel p-6 text-center">
           <p className="text-sm text-muted">Connect a wallet holding $CHIMP to buy land.</p>
           <div className="mt-4 flex justify-center">
             <WalletMultiButton />
@@ -186,7 +186,7 @@ export function LandMarket() {
         </div>
       )}
       {SOLANA_CLUSTER !== "mainnet-beta" && (
-        <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+        <p className="border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
           App is not on mainnet (`NEXT_PUBLIC_SOLANA_CLUSTER`).
         </p>
       )}
@@ -194,7 +194,7 @@ export function LandMarket() {
       {zones.length > 1 && (
         <div className="flex flex-wrap gap-2">
           <button
-            className={`chip ${zone === "all" ? "text-accent-2" : "text-muted"}`}
+            className={`hud-tag cursor-pointer ${zone === "all" ? "text-accent-2" : "text-muted"}`}
             onClick={() => setZone("all")}
           >
             All zones
@@ -202,7 +202,7 @@ export function LandMarket() {
           {zones.map((z) => (
             <button
               key={z}
-              className={`chip ${zone === z ? "text-accent-2" : "text-muted"}`}
+              className={`hud-tag cursor-pointer ${zone === z ? "text-accent-2" : "text-muted"}`}
               onClick={() => setZone(z)}
             >
               {z}
@@ -214,27 +214,27 @@ export function LandMarket() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card h-56 animate-pulse" />
+            <div key={i} className="hud-panel h-56 animate-pulse" />
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <p className="card p-6 text-sm text-muted">
+        <p className="hud-panel p-6 text-sm text-muted">
           No land available to buy right now. Check back soon.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((p) => (
-            <button key={p.id} className="card overflow-hidden text-left" onClick={() => open(p)}>
+            <button key={p.id} className="hud-panel overflow-hidden text-left" onClick={() => open(p)}>
               {p.imageUrl && (
                 <div className="relative aspect-[4/3] w-full">
                   <Image src={p.imageUrl} alt="" fill className="object-cover" unoptimized />
                 </div>
               )}
               <div className="p-4">
-                <div className="font-semibold">{p.name}</div>
+                <h3 className="font-bold uppercase">{p.name}</h3>
                 <div className="mono text-xs text-muted">{p.zone} · {p.type}</div>
                 {p.blurb && <p className="mt-2 text-sm text-muted">{p.blurb}</p>}
-                <div className="mt-3 font-semibold text-accent">
+                <div className="hud-value mt-3 text-[color:var(--hud-amber)]">
                   {p.priceChimp.toLocaleString()} $CHIMP
                 </div>
               </div>
@@ -245,7 +245,7 @@ export function LandMarket() {
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="card w-full max-w-md p-6">
+          <div className="hud-panel w-full max-w-md p-6">
             {phase === "confirm" && (
               <div className="flex flex-col gap-3">
                 <h2 className="text-lg font-bold">{selected.name}</h2>
@@ -256,40 +256,40 @@ export function LandMarket() {
                   the NFT&apos;s on-chain storage rent.
                 </p>
                 {salesAvailable === false && (
-                  <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
+                  <p className="border border-bad/40 bg-bad/10 p-3 text-sm text-bad">
                     {SALES_UNAVAILABLE_MESSAGE}
                   </p>
                 )}
                 <div className="flex gap-2">
                   <button
-                    className="btn btn-primary flex-1"
+                    className="hud-btn flex-1"
                     disabled={salesAvailable === false}
                     onClick={() => void buy()}
                   >
                     {salesAvailable === false ? "Temporarily unavailable" : "Confirm & sign"}
                   </button>
-                  <button className="btn btn-ghost" onClick={() => setSelected(null)}>
+                  <button className="hud-btn hud-btn-ghost" onClick={() => setSelected(null)}>
                     Cancel
                   </button>
                 </div>
               </div>
             )}
             {phase === "buying" && (
-              <button className="btn btn-primary w-full" disabled>
+              <button className="hud-btn w-full" disabled>
                 {stuckPayment ? "Retrying…" : "Buying… approve in your wallet"}
               </button>
             )}
             {phase === "error" && error && (
               <div className="flex flex-col gap-3">
                 <TxErrorBanner error={error} />
-                <button className="btn btn-ghost" onClick={() => setSelected(null)}>
+                <button className="hud-btn hud-btn-ghost" onClick={() => setSelected(null)}>
                   Close
                 </button>
               </div>
             )}
             {phase === "stuck" && stuckPayment && (
               <div className="flex flex-col gap-3">
-                <div className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">
+                <div className="border border-bad/40 bg-bad/10 p-3 text-sm">
                   <div className="font-semibold text-bad">
                     Your property NFT is yours - we just need to record it
                   </div>
@@ -308,7 +308,7 @@ export function LandMarket() {
                   </a>
                 </div>
                 <button
-                  className="btn btn-primary"
+                  className="hud-btn"
                   onClick={async () => {
                     if (!wallet.publicKey) return;
                     setPhase("buying");
@@ -323,7 +323,7 @@ export function LandMarket() {
               <div className="flex flex-col gap-2">
                 <p className="font-semibold text-good">Sold. Welcome to {selected.name}.</p>
                 {result.warning && (
-                  <p className="rounded-lg border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
+                  <p className="border border-bad/40 bg-bad/10 p-2 text-xs text-bad">
                     {result.warning}
                   </p>
                 )}
@@ -344,7 +344,7 @@ export function LandMarket() {
                   transaction ↗
                 </a>
                 <button
-                  className="btn btn-ghost mt-2"
+                  className="hud-btn hud-btn-ghost mt-2"
                   onClick={() => {
                     setSelected(null);
                     setPhase("idle");

@@ -7,6 +7,7 @@ import { explorerAddress } from "@/lib/chain/connection";
 import { ResaleControls } from "@/components/resale-controls";
 import { HoloCard } from "@/components/holo-card";
 import type { Property } from "@/lib/types";
+import { PageHeader, SectionHeader, tint } from "@/components/hud";
 
 interface Nft {
   asset: string;
@@ -40,30 +41,23 @@ export default function MyAssetsPage() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-10 py-6">
-      <div>
-        <h1 className="text-2xl font-black sm:text-3xl">My Assets</h1>
-        <p className="mt-1 text-muted">
-          Everything you currently own: properties from the Market, and
-          Astrochimps NFTs read live from your wallet.
-        </p>
-      </div>
+    <div className="hud flex flex-col gap-10">
+      <PageHeader
+        kicker="Hangar · inventory"
+        title="My Assets"
+        blurb="Everything you currently own: properties from the Market, and Astrochimps NFTs read live from your wallet."
+      />
 
       <section>
-        <h2 className="text-lg font-bold">
-          Properties
-          <span className="ml-2 text-sm font-normal text-muted">
-            {loading ? "" : `(${properties.length})`}
-          </span>
-        </h2>
+        <SectionHeader title="Properties" aside={loading ? undefined : `${properties.length} owned`} />
         {loading ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="card h-40 animate-pulse" />
+              <div key={i} className="hud-panel h-40 animate-pulse" />
             ))}
           </div>
         ) : properties.length === 0 ? (
-          <p className="card mt-4 p-6 text-sm text-muted">
+          <p className="hud-panel mt-4 p-6 text-sm text-muted">
             You don&apos;t own any properties yet.{" "}
             <Link href="/market" className="underline">
               Visit the Market
@@ -73,7 +67,7 @@ export default function MyAssetsPage() {
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {properties.map((p) => (
-              <div key={p.id} className="card overflow-hidden">
+              <div key={p.id} className="hud-panel overflow-hidden">
                 {p.image && (
                   <div className="relative aspect-[4/3] w-full">
                     <Image src={p.image} alt="" fill className="object-cover" unoptimized />
@@ -81,14 +75,14 @@ export default function MyAssetsPage() {
                 )}
                 <div className="p-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">{p.name}</span>
+                    <h3 className="font-bold uppercase">{p.name}</h3>
                     {p.assetAddress ? (
-                      <span className="chip text-xs text-good" title="3% resale royalty locked to Astro Corp">
+                      <span className="hud-tag" style={tint("var(--good)")} title="3% resale royalty locked to Astro Corp">
                         NFT
                       </span>
                     ) : (
                       p.resalePrice != null && (
-                        <span className="chip text-xs text-accent-2">Listed</span>
+                        <span className="hud-tag" style={tint("var(--hud-cyan)")}>Listed</span>
                       )
                     )}
                   </div>
@@ -119,20 +113,15 @@ export default function MyAssetsPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-bold">
-          Astrochimps NFTs
-          <span className="ml-2 text-sm font-normal text-muted">
-            {loading ? "" : `(${nfts.length})`}
-          </span>
-        </h2>
+        <SectionHeader title="Astrochimps" aside={loading ? undefined : `${nfts.length} in wallet`} />
         {loading ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="card h-48 animate-pulse" />
+              <div key={i} className="hud-panel h-48 animate-pulse" />
             ))}
           </div>
         ) : nfts.length === 0 ? (
-          <p className="card mt-4 p-6 text-sm text-muted">
+          <p className="hud-panel mt-4 p-6 text-sm text-muted">
             You don&apos;t own any Astrochimps yet.{" "}
             <Link href="/mint" className="underline">
               Mint one
@@ -142,7 +131,7 @@ export default function MyAssetsPage() {
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {nfts.map((n) => (
-              <div key={n.asset} className="card overflow-hidden">
+              <div key={n.asset} className="hud-panel overflow-hidden">
                 <HoloCard className="block">
                   <div className="relative aspect-square w-full">
                     <Image src={n.image} alt="" fill className="object-cover" />
@@ -150,13 +139,13 @@ export default function MyAssetsPage() {
                 </HoloCard>
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">{n.name}</span>
+                    <h3 className="truncate font-bold uppercase">{n.name}</h3>
                     {n.inCollection ? (
-                      <span className="chip text-xs text-good" title="3% resale royalty locked to Astro Corp">
-                        Royalty-protected
+                      <span className="hud-tag shrink-0" style={tint("var(--good)")} title="3% resale royalty locked to Astro Corp">
+                        Protected
                       </span>
                     ) : (
-                      <span className="chip text-xs text-muted" title="No royalty enforcement (minted before the collection existed)">
+                      <span className="hud-tag shrink-0" title="Not in the official collection yet - fix it at /admin/repair">
                         Legacy
                       </span>
                     )}
