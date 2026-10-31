@@ -9,11 +9,11 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { mintDelegateUmi } from "@/lib/chain/mint-delegate";
 import { moveIntoCollection } from "@/lib/chain/collection-join";
 import { verifyCreatedAsset } from "@/lib/chain/verify-created-asset";
+import { releaseMilestone, reserveMilestone } from "@/lib/chain/milestone";
 import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
   CHIMP_MINT,
-  MILESTONE_MINT_INTERVAL,
   MINT_PRICE_BASE,
 } from "@/lib/chain/mint-config";
 
@@ -31,7 +31,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 /**
  * Picks a random One of One design for a milestone bonus. Unchanged from
  * the old app/api/mint/claim (now retired) - still delegate-paid and
- * best-effort, since it's rare (1 in MILESTONE_MINT_INTERVAL) and small
+ * best-effort, since it's rare (one per block of mints) and small
  * enough that moving its SOL cost onto the buyer isn't worth the
  * complexity of a second buyer-signed transaction for a "free" bonus.
  */
@@ -204,11 +204,12 @@ export async function POST(req: Request) {
       "Your Astrochimp is in your wallet. Adding it to the official collection didn't finish yet - Astro Corp will complete that, nothing more to pay.";
   }
 
-  // Best-effort bonus, unchanged from the old claim route: the paid mint
-  // above already succeeded regardless of what happens here, and it's still
-  // delegate-paid (rare + small enough not to be worth a second buyer-signed
-  // transaction).
-  if (pending.mint_number % MILESTONE_MINT_INTERVAL === 0) {
+  // Best-effort bonus: the paid mint above already succeeded regardless of
+  // what happens here, and it's still delegate-paid (rare + small enough not
+  // to be worth a second buyer-signed transaction). Which mint wins is a
+  // secret per block of mints - see lib/chain/milestone.ts.
+  if (await reserveMilestone(db, pending.mint_number, wallet)) {
+    let minted = false;
     try {
       const umi = mintDelegateUmi();
       const collection = await fetchCollection(umi, umiPublicKey(ASTROCHIMPS_COLLECTION));
@@ -224,14 +225,13 @@ export async function POST(req: Request) {
           // Explicit - an omitted authority becomes a non-signer placeholder.
           authority: umi.identity,
         }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
+        minted = true;
 
         const bonusAddress = bonusAsset.publicKey.toString();
-        await db.from("chimp_milestones").insert({
-          mint_number: pending.mint_number,
-          wallet,
-          variant_id: bonusVariant.id,
-          asset_address: bonusAddress,
-        });
+        await db
+          .from("chimp_milestones")
+          .update({ variant_id: bonusVariant.id, asset_address: bonusAddress })
+          .eq("mint_number", pending.mint_number);
 
         result.milestone = {
           mintNumber: pending.mint_number,
@@ -242,9 +242,10 @@ export async function POST(req: Request) {
         };
       }
     } catch {
-      // Bonus mint failed after the paid mint already succeeded - just no
-      // milestone bonus this time, nothing to unwind.
+      // Bonus mint failed after the paid mint already succeeded - no bonus
+      // this time; released below so the block's next mint gets it instead.
     }
+    if (!minted) await releaseMilestone(db, pending.mint_number);
   }
 
   return NextResponse.json(result);

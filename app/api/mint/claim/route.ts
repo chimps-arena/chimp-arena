@@ -11,12 +11,12 @@ import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
   CHIMP_MINT,
-  MILESTONE_MINT_INTERVAL,
   MINT_PRICE_BASE,
   TIER_ODDS,
   type ChimpTier,
 } from "@/lib/chain/mint-config";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { releaseMilestone, reserveMilestone } from "@/lib/chain/milestone";
 
 export const runtime = "nodejs";
 
@@ -42,7 +42,7 @@ function rollTier(): Exclude<ChimpTier, "one_of_one"> {
  * hand-making a new one every 1000 mints forever isn't realistic, so the
  * same 5 shuffle and repeat indefinitely rather than running out. What
  * makes a milestone chimp special is that it's free and only comes once
- * every MILESTONE_MINT_INTERVAL mints, not that the design itself is
+ * per block of mints (lib/chain/milestone.ts), not that the design itself is
  * one-of-a-kind on-chain - two different wallets can both end up holding
  * a "The Founder". chimp_milestones (not chimp_variants) is the real
  * record of who got which design and when.
@@ -105,7 +105,7 @@ const TIER_PLACEHOLDER_IMAGE: Record<"standard" | "rare", string> = {
  *
  * Every mint gets a sequential number from chimp_mint_seq (Postgres
  * sequences are atomic, so concurrent mints near a milestone boundary can't
- * both land on the same number). Every MILESTONE_MINT_INTERVAL-th mint also
+ * both land on the same number). One secret mint per block (lib/chain/milestone.ts) also
  * gets a second, free one-of-one minted to the same wallet - on top of, not
  * instead of, their paid tier. The 5 designs are reusable, not claimed
  * (founder's call, 2026-09-29 - see pickOneOfOne), so this never runs out;
@@ -286,7 +286,8 @@ export async function POST(req: Request) {
     // what happens here, so a failure just means no milestone this time,
     // not a failed request. Nothing to release on failure since picking a
     // design no longer claims it - see pickOneOfOne.
-    if (mintNumber % MILESTONE_MINT_INTERVAL === 0) {
+    if (await reserveMilestone(db, mintNumber, wallet)) {
+      let minted = false;
       const bonusVariant = await pickOneOfOne(db);
       if (bonusVariant) {
         try {
@@ -298,14 +299,13 @@ export async function POST(req: Request) {
             collection,
             owner: umiPublicKey(wallet),
           }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
+          minted = true;
 
           const bonusAddress = bonusAsset.publicKey.toString();
-          await db.from("chimp_milestones").insert({
-            mint_number: mintNumber,
-            wallet,
-            variant_id: bonusVariant.id,
-            asset_address: bonusAddress,
-          });
+          await db
+            .from("chimp_milestones")
+            .update({ variant_id: bonusVariant.id, asset_address: bonusAddress })
+            .eq("mint_number", mintNumber);
 
           result.milestone = {
             mintNumber,
@@ -315,10 +315,11 @@ export async function POST(req: Request) {
             signature: bs58.encode(bonusTx.signature),
           };
         } catch {
-          // Bonus mint failed after the paid mint already succeeded - just
-          // no milestone bonus this time, nothing to unwind.
+          // Bonus mint failed after the paid mint already succeeded - no
+          // bonus this time; released below so the block's next mint gets it.
         }
       }
+      if (!minted) await releaseMilestone(db, mintNumber);
     }
 
     return NextResponse.json(result);

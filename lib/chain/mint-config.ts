@@ -65,11 +65,12 @@ export const TIER_ODDS = {
 export type ChimpTier = "standard" | "rare" | "one_of_one";
 
 /**
- * The founder's rule (2026-09-27): every Nth mint gets a second, bonus
- * one-of-one NFT minted to the same wallet for free, on top of whatever
- * tier their paid mint drew. Tracked via chimp_mint_seq / chimp_milestones
- * (migration 0014) so it survives concurrent mints landing near the
- * boundary at the same time.
+ * The founder's rule (2026-09-27): one mint per block of this many gets a
+ * second, bonus one-of-one NFT minted to the same wallet for free, on top
+ * of whatever tier their paid mint drew. Which mint is a secret,
+ * provably-fair draw per block (2026-10-31, lib/chain/milestone.ts) - it
+ * used to be exactly every Nth, which anyone could time. Recorded in
+ * chimp_milestones (migrations 0014, 0035).
  */
 export const MILESTONE_MINT_INTERVAL = 1000;
 
