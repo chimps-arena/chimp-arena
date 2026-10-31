@@ -12,12 +12,17 @@ export const dynamic = "force-dynamic";
 
 const TOP_N = 100;
 
+/** Guest sessions (wallet "guest_<hex>") cost nothing to create, so only
+ *  real wallets rank or add to a crew's score - guests can still play. */
+const GUEST_PATTERN = "guest_%";
+
 export async function GET() {
   const db = supabaseAdmin();
 
   const { data: players } = await db
     .from("players")
     .select("wallet, handle, crew_slug, xp, streak_count")
+    .not("wallet", "like", GUEST_PATTERN)
     .order("xp", { ascending: false })
     .limit(TOP_N);
 
@@ -30,11 +35,12 @@ export async function GET() {
     streak: p.streak_count ?? 0,
   }));
 
-  // Crew totals across ALL members (not just the top 100).
+  // Crew totals across ALL wallet members (not just the top 100).
   const { data: crewAgg } = await db
     .from("players")
     .select("crew_slug, xp")
-    .not("crew_slug", "is", null);
+    .not("crew_slug", "is", null)
+    .not("wallet", "like", GUEST_PATTERN);
 
   const totals = new Map<string, { xp: number; members: number }>();
   for (const row of crewAgg ?? []) {

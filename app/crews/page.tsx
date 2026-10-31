@@ -70,6 +70,14 @@ export default function CrewsPage() {
         blurb="Your XP is added to your crew's total. Choose once. Crew changes are locked to keep the rivalry honest."
       />
 
+      {me?.player?.wallet.startsWith("guest_") && (
+        <div className="hud-tag !flex !normal-case !tracking-normal p-3 text-sm" style={tint("var(--hud-amber)")}>
+          <span className="text-foreground">
+            You&apos;re playing as a guest - connect a wallet so your XP counts on the leaderboards and for your crew.
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="hud-tag !flex !normal-case !tracking-normal p-3 text-sm" style={tint("var(--bad)")}>
           {error}

@@ -19,7 +19,10 @@ export function GuestButton({ redirectTo = "/dashboard" }: { redirectTo?: string
     setError(null);
     try {
       const res = await fetch("/api/auth/guest", { method: "POST" });
-      if (!res.ok) throw new Error("Could not start guest session");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(res.status === 429 && data.error ? data.error : "Could not start guest session");
+      }
       await refresh();
       router.push(redirectTo);
       router.refresh();
