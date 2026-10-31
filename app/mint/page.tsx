@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ChimpMint } from "@/components/chimp-mint";
 import { Lamp, PageHeader, Readout, tint } from "@/components/hud";
 import { MINT_PRICE_CHIMP } from "@/lib/chain/mint-config";
@@ -54,9 +55,9 @@ export default function MintPage() {
               <Readout label="Rare" value="15%" color="var(--accent-3)" size="md" />
             </div>
           </div>
-          <div className="hud-tag relative" style={tint("var(--hud-amber)")}>
-            ✦ Hidden One of Ones · provably fair
-          </div>
+          <Link href="/fairness" className="hud-tag relative hover:!text-foreground" style={tint("var(--hud-amber)")}>
+            ✦ Hidden One of Ones · provably fair ▸
+          </Link>
         </div>
 
         <ChimpMint />

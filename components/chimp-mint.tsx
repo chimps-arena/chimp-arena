@@ -340,8 +340,8 @@ export function ChimpMint() {
             <span className="text-accent">One of Ones</span> aren&apos;t part of
             that draw. Some mints carry a hidden bonus One of One on top -
             nobody knows which until it lands.{" "}
-            <a href="/api/mint/fairness" target="_blank" rel="noopener" className="underline hover:text-foreground">
-              Provably fair ↗
+            <a href="/fairness" className="underline hover:text-foreground">
+              Provably fair ▸
             </a>
           </p>
         </div>
