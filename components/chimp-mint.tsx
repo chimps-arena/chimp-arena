@@ -19,7 +19,6 @@ import {
   ASTRO_CORP_WALLET,
   CHIMP_MINT,
   CHIMP_DECIMALS,
-  MILESTONE_MINT_INTERVAL,
   MINT_PRICE_BASE,
   MINT_PRICE_CHIMP,
 } from "@/lib/chain/mint-config";
@@ -338,10 +337,9 @@ export function ChimpMint() {
             <span>15%</span>
           </div>
           <p className="mt-2 border-t border-border pt-2">
-            <span className="text-accent">One of One</span> isn&apos;t part of
-            that draw. Every {MILESTONE_MINT_INTERVAL.toLocaleString()}th
-            mint automatically gets a second, free one, on top of whichever
-            of the above you drew.
+            <span className="text-accent">One of Ones</span> aren&apos;t part of
+            that draw. Some mints carry a hidden bonus One of One on top -
+            nobody knows which until it lands.
           </p>
         </div>
       </div>
@@ -467,8 +465,7 @@ export function ChimpMint() {
           {result.milestone && (
             <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 p-3">
               <p className="font-black text-accent">
-                🎉 You&apos;re mint #{result.milestone.mintNumber.toLocaleString()}:
-                bonus One of One!
+                🎉 Hidden bonus found: a One of One!
               </p>
               {result.milestone.imageUrl && (
                 <div className="glow-magenta h-28 w-28 overflow-hidden rounded-xl border-2 border-accent-3">

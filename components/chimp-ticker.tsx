@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CHIMP_MINT } from "@/lib/chain/mint-config";
 import { shortWallet } from "@/lib/format";
+import { BUY_CHIMP_URL, SOLSCAN_TOKEN_URL } from "@/lib/links";
 
 interface StatsOk {
   available: true;
@@ -95,7 +96,7 @@ export function ChimpTicker() {
           {copied ? "Copied!" : shortWallet(CHIMP_MINT, 6, 6)}
         </button>
         <a
-          href={`https://solscan.io/token/${CHIMP_MINT}`}
+          href={SOLSCAN_TOKEN_URL}
           target="_blank"
           rel="noreferrer"
           className="rounded-full border px-3 py-1.5 text-muted transition hover:text-foreground"
@@ -104,7 +105,7 @@ export function ChimpTicker() {
           Solscan
         </a>
         <a
-          href={`https://raydium.io/swap/?inputMint=So11111111111111111111111111111111111111112&outputMint=${CHIMP_MINT}`}
+          href={BUY_CHIMP_URL}
           target="_blank"
           rel="noreferrer"
           className="rounded-full px-4 py-1.5 font-semibold text-background"

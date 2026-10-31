@@ -6,6 +6,8 @@ import { WalletSessionGuard } from "@/components/wallet-session-guard";
 import { TxTrackerProvider } from "@/components/tx-tracker";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
+import { CopyContractAddress, SocialLinks } from "@/components/social-links";
+import { BUY_CHIMP_URL, CHART_URL, SOLSCAN_TOKEN_URL } from "@/lib/links";
 
 // Body: clean, warm geometric sans.
 const bodyFont = Sora({
@@ -42,10 +44,19 @@ export const metadata: Metadata = {
   description:
     "Missions, rivalry and crew competition for the $CHIMP community. Adoption first.",
   openGraph: {
-    title: "CHIMP Arena",
+    title: "CHIMP Arena · Astrochimpz",
     description:
-      "Missions, rivalry and crew competition for the $CHIMP community.",
-    images: ["/og.png"],
+      "Missions, rivalry and crew competition for the $CHIMP community. Fortune lies in the unknown.",
+    siteName: "Astrochimpz",
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "Astrochimpz - Fortune lies in the unknown" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@Astrochimpz",
+    title: "CHIMP Arena · Astrochimpz",
+    description:
+      "Missions, rivalry and crew competition for the $CHIMP community. Fortune lies in the unknown.",
+    images: ["/og.jpg"],
   },
 };
 
@@ -77,10 +88,28 @@ export default function RootLayout({
             <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
               {children}
             </main>
-            <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
-              <span>© {new Date().getFullYear()} Astrochimpz</span>
-              <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
-              <a href="/legal" className="hover:text-foreground">Legal</a>
+            <footer
+              className="mt-10 w-full border-t"
+              style={{ borderColor: "var(--hud-edge)", background: "color-mix(in srgb, var(--background) 70%, transparent)" }}
+            >
+              <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <a href={BUY_CHIMP_URL} target="_blank" rel="noopener noreferrer" className="hud-btn">
+                      Buy $CHIMP ▸
+                    </a>
+                    <CopyContractAddress full />
+                  </div>
+                  <SocialLinks />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
+                  <span>© {new Date().getFullYear()} Astrochimpz</span>
+                  <a href={CHART_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Chart</a>
+                  <a href={SOLSCAN_TOKEN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Solscan</a>
+                  <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
+                  <a href="/legal" className="hover:text-foreground">Legal</a>
+                </div>
+              </div>
             </footer>
           </TxTrackerProvider>
         </SessionProvider>

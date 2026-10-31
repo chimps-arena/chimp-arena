@@ -11,6 +11,8 @@ import { disconnectPhantom } from "@/lib/phantom";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
 import { Flame } from "lucide-react";
 import { Lamp, tint } from "@/components/hud";
+import { CopyContractAddress } from "@/components/social-links";
+import { BUY_CHIMP_URL } from "@/lib/links";
 
 const LINKS = [
   { href: "/dashboard", label: "Mission Control" },
@@ -77,6 +79,14 @@ export function NavBar() {
         </Link>
 
         <div className="ml-auto flex items-center gap-3">
+          <a
+            href={BUY_CHIMP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hud-btn hidden !px-3 !py-2 !text-[0.7rem] sm:inline-flex"
+          >
+            Buy ${TOKEN_SYMBOL}
+          </a>
           {loading ? null : player ? (
             <>
               {me && me.streak.count >= 2 && (
@@ -234,6 +244,12 @@ export function NavBar() {
               );
             })}
           </nav>
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3" style={{ borderColor: "var(--hud-edge)" }}>
+            <a href={BUY_CHIMP_URL} target="_blank" rel="noopener noreferrer" className="hud-btn !px-3 !py-2 !text-[0.7rem]">
+              Buy ${TOKEN_SYMBOL} ▸
+            </a>
+            <CopyContractAddress />
+          </div>
           <div className="mt-3 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--hud-edge)" }}>
             {player ? (
               <>

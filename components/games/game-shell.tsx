@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { useSession } from "@/components/session-provider";
+import { BUY_CHIMP_URL } from "@/lib/links";
 import type { SubmitResult } from "@/lib/types";
 
 type Phase = "intro" | "loading" | "playing" | "submitting" | "result" | "error";
@@ -220,6 +221,26 @@ function ResultView({
         <Link className="btn btn-primary" href="/dashboard">
           Mission Control
         </Link>
+      </div>
+      <div
+        className="mt-4 w-full max-w-md border p-4"
+        style={{
+          borderColor: "color-mix(in srgb, var(--hud-amber) 40%, transparent)",
+          background: "color-mix(in srgb, var(--hud-amber) 6%, transparent)",
+        }}
+      >
+        <div className="hud-label !text-[color:var(--hud-amber)]">Gear up, pilot</div>
+        <p className="mt-1 text-sm text-muted">
+          Stack $CHIMP to mint an Astrochimp and claim property across the belt.
+        </p>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <a href={BUY_CHIMP_URL} target="_blank" rel="noopener noreferrer" className="hud-btn !px-3 !py-2 !text-[0.7rem]">
+            Buy $CHIMP ▸
+          </a>
+          <Link href="/mint" className="hud-btn hud-btn-ghost !px-3 !py-2 !text-[0.7rem]">
+            Mint an Astrochimp ▸
+          </Link>
+        </div>
       </div>
     </div>
   );
