@@ -134,7 +134,7 @@ export default function MyAssetsPage() {
               <div key={n.asset} className="hud-panel overflow-hidden">
                 <HoloCard className="block">
                   <div className="relative aspect-square w-full">
-                    <Image src={n.image} alt="" fill className="object-cover" />
+                    <Image src={n.image} alt="" fill className="object-cover" unoptimized />
                   </div>
                 </HoloCard>
                 <div className="p-4">
