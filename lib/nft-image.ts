@@ -1,15 +1,19 @@
 /**
- * NFT art lives on Irys/Arweave, whose gateway takes 10-30s per image -
- * slow enough that mint reveals, My Assets and wallets often gave up.
- * Arweave content never changes, so app/nft-img serves it from our own
- * domain with a permanent CDN cache: one slow fetch, fast forever after.
+ * NFT art lives on Irys/Arweave, whose gateway is slow - property PNGs are
+ * ~2.8 MB and take ~40s each - so cards often never filled in. The site
+ * shows small web copies instead (public/nft-thumbs, ~800px WebP), served
+ * from our static CDN. They're made by scripts/make-nft-thumbs.mjs; re-run
+ * it after uploading new art (anything without a copy falls back to Irys).
+ * On-chain metadata keeps pointing at the permanent Arweave originals.
  * Safe on client and server.
  */
-const IRYS_URL = /^https:\/\/gateway\.irys\.xyz\/([A-Za-z0-9_-]{43,44})\/?$/;
+import thumbs from "@/lib/nft-thumbs.json";
 
-/** Rewrites an Irys gateway URL to our cached copy; anything else unchanged.
- *  `origin` makes it absolute (wallet metadata needs that). */
-export function fastImage(url: string, origin = ""): string {
-  const m = IRYS_URL.exec(url);
-  return m ? `${origin}/nft-img/${m[1]}` : url;
+const IRYS_URL = /^https:\/\/gateway\.irys\.xyz\/([A-Za-z0-9_-]{43,44})\/?$/;
+const HAVE = new Set<string>(thumbs);
+
+/** Our fast copy of an Irys image if we have one; anything else unchanged. */
+export function fastImage(url: string): string {
+  const id = IRYS_URL.exec(url)?.[1];
+  return id && HAVE.has(id) ? `/nft-thumbs/${id}.webp` : url;
 }
