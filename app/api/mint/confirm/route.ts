@@ -14,7 +14,7 @@ import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
   CHIMP_MINT,
-  MINT_PRICE_BASE,
+  mintPriceBaseAt,
 } from "@/lib/chain/mint-config";
 
 export const runtime = "nodejs";
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
   const { data: pending } = await db
     .from("pending_chimp_mints")
-    .select("asset_address, tier, mint_number, name, image_url, uri")
+    .select("asset_address, tier, mint_number, name, image_url, uri, created_at")
     .eq("wallet", wallet)
     .maybeSingle();
 
@@ -121,6 +121,7 @@ export async function POST(req: Request) {
   const buyerAta = getAssociatedTokenAddressSync(mint, buyerPk).toBase58();
   const astroAta = getAssociatedTokenAddressSync(mint, new PublicKey(ASTRO_CORP_WALLET)).toBase58();
 
+  const requiredPrice = mintPriceBaseAt(pending.created_at);
   const paidEnough = tx.transaction.message.instructions.some((ix) => {
     if (!("parsed" in ix) || ix.program !== "spl-token") return false;
     const parsed = ix.parsed as { type?: string; info?: Record<string, unknown> };
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
         (info.amount as string | undefined) ??
         "0",
     );
-    return raw >= MINT_PRICE_BASE;
+    return raw >= requiredPrice;
   });
   const assetCreated = tx.transaction.message.accountKeys.some(
     (k) => k.pubkey.toBase58() === pending.asset_address,

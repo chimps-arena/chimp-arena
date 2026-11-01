@@ -17,6 +17,7 @@ import { GuestButton } from "@/components/guest-button";
 import { Lamp, Readout, SectionHeader, tint } from "@/components/hud";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
+import { MINT_PRICE_CHIMP } from "@/lib/chain/mint-config";
 
 export default function DashboardPage() {
   const { me, loading, refresh } = useSession();
@@ -191,7 +192,7 @@ export default function DashboardPage() {
               icon: Sparkles,
               color: "var(--accent-violet)",
               title: "Mint an Astrochimp",
-              blurb: `Trade 1,000 ${TOKEN_SYMBOL} for an Astrochimp NFT.`,
+              blurb: `Trade ${MINT_PRICE_CHIMP.toLocaleString()} ${TOKEN_SYMBOL} for an Astrochimp NFT.`,
             },
           ].map((q, i) => (
             <Reveal key={q.href} delay={i * 0.05}>

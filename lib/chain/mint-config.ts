@@ -1,7 +1,7 @@
 /**
  * Astrochimp test-mint constants.
  *
- * MAINNET. Moving 1,000 real $CHIMP per mint. The payment + the NFT mint go
+ * MAINNET. Moving real $CHIMP (MINT_PRICE_CHIMP) per mint. The payment + the NFT mint go
  * out as ONE transaction (see components/chimp-mint.tsx) so a failure can
  * never take the payment without delivering the NFT.
  */
@@ -20,11 +20,23 @@ export const ASTRO_CORP_WALLET =
   PUBLIC_ENV.astroCorpWallet ||
   "2HJouoXc3KrWULcFqE2t1eQRY2EDjSTWL6KB3bhAQSPU";
 
-/** Price of one Astrochimp, in whole $CHIMP (founders' note). */
-export const MINT_PRICE_CHIMP = 1_000;
+/** Price of one Astrochimp, in whole $CHIMP (founders' note; raised from
+ *  1,000 on 2026-11-01). */
+export const MINT_PRICE_CHIMP = 10_000;
 
 /** Price in base units (bigint). */
 export const MINT_PRICE_BASE = BigInt(MINT_PRICE_CHIMP) * 10n ** BigInt(CHIMP_DECIMALS);
+
+/** The old 1,000 price is still honoured by confirm for mints *prepared*
+ *  before the switch went live - a buyer who signed at the old price must
+ *  not end up with an unrecorded NFT. */
+export const PREVIOUS_MINT_PRICE_BASE = 1_000n * 10n ** BigInt(CHIMP_DECIMALS);
+export const MINT_PRICE_CHANGED_AT = Date.parse("2026-11-01T12:57:00Z");
+
+/** What a mint staged at `preparedAt` must have paid, in base units. */
+export function mintPriceBaseAt(preparedAt: string | Date): bigint {
+  return new Date(preparedAt).getTime() < MINT_PRICE_CHANGED_AT ? PREVIOUS_MINT_PRICE_BASE : MINT_PRICE_BASE;
+}
 
 export const COLLECTION_NAME = "Astrochimps";
 export const NFT_SYMBOL = "ACHMP";
