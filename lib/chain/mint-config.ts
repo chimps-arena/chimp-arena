@@ -31,7 +31,7 @@ export const MINT_PRICE_BASE = BigInt(MINT_PRICE_CHIMP) * 10n ** BigInt(CHIMP_DE
  *  before the switch went live - a buyer who signed at the old price must
  *  not end up with an unrecorded NFT. */
 export const PREVIOUS_MINT_PRICE_BASE = 1_000n * 10n ** BigInt(CHIMP_DECIMALS);
-export const MINT_PRICE_CHANGED_AT = Date.parse("2026-11-01T12:57:00Z");
+export const MINT_PRICE_CHANGED_AT = Date.parse("2026-11-01T12:58:00Z");
 
 /** What a mint staged at `preparedAt` must have paid, in base units. */
 export function mintPriceBaseAt(preparedAt: string | Date): bigint {
