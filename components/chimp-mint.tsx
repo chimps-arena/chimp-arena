@@ -12,6 +12,7 @@ import { chainEndpoint, explorerAddress, explorerTx } from "@/lib/chain/connecti
 import { SOLANA_CLUSTER } from "@/lib/chain/connection";
 import { describeTxError, type DescribedTxError } from "@/lib/chain/tx-error";
 import { decodeTransaction, newAssetKeypair, walletSignsFirst } from "@/lib/chain/wallet-signs-first";
+import { fastImage } from "@/lib/nft-image";
 import { TxErrorBanner } from "@/components/tx-error-banner";
 import { useTxTracker } from "@/components/tx-tracker";
 import { SALES_UNAVAILABLE_MESSAGE, useSalesAvailability } from "@/components/use-sales-availability";
@@ -109,7 +110,7 @@ function MintReveal({ result }: { result: Result }) {
       {result.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={result.imageUrl}
+          src={fastImage(result.imageUrl)}
           alt={result.name ?? "Astrochimp"}
           className="h-full w-full object-cover"
         />
@@ -474,7 +475,7 @@ export function ChimpMint() {
                 <div className="glow-magenta h-28 w-28 overflow-hidden rounded-xl border-2 border-accent-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={result.milestone.imageUrl}
+                    src={fastImage(result.milestone.imageUrl)}
                     alt={result.milestone.name}
                     className="h-full w-full object-cover"
                   />

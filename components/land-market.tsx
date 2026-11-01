@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { fastImage } from "@/lib/nft-image";
 import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -227,7 +228,7 @@ export function LandMarket() {
             <button key={p.id} className="hud-panel overflow-hidden text-left" onClick={() => open(p)}>
               {p.imageUrl && (
                 <div className="relative aspect-[4/3] w-full">
-                  <Image src={p.imageUrl} alt="" fill className="object-cover" unoptimized />
+                  <Image src={fastImage(p.imageUrl)} alt="" fill className="object-cover" unoptimized />
                 </div>
               )}
               <div className="p-4">

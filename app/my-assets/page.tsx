@@ -8,6 +8,7 @@ import { ResaleControls } from "@/components/resale-controls";
 import { HoloCard } from "@/components/holo-card";
 import type { Property } from "@/lib/types";
 import { PageHeader, SectionHeader, tint } from "@/components/hud";
+import { fastImage } from "@/lib/nft-image";
 
 interface Nft {
   asset: string;
@@ -70,7 +71,7 @@ export default function MyAssetsPage() {
               <div key={p.id} className="hud-panel overflow-hidden">
                 {p.image && (
                   <div className="relative aspect-[4/3] w-full">
-                    <Image src={p.image} alt="" fill className="object-cover" unoptimized />
+                    <Image src={fastImage(p.image)} alt="" fill className="object-cover" unoptimized />
                   </div>
                 )}
                 <div className="p-4">
@@ -134,7 +135,7 @@ export default function MyAssetsPage() {
               <div key={n.asset} className="hud-panel overflow-hidden">
                 <HoloCard className="block">
                   <div className="relative aspect-square w-full">
-                    <Image src={n.image} alt="" fill className="object-cover" unoptimized />
+                    <Image src={fastImage(n.image)} alt="" fill className="object-cover" unoptimized />
                   </div>
                 </HoloCard>
                 <div className="p-4">
