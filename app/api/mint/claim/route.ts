@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { create as createCoreAsset, fetchCollection } from "@metaplex-foundation/mpl-core";
@@ -16,7 +16,7 @@ import {
   type ChimpTier,
 } from "@/lib/chain/mint-config";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { releaseMilestone, reserveMilestone } from "@/lib/chain/milestone";
+import { settleDraws } from "@/lib/chain/milestone";
 
 export const runtime = "nodejs";
 
@@ -34,25 +34,6 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 /** Standard vs Rare only - One of One only ever comes from a milestone, see POST below. */
 function rollTier(): Exclude<ChimpTier, "one_of_one"> {
   return Math.random() < TIER_ODDS.RARE ? "rare" : "standard";
-}
-
-/**
- * Picks a random One of One design for a milestone bonus. Reusable, not
- * claimed (founder's call, 2026-09-29): the catalog is only 5 designs and
- * hand-making a new one every 1000 mints forever isn't realistic, so the
- * same 5 shuffle and repeat indefinitely rather than running out. What
- * makes a milestone chimp special is that it's free and only comes once
- * per block of mints (lib/chain/milestone.ts), not that the design itself is
- * one-of-a-kind on-chain - two different wallets can both end up holding
- * a "The Founder". chimp_milestones (not chimp_variants) is the real
- * record of who got which design and when.
- */
-async function pickOneOfOne(
-  db: SupabaseClient,
-): Promise<{ id: string; name: string; image_url: string | null } | null> {
-  const { data: variants } = await db.from("chimp_variants").select("id, name, image_url");
-  if (!variants || variants.length === 0) return null;
-  return variants[Math.floor(Math.random() * variants.length)];
 }
 
 /**
@@ -286,41 +267,11 @@ export async function POST(req: Request) {
     // what happens here, so a failure just means no milestone this time,
     // not a failed request. Nothing to release on failure since picking a
     // design no longer claims it - see pickOneOfOne.
-    if (await reserveMilestone(db, mintNumber, wallet)) {
-      let minted = false;
-      const bonusVariant = await pickOneOfOne(db);
-      if (bonusVariant) {
-        try {
-          const bonusAsset = generateSigner(umi);
-          const bonusTx = await createCoreAsset(umi, {
-            asset: bonusAsset,
-            name: bonusVariant.name,
-            uri: `${SITE_URL}/nft/chimp-metadata/${bonusVariant.id}`,
-            collection,
-            owner: umiPublicKey(wallet),
-          }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
-          minted = true;
-
-          const bonusAddress = bonusAsset.publicKey.toString();
-          await db
-            .from("chimp_milestones")
-            .update({ variant_id: bonusVariant.id, asset_address: bonusAddress })
-            .eq("mint_number", mintNumber);
-
-          result.milestone = {
-            mintNumber,
-            asset: bonusAddress,
-            name: bonusVariant.name,
-            imageUrl: bonusVariant.image_url || "/characters/astrochimp-512.png",
-            signature: bs58.encode(bonusTx.signature),
-          };
-        } catch {
-          // Bonus mint failed after the paid mint already succeeded - no
-          // bonus this time; released below so the block's next mint gets it.
-        }
-      }
-      if (!minted) await releaseMilestone(db, mintNumber);
-    }
+    // Bonus One of One: drawn per block once it fills (lib/chain/milestone.ts).
+    const closing = { mintNumber, signature };
+    after(() =>
+      settleDraws(supabaseAdmin(), closing).catch((e) => console.error("bonus draw failed", e)),
+    );
 
     return NextResponse.json(result);
   } catch (e) {

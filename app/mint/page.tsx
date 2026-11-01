@@ -14,7 +14,7 @@ export default function MintPage() {
       <PageHeader
         kicker="Mint bay · Astrochimpz collection"
         title="Mint an Astrochimp"
-        blurb={`Pay ${MINT_PRICE_CHIMP.toLocaleString()} $CHIMP and get a Standard or Rare Astrochimp, drawn at random. Somewhere out there, hidden One of Ones are waiting to be found.`}
+        blurb={`Pay ${MINT_PRICE_CHIMP.toLocaleString()} $CHIMP and get a Standard or Rare Astrochimp, drawn at random. Every 1,000 mints, one Astrochimp from the block wins a bonus One of One.`}
       />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
@@ -56,7 +56,7 @@ export default function MintPage() {
             </div>
           </div>
           <Link href="/fairness" className="hud-tag relative hover:!text-foreground" style={tint("var(--hud-amber)")}>
-            ✦ Hidden One of Ones · provably fair ▸
+            ✦ Bonus One of One every 1,000 mints · provably fair ▸
           </Link>
         </div>
 

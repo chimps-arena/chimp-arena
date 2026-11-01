@@ -1,15 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { create as createCoreAsset, fetchCollection } from "@metaplex-foundation/mpl-core";
-import { generateSigner, publicKey as umiPublicKey } from "@metaplex-foundation/umi";
-import bs58 from "bs58";
 import { PUBLIC_ENV } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { mintDelegateUmi } from "@/lib/chain/mint-delegate";
 import { moveIntoCollection } from "@/lib/chain/collection-join";
 import { verifyCreatedAsset } from "@/lib/chain/verify-created-asset";
-import { releaseMilestone, reserveMilestone } from "@/lib/chain/milestone";
+import { settleDraws } from "@/lib/chain/milestone";
 import {
   ASTRO_CORP_WALLET,
   ASTROCHIMPS_COLLECTION,
@@ -26,23 +22,6 @@ const endpoint =
   );
 const conn = new Connection(endpoint, "confirmed");
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
-/**
- * Picks a random One of One design for a milestone bonus. Unchanged from
- * the old app/api/mint/claim (now retired) - still delegate-paid and
- * best-effort, since it's rare (one per block of mints) and small
- * enough that moving its SOL cost onto the buyer isn't worth the
- * complexity of a second buyer-signed transaction for a "free" bonus.
- */
-async function pickOneOfOne(
-  db: ReturnType<typeof supabaseAdmin>,
-): Promise<{ id: string; name: string; image_url: string | null } | null> {
-  const { data: variants } = await db.from("chimp_variants").select("id, name, image_url");
-  if (!variants || variants.length === 0) return null;
-  return variants[Math.floor(Math.random() * variants.length)];
-}
-
 /**
  * POST { wallet, signature } -> { ok, asset, signature, tier, name, imageUrl, milestone? }
  *
@@ -51,8 +30,8 @@ async function pickOneOfOne(
  * app/api/mint/prepare built (payment + NFT creation together, buyer pays
  * the real rent). This route only verifies that transaction actually landed
  * and matches what was staged in pending_chimp_mints, then records it and
- * rolls the milestone bonus - it performs no minting of its own for the
- * primary tier.
+ * settles any bonus draw it closes - it performs no minting of its own for
+ * the primary tier.
  *
  * tx_signature keeps the exact same unique-constraint replay-guard role it
  * always had (see nft_mint_claims, migration 0010) - a duplicate confirm
@@ -205,49 +184,13 @@ export async function POST(req: Request) {
       "Your Astrochimp is in your wallet. Adding it to the official collection didn't finish yet - Astro Corp will complete that, nothing more to pay.";
   }
 
-  // Best-effort bonus: the paid mint above already succeeded regardless of
-  // what happens here, and it's still delegate-paid (rare + small enough not
-  // to be worth a second buyer-signed transaction). Which mint wins is a
-  // secret per block of mints - see lib/chain/milestone.ts.
-  if (await reserveMilestone(db, pending.mint_number, wallet)) {
-    let minted = false;
-    try {
-      const umi = mintDelegateUmi();
-      const collection = await fetchCollection(umi, umiPublicKey(ASTROCHIMPS_COLLECTION));
-      const bonusVariant = await pickOneOfOne(db);
-      if (bonusVariant) {
-        const bonusAsset = generateSigner(umi);
-        const bonusTx = await createCoreAsset(umi, {
-          asset: bonusAsset,
-          name: bonusVariant.name,
-          uri: `${SITE_URL}/nft/chimp-metadata/${bonusVariant.id}`,
-          collection,
-          owner: umiPublicKey(wallet),
-          // Explicit - an omitted authority becomes a non-signer placeholder.
-          authority: umi.identity,
-        }).sendAndConfirm(umi, { send: { maxRetries: 5 }, confirm: { commitment: "confirmed" } });
-        minted = true;
-
-        const bonusAddress = bonusAsset.publicKey.toString();
-        await db
-          .from("chimp_milestones")
-          .update({ variant_id: bonusVariant.id, asset_address: bonusAddress })
-          .eq("mint_number", pending.mint_number);
-
-        result.milestone = {
-          mintNumber: pending.mint_number,
-          asset: bonusAddress,
-          name: bonusVariant.name,
-          imageUrl: bonusVariant.image_url || "/characters/astrochimp-512.png",
-          signature: bs58.encode(bonusTx.signature),
-        };
-      }
-    } catch {
-      // Bonus mint failed after the paid mint already succeeded - no bonus
-      // this time; released below so the block's next mint gets it instead.
-    }
-    if (!minted) await releaseMilestone(db, pending.mint_number);
-  }
+  // The bonus One of One is drawn per block of mints, only once a block
+  // fills (lib/chain/milestone.ts) - this mint may be the one that closes
+  // one. Runs after the response so the buyer never waits on it.
+  const mintNumber = pending.mint_number;
+  after(() =>
+    settleDraws(supabaseAdmin(), { mintNumber, signature }).catch((e) => console.error("bonus draw failed", e)),
+  );
 
   return NextResponse.json(result);
 }

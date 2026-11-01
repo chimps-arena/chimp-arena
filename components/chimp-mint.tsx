@@ -338,8 +338,8 @@ export function ChimpMint() {
           </div>
           <p className="mt-2 border-t border-border pt-2">
             <span className="text-accent">One of Ones</span> aren&apos;t part of
-            that draw. Some mints carry a hidden bonus One of One on top -
-            nobody knows which until it lands.{" "}
+            that draw. Every 1,000 mints, one Astrochimp from the block is
+            drawn to win a bonus One of One - every mint is a ticket.{" "}
             <a href="/fairness" className="underline hover:text-foreground">
               Provably fair ▸
             </a>

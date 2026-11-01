@@ -2,14 +2,17 @@ import Link from "next/link";
 import { Lamp, PageHeader, Readout, SectionHeader, tint } from "@/components/hud";
 import { CopyText } from "@/components/copy-text";
 import { fairnessReport } from "@/lib/chain/fairness-report";
-import { explorerAddress } from "@/lib/chain/connection";
+import { explorerAddress, explorerTx } from "@/lib/chain/connection";
+import { shortWallet } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Provably fair bonus draw",
-  description: "How the hidden bonus One of One Astrochimp is drawn, and how to verify it yourself.",
+  description: "How the bonus One of One Astrochimp is drawn after every 1,000 mints, and how to verify it yourself.",
 };
+
+const dash = (range: string) => range.replace("-", "–");
 
 export default async function FairnessPage() {
   const report = await fairnessReport();
@@ -25,41 +28,40 @@ export default async function FairnessPage() {
     );
   }
 
-  const current = report.blocks.find((b) => b.block === report.currentBlock)!;
-  const upcoming = report.blocks.filter((b) => b.block > report.currentBlock);
-  const finished = report.blocks.filter((b) => b.block < report.currentBlock).reverse();
-  const [, hi] = current.mints.split("-").map(Number);
-  const blockStart = Number(current.mints.split("-")[0]);
-  const progress = Math.min(100, ((report.latestMint - blockStart + 1) / (hi - blockStart + 1)) * 100);
+  // The earliest block that isn't drawn yet is the one in play.
+  const current = report.blocks.find((b) => b.status === "open" || b.status === "drawing")!;
+  const upcoming = report.blocks.filter((b) => b.status === "upcoming");
+  const drawn = report.blocks.filter((b) => b.status === "drawn").reverse();
+  const [blockStart, hi] = current.mints.split("-").map(Number);
+  const minted = Math.max(0, Math.min(report.latestMint, hi) - blockStart + 1);
+  const progress = (minted / (hi - blockStart + 1)) * 100;
 
   return (
     <div className="hud mx-auto flex max-w-3xl flex-col gap-8">
       <PageHeader
         kicker="Mint bay · bonus draw"
         title="Provably fair"
-        blurb="One mint in every block of 1,000 carries a hidden bonus One of One Astrochimp. Nobody - including us - can see or move which one, and you can check that yourself."
+        blurb="Every 1,000 mints, one Astrochimp from that block is drawn to win a bonus One of One. The draw only happens once the block is full - nobody, including us, can know the winner before then, and you can check it yourself."
       />
 
-      {/* ---------- current block ---------- */}
+      {/* ---------- block in play ---------- */}
       <section
         className="hud-panel hud-panel-hot flex flex-col gap-5 p-6"
         style={{ ...tint("var(--hud-amber)"), "--cut": "20px" } as React.CSSProperties}
       >
         <div className="hud-label flex items-center gap-2 !text-[color:var(--hud-amber)]">
-          <Lamp color="var(--hud-amber)" live /> Block {current.block} · draw in progress
+          <Lamp color="var(--hud-amber)" live />
+          Block {current.block} · {current.status === "drawing" ? "full - drawing now" : "open"}
         </div>
-        <div
-          className="grid grid-cols-3 divide-x border-y py-3"
-          style={{ borderColor: "var(--hud-edge)" }}
-        >
+        <div className="grid grid-cols-3 divide-x border-y py-3" style={{ borderColor: "var(--hud-edge)" }}>
           <div className="pr-3" style={{ borderColor: "var(--hud-edge)" }}>
-            <Readout label="Mints" value={current.mints.replace("-", "–")} size="md" />
+            <Readout label="Mints" value={dash(current.mints)} size="md" />
           </div>
           <div className="px-3" style={{ borderColor: "var(--hud-edge)" }}>
-            <Readout label="Winner drawn from" value={current.drawRange.replace("-", "–")} size="md" color="var(--hud-amber)" />
+            <Readout label="In the draw" value={`#${dash(current.drawRange)}`} size="md" color="var(--hud-amber)" />
           </div>
           <div className="pl-3" style={{ borderColor: "var(--hud-edge)" }}>
-            <Readout label="Minted so far" value={report.latestMint.toLocaleString()} size="md" />
+            <Readout label="Draw at" value={`#${hi.toLocaleString()}`} size="md" />
           </div>
         </div>
         <div>
@@ -67,15 +69,15 @@ export default async function FairnessPage() {
             <div className="hud-gauge-fill" style={{ width: `${progress}%` }} />
           </div>
           <div className="mono mt-1 text-[11px] text-muted">
-            {report.latestMint.toLocaleString()} of {hi.toLocaleString()} · the bonus is somewhere ahead
-            {current.awardedToMint ? " - already found this block" : ""}
+            {Math.min(report.latestMint, hi).toLocaleString()} of {hi.toLocaleString()} minted · the winner is drawn
+            when the block fills
           </div>
         </div>
         <div>
           <div className="hud-label">Sealed commitment</div>
           <p className="mt-1 text-xs text-muted">
-            The fingerprint of this block&apos;s secret, published before the block started. The secret is
-            revealed here when the block ends.
+            The fingerprint of this block&apos;s secret, published before minting began. The secret is revealed
+            here after the draw.
           </p>
           <div className="mt-2">
             <CopyText value={current.commitment} />
@@ -91,10 +93,10 @@ export default async function FairnessPage() {
         <SectionHeader title="How it works" />
         <ol className="hud-panel flex flex-col gap-3 p-5 text-sm text-muted">
           {[
-            "Each block of 1,000 mints gets its own secret, generated on our server and never shown while the block is running.",
-            "The winning mint number is calculated from that secret. The bonus goes to the first mint at or after it - one per block.",
-            "Before a block starts we publish a fingerprint (SHA-256 hash) of its secret. A fingerprint can't be reversed to find the secret, but it locks it in: any change would produce a different fingerprint.",
-            "When the block ends, the secret is revealed below. Anyone can check it matches the fingerprint and recompute the winner.",
+            "Every block of 1,000 mints has its own secret, sealed before minting starts. We publish its fingerprint (a SHA-256 hash): it can't be reversed to find the secret, but it locks the secret in.",
+            "Nobody wins while the block is open - every mint in the draw range is a ticket until the block fills.",
+            "When the last mint of the block lands, the draw runs automatically. It mixes the sealed secret with the Solana blockhash of that closing mint - a value that didn't exist until that moment, so nobody could know the result in advance, us included.",
+            "Whoever holds the winning Astrochimp at draw time gets the bonus One of One airdropped. The secret is then revealed here so anyone can recompute the draw.",
           ].map((t, i) => (
             <li key={i} className="flex gap-3">
               <span className="hud-tag h-fit shrink-0" style={tint("var(--hud-cyan)")}>
@@ -113,7 +115,7 @@ export default async function FairnessPage() {
           {upcoming.map((b) => (
             <div key={b.block} className="hud-panel flex flex-col gap-3 p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="hud-label">Block {b.block} · mints {b.mints.replace("-", "–")}</span>
+                <span className="hud-label">Block {b.block} · mints {dash(b.mints)}</span>
                 <span className="hud-label">Not started</span>
               </div>
               <CopyText value={b.commitment} />
@@ -122,20 +124,32 @@ export default async function FairnessPage() {
         </section>
       )}
 
-      {/* ---------- finished blocks ---------- */}
+      {/* ---------- results ---------- */}
       <section className="flex flex-col gap-4">
-        <SectionHeader title="Revealed draws" aside={`${finished.length} finished`} />
-        {finished.length === 0 ? (
+        <SectionHeader title="Draw results" aside={`${drawn.length} drawn`} />
+        {drawn.length === 0 ? (
           <p className="hud-panel p-5 text-sm text-muted">
-            No block has finished yet - the first secret is revealed after mint #1,000.
+            No draw yet - the first one runs when mint #1,000 lands.
           </p>
         ) : (
-          finished.map((b) => (
-            <div key={b.block} className="hud-panel flex flex-col gap-3 p-5">
+          drawn.map((b) => (
+            <div key={b.block} className="hud-panel flex flex-col gap-3 p-5" style={tint("var(--hud-amber)")}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="hud-label">Block {b.block} · mints {b.mints.replace("-", "–")}</span>
-                <span className="hud-value text-[color:var(--hud-amber)]">winning mint #{b.winningMint}</span>
+                <span className="hud-label">Block {b.block} · {b.poolSize} mints in the draw</span>
+                <span className="hud-value text-[color:var(--hud-amber)]">Winner: mint #{b.winningMint}</span>
               </div>
+              <p className="text-sm text-muted">
+                Bonus One of One {b.bonusAsset ? "sent" : "being sent"} to{" "}
+                <span className="mono text-foreground">{shortWallet(b.bonusRecipient!)}</span>
+                {b.bonusAsset && (
+                  <>
+                    {" · "}
+                    <a href={explorerAddress(b.bonusAsset)} target="_blank" rel="noopener noreferrer" className="underline">
+                      view NFT ↗
+                    </a>
+                  </>
+                )}
+              </p>
               <div>
                 <div className="hud-label">Commitment</div>
                 <CopyText value={b.commitment} />
@@ -144,11 +158,13 @@ export default async function FairnessPage() {
                 <div className="hud-label">Revealed secret</div>
                 <CopyText value={b.secret!} />
               </div>
-              {b.bonusAsset && (
-                <a href={explorerAddress(b.bonusAsset)} target="_blank" rel="noopener noreferrer" className="mono text-xs underline">
-                  Bonus went to mint #{b.awardedToMint} ↗
+              <div>
+                <div className="hud-label">Closing blockhash · slot {b.closeSlot?.toLocaleString()}</div>
+                <CopyText value={b.closeBlockhash!} />
+                <a href={explorerTx(b.closeSignature!)} target="_blank" rel="noopener noreferrer" className="mono mt-1 inline-block text-xs underline">
+                  closing mint transaction ↗
                 </a>
-              )}
+              </div>
             </div>
           ))
         )}
@@ -158,17 +174,23 @@ export default async function FairnessPage() {
       <section className="flex flex-col gap-4">
         <SectionHeader title="Verify it yourself" />
         <div className="hud-panel flex flex-col gap-3 p-5 text-sm text-muted">
-          <p>For any finished block:</p>
+          <p>For any drawn block:</p>
           <p>
-            <span className="text-foreground">1.</span> SHA-256 of the revealed secret must equal the commitment.
+            <span className="text-foreground">1.</span> SHA-256 of the revealed secret must equal the commitment
+            published before the block started.
           </p>
           <p>
-            <span className="text-foreground">2.</span> Take SHA-256 of <span className="mono text-foreground">winner:</span>{" "}
-            followed by the secret. Read its first 12 hex digits as a number, divide by the size of the draw range, and
-            add the remainder to the range&apos;s first mint. That&apos;s the winning mint.
+            <span className="text-foreground">2.</span> Take SHA-256 of <span className="mono text-foreground">winner:</span>
+            {" + secret + "}
+            <span className="mono text-foreground">:</span>
+            {" + closing blockhash. Read its first 12 hex digits as a number and divide by the number of mints in the draw - the remainder is the winner's position in the pool (lowest mint number first)."}
           </p>
           <p>
-            Machine-readable record:{" "}
+            <span className="text-foreground">3.</span> The closing blockhash is public on Solana: look up the slot of
+            the closing mint transaction.
+          </p>
+          <p>
+            Full record, including each pool:{" "}
             <a href="/api/mint/fairness" className="mono underline hover:text-foreground">
               /api/mint/fairness
             </a>
