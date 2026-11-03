@@ -5,7 +5,7 @@ import Image from "next/image";
 import { fastImage } from "@/lib/nft-image";
 import { Connection } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { fetchToken, findAssociatedTokenPda, mplToolbox } from "@metaplex-foundation/mpl-toolbox";
@@ -24,6 +24,7 @@ type Phase = "idle" | "confirm" | "buying" | "done" | "error" | "stuck";
 
 export function LandMarket() {
   const wallet = useWallet();
+  const { setVisible: openWalletModal } = useWalletModal();
   const [mounted, setMounted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
@@ -107,7 +108,14 @@ export function LandMarket() {
   }
 
   async function buy() {
-    if (!selected || !wallet.publicKey) return;
+    if (!selected) return;
+    // The market's wallet connection is separate from the site sign-in and
+    // doesn't auto-reconnect - this used to return silently, so "Confirm &
+    // sign" looked dead. Ask to connect instead.
+    if (!wallet.publicKey) {
+      openWalletModal(true);
+      return;
+    }
     setPhase("buying");
     setError(null);
     const owner = wallet.publicKey.toBase58();
@@ -261,13 +269,22 @@ export function LandMarket() {
                     {SALES_UNAVAILABLE_MESSAGE}
                   </p>
                 )}
+                {!wallet.publicKey && (
+                  <p className="border border-[color:var(--hud-amber)]/40 p-3 text-sm text-foreground">
+                    Connect the wallet holding your $CHIMP to buy this property.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     className="hud-btn flex-1"
                     disabled={salesAvailable === false}
                     onClick={() => void buy()}
                   >
-                    {salesAvailable === false ? "Temporarily unavailable" : "Confirm & sign"}
+                    {salesAvailable === false
+                      ? "Temporarily unavailable"
+                      : wallet.publicKey
+                        ? "Confirm & sign"
+                        : "Connect wallet"}
                   </button>
                   <button className="hud-btn hud-btn-ghost" onClick={() => setSelected(null)}>
                     Cancel
