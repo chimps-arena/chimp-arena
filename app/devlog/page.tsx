@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { PageHeader, SectionHeader, tint } from "@/components/hud";
-import { DEVLOG_COOKIE, devlogPosts, devlogToken, tokenValid } from "@/lib/devlog";
+import { DEVLOG_COOKIE, devlogPosts, devlogTasks, devlogToken, tokenValid, type DevlogTask } from "@/lib/devlog";
 import shipped from "@/lib/devlog.json";
-import { lockDevlog, unlockDevlog } from "./actions";
+import { addTask, completeTask, lockDevlog, reopenTask, unlockDevlog } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +57,67 @@ function Body({ text }: { text: string }) {
   return <div className="flex flex-col gap-2 text-sm text-muted">{out}</div>;
 }
 
+const field = "border border-border bg-surface-2/50 px-3 py-2 text-sm";
+
+function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string }) {
+  const open = tasks?.filter((t) => !t.doneAt) ?? [];
+  const done = tasks?.filter((t) => t.doneAt) ?? [];
+  return (
+    <section id="todo" className="flex scroll-mt-24 flex-col gap-4">
+      <SectionHeader title="To-do" aside={tasks ? `${open.length} open` : undefined} />
+
+      <form action={addTask} className="hud-panel flex flex-col gap-3 p-5">
+        <input name="title" required maxLength={300} placeholder="What needs fixing or doing?" className={field} />
+        <textarea name="details" maxLength={2000} rows={2} placeholder="Details, links, where it happens (optional)" className={field} />
+        <div className="flex flex-wrap items-center gap-3">
+          <input name="addedBy" maxLength={40} defaultValue={name} placeholder="Your name" className={`${field} w-40`} />
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input type="checkbox" name="urgent" /> Urgent
+          </label>
+          <button className="hud-btn ml-auto !py-2 !text-[0.7rem]">Add task</button>
+        </div>
+      </form>
+
+      {tasks === null && <div className="hud-panel p-5 text-sm text-bad">The to-do list couldn&apos;t load. Try again shortly.</div>}
+      {tasks && open.length === 0 && <div className="hud-panel p-5 text-sm text-muted">Nothing open.</div>}
+      {open.map((t) => (
+        <div key={t.id} className="hud-panel flex flex-col gap-3 p-5" style={t.urgent ? tint("var(--bad)") : undefined}>
+          <div className="flex flex-wrap items-baseline gap-2">
+            {t.urgent && <span className="hud-tag" style={tint("var(--bad)")}>Urgent</span>}
+            <span className="font-semibold">{t.title}</span>
+          </div>
+          {t.details && <p className="whitespace-pre-line text-sm text-muted">{t.details}</p>}
+          <div className="text-xs text-muted">
+            #{t.id} · added {day(t.createdAt)}{t.addedBy && ` by ${t.addedBy}`}
+          </div>
+          <form action={completeTask.bind(null, t.id)} className="flex flex-wrap gap-2">
+            <input name="note" maxLength={500} placeholder="What was done (optional)" className={`${field} min-w-0 flex-1`} />
+            <button className="hud-btn hud-btn-ghost !py-2 !text-[0.7rem]">Mark done</button>
+          </form>
+        </div>
+      ))}
+
+      {done.length > 0 && (
+        <details className="hud-panel p-5">
+          <summary className="hud-label cursor-pointer">Done ({done.length})</summary>
+          <ul className="mt-3 flex flex-col gap-3">
+            {done.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-baseline gap-2 text-sm">
+                <span className="text-muted line-through">{t.title}</span>
+                {t.doneNote && <span className="text-good">{t.doneNote}</span>}
+                <span className="text-xs text-muted">{day(t.doneAt!)}</span>
+                <form action={reopenTask.bind(null, t.id)} className="ml-auto">
+                  <button className="text-xs text-muted underline hover:text-foreground">Reopen</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
 function Locked({ wrong, configured }: { wrong: boolean; configured: boolean }) {
   return (
     <div className="hud">
@@ -82,22 +143,24 @@ function Locked({ wrong, configured }: { wrong: boolean; configured: boolean }) 
 }
 
 export default async function DevlogPage({ searchParams }: { searchParams: Promise<{ wrong?: string }> }) {
-  const cookie = (await cookies()).get(DEVLOG_COOKIE)?.value;
-  if (!tokenValid(cookie)) {
+  const jar = await cookies();
+  if (!tokenValid(jar.get(DEVLOG_COOKIE)?.value)) {
     return <Locked wrong={(await searchParams).wrong === "1"} configured={devlogToken() !== null} />;
   }
 
-  const posts = await devlogPosts();
+  const [posts, tasks] = await Promise.all([devlogPosts(), devlogTasks()]);
   const byDate = new Map<string, typeof shipped>();
   for (const e of shipped) byDate.set(e.date, [...(byDate.get(e.date) ?? []), e]);
 
   return (
     <div className="hud mx-auto flex max-w-3xl flex-col gap-8">
-      <PageHeader kicker="Team only · progress" title="Dev log" blurb="Written updates on what's happening and what's needed, then everything that has shipped, newest first.">
+      <PageHeader kicker="Team only · progress" title="Dev log" blurb="The team's to-do list, written updates on what's happening and what's needed, then everything that has shipped.">
         <form action={lockDevlog}>
           <button className="hud-btn hud-btn-ghost !py-2 !text-[0.7rem]">Lock</button>
         </form>
       </PageHeader>
+
+      <TodoList tasks={tasks} name={jar.get("devlog_name")?.value ?? ""} />
 
       <section className="flex flex-col gap-4">
         <SectionHeader title="Updates" aside={posts ? `${posts.length} posts` : undefined} />

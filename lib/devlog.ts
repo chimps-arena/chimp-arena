@@ -41,6 +41,40 @@ export function tokenValid(cookie: string | undefined): boolean {
   return timingSafeEqual(Buffer.from(cookie), Buffer.from(want));
 }
 
+export interface DevlogTask {
+  id: number;
+  createdAt: string;
+  title: string;
+  details: string | null;
+  addedBy: string | null;
+  urgent: boolean;
+  doneAt: string | null;
+  doneNote: string | null;
+}
+
+/** Open tasks (urgent first, oldest first), then the 30 most recently done. */
+export async function devlogTasks(): Promise<DevlogTask[] | null> {
+  const db = supabaseAdmin();
+  const cols = "id, created_at, title, details, added_by, urgent, done_at, done_note";
+  const [open, done] = await Promise.all([
+    db.from("devlog_tasks").select(cols).is("done_at", null)
+      .order("urgent", { ascending: false }).order("created_at", { ascending: true }),
+    db.from("devlog_tasks").select(cols).not("done_at", "is", null)
+      .order("done_at", { ascending: false }).limit(30),
+  ]);
+  if (open.error || done.error) return null;
+  return [...open.data, ...done.data].map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    title: r.title,
+    details: r.details,
+    addedBy: r.added_by,
+    urgent: r.urgent,
+    doneAt: r.done_at,
+    doneNote: r.done_note,
+  }));
+}
+
 export async function devlogPosts(limit = 20): Promise<DevlogPost[] | null> {
   const { data, error } = await supabaseAdmin()
     .from("devlog_posts")
