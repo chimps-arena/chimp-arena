@@ -58,13 +58,16 @@ function Body({ text }: { text: string }) {
 }
 
 const field = "border border-border bg-surface-2/50 px-3 py-2 text-sm";
+/** Side by side on wide screens, each column scrolls on its own. */
+const column = "flex min-w-0 flex-col gap-4 lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-2";
 
 function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string }) {
   const open = tasks?.filter((t) => !t.doneAt) ?? [];
   const done = tasks?.filter((t) => t.doneAt) ?? [];
   return (
-    <section id="todo" className="flex scroll-mt-24 flex-col gap-4">
+    <section id="todo" className="flex min-w-0 scroll-mt-24 flex-col gap-4">
       <SectionHeader title="To-do" aside={tasks ? `${open.length} open` : undefined} />
+      <div className={column}>
 
       <form action={addTask} className="hud-panel flex flex-col gap-3 p-5">
         <input name="title" required maxLength={300} placeholder="What needs fixing or doing?" className={field} />
@@ -114,6 +117,7 @@ function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string })
           </ul>
         </details>
       )}
+      </div>
     </section>
   );
 }
@@ -153,33 +157,37 @@ export default async function DevlogPage({ searchParams }: { searchParams: Promi
   for (const e of shipped) byDate.set(e.date, [...(byDate.get(e.date) ?? []), e]);
 
   return (
-    <div className="hud mx-auto flex max-w-3xl flex-col gap-8">
+    <div className="hud mx-auto flex max-w-6xl flex-col gap-8">
       <PageHeader kicker="Team only · progress" title="Dev log" blurb="The team's to-do list, written updates on what's happening and what's needed, then everything that has shipped.">
         <form action={lockDevlog}>
           <button className="hud-btn hud-btn-ghost !py-2 !text-[0.7rem]">Lock</button>
         </form>
       </PageHeader>
 
-      <TodoList tasks={tasks} name={jar.get("devlog_name")?.value ?? ""} />
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-6">
+        <TodoList tasks={tasks} name={jar.get("devlog_name")?.value ?? ""} />
 
-      <section className="flex flex-col gap-4">
-        <SectionHeader title="Updates" aside={posts ? `${posts.length} posts` : undefined} />
-        {posts === null && <div className="hud-panel p-5 text-sm text-bad">Updates couldn&apos;t load. Try again shortly.</div>}
-        {posts?.length === 0 && <div className="hud-panel p-5 text-sm text-muted">No updates posted yet.</div>}
-        {posts?.map((p) => (
-          <article key={p.id} className="hud-panel flex flex-col gap-3 p-5">
-            <div>
-              <div className="hud-label">{day(p.postedAt)}</div>
-              <h2 className="mt-1 text-xl font-bold">{p.title}</h2>
-            </div>
-            <Body text={p.body} />
-          </article>
-        ))}
-      </section>
+        <section className="flex min-w-0 flex-col gap-4">
+          <SectionHeader title="Updates" aside={posts ? `${posts.length} posts` : undefined} />
+          <div className={column}>
+            {posts === null && <div className="hud-panel p-5 text-sm text-bad">Updates couldn&apos;t load. Try again shortly.</div>}
+            {posts?.length === 0 && <div className="hud-panel p-5 text-sm text-muted">No updates posted yet.</div>}
+            {posts?.map((p) => (
+              <article key={p.id} className="hud-panel flex flex-col gap-3 p-5">
+                <div>
+                  <div className="hud-label">{day(p.postedAt)}</div>
+                  <h2 className="mt-1 text-xl font-bold">{p.title}</h2>
+                </div>
+                <Body text={p.body} />
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
 
       <section className="flex flex-col gap-4">
         <SectionHeader title="Shipped" aside={`${shipped.length} changes`} />
-        <div className="hud-panel flex flex-col gap-5 p-5">
+        <div className="hud-panel flex max-h-[32rem] flex-col gap-5 overflow-y-auto p-5">
           {[...byDate].map(([date, items]) => (
             <div key={date}>
               <div className="hud-label">{day(date)}</div>
