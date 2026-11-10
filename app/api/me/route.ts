@@ -49,12 +49,15 @@ export async function GET() {
   const today = await todayStatus(session.wallet);
   const db = supabaseAdmin();
 
-  // This week's live XP split, for the "projected CHIMP" figure.
+  // This week's live XP split, for the "projected CHIMP" figure. Guests
+  // don't share the weekly pool (see /api/rewards/freeze), so they neither
+  // dilute it nor get a projection.
   const weekStart = currentWeekStart();
   const { data: weekRows } = await db
     .from("weekly_xp_live")
     .select("wallet, xp_earned")
-    .eq("week_start", weekStart);
+    .eq("week_start", weekStart)
+    .not("wallet", "like", "guest_%");
   const rows = weekRows ?? [];
   const poolXp = rows.reduce((s, r) => s + (r.xp_earned ?? 0), 0);
   const myWeekXp = rows.find((r) => r.wallet === session.wallet)?.xp_earned ?? 0;

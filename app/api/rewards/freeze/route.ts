@@ -64,7 +64,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const list = (scores ?? []).filter((r) => (r.xp_earned ?? 0) > 0);
+  // Guest sessions cost nothing to create, so only real wallets share the pool.
+  const list = (scores ?? []).filter(
+    (r) => (r.xp_earned ?? 0) > 0 && !String(r.wallet).startsWith("guest_"),
+  );
   const weekIndex = weekIndexOf(weekStart);
   const poolBase = toBaseUnits(weeklyPool(weekIndex));
   const totalXp = list.reduce((s, r) => s + (r.xp_earned ?? 0), 0);

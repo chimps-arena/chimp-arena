@@ -1,0 +1,807 @@
+[
+ {
+  "hash": "17cf8f2",
+  "date": "2026-11-03",
+  "kind": "Fix",
+  "area": "Market",
+  "text": "Buy asked nothing when the wallet wasn't connected"
+ },
+ {
+  "hash": "25ef6b0",
+  "date": "2026-11-01",
+  "kind": "Fix",
+  "area": "Images",
+  "text": "Web copies for the remaining 33 NFT images (162 of 163)"
+ },
+ {
+  "hash": "c24ecbb",
+  "date": "2026-11-01",
+  "kind": "Fix",
+  "area": "Images",
+  "text": "Static web copies of NFT art; /logo brand page for listings"
+ },
+ {
+  "hash": "96d8f70",
+  "date": "2026-11-01",
+  "kind": "Faster",
+  "area": "Images",
+  "text": "Serve NFT art from our CDN instead of the slow Irys gateway"
+ },
+ {
+  "hash": "61902e6",
+  "date": "2026-11-01",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Bonus One of One drawn after each block of 1,000 fills"
+ },
+ {
+  "hash": "45ce416",
+  "date": "2026-11-01",
+  "kind": "Fix",
+  "area": "My Assets",
+  "text": "Astrochimp images failed to load"
+ },
+ {
+  "hash": "284ed89",
+  "date": "2026-11-01",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Astrochimp mint price 1,000 -> 10,000 CHIMP"
+ },
+ {
+  "hash": "6e8fdb7",
+  "date": "2026-10-31",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Readable /fairness page for the bonus draw"
+ },
+ {
+  "hash": "9cfbb84",
+  "date": "2026-10-31",
+  "kind": "New",
+  "area": "Site design",
+  "text": "HUD theme for Mint, Market, Resources and My Assets"
+ },
+ {
+  "hash": "4a596a0",
+  "date": "2026-10-31",
+  "kind": "Fix",
+  "area": "Arena",
+  "text": "Only wallet players rank; brake on guest sign-up floods"
+ },
+ {
+  "hash": "b50d787",
+  "date": "2026-10-31",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Provably-fair secret draw for the bonus One of One"
+ },
+ {
+  "hash": "fb80c89",
+  "date": "2026-10-31",
+  "kind": "New",
+  "area": "Site",
+  "text": "Share image, socials + one-click CA, Buy $CHIMP everywhere, hide 1-of-1 cadence"
+ },
+ {
+  "hash": "7e4f437",
+  "date": "2026-10-30",
+  "kind": "New",
+  "area": "Site design",
+  "text": "HUD theme for Mission Control, leaderboards, crews, bank and nav; Deep Core offline"
+ },
+ {
+  "hash": "0e85a68",
+  "date": "2026-10-30",
+  "kind": "Fix",
+  "area": "Minting, Properties",
+  "text": "Wallet signs first, buyers pay property rent, NFTs join collections"
+ },
+ {
+  "hash": "1865d17",
+  "date": "2026-10-26",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Stop granting the delegate authority on the buyer's own asset"
+ },
+ {
+  "hash": "97580f1",
+  "date": "2026-10-26",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Split buyer-paid mint into two transactions to avoid a Phantom security flag"
+ },
+ {
+  "hash": "ebacfcf",
+  "date": "2026-10-26",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Pass authority explicitly in the buyer-paid mint transaction"
+ },
+ {
+  "hash": "bb3c9bc",
+  "date": "2026-10-26",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Buyer pays their own mint rent, not the delegate wallet"
+ },
+ {
+  "hash": "8aec170",
+  "date": "2026-10-25",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Stop broken NFT thumbnails in wallets/Explorer"
+ },
+ {
+  "hash": "e6f14b9",
+  "date": "2026-10-25",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Real reveal animation + sound on successful mint"
+ },
+ {
+  "hash": "d2d77c0",
+  "date": "2026-10-21",
+  "kind": "New",
+  "area": "3D world",
+  "text": "J2 CI pipeline + B3 - the real Colyseus MiningRoom"
+ },
+ {
+  "hash": "580012c",
+  "date": "2026-10-21",
+  "kind": "Fix",
+  "area": "repo",
+  "text": "Ignore node_modules in every workspace, not just root"
+ },
+ {
+  "hash": "b7d5962",
+  "date": "2026-10-21",
+  "kind": "New",
+  "area": "3D world",
+  "text": "B1+B2 - shared/ package, server/ stub, Git LFS"
+ },
+ {
+  "hash": "e1e81a3",
+  "date": "2026-10-16",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Stop treating RPC failures as an empty $CHIMP wallet"
+ },
+ {
+  "hash": "2b1add5",
+  "date": "2026-10-16",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Stop reporting real RPC failures as a balance of 0"
+ },
+ {
+  "hash": "a8d8891",
+  "date": "2026-10-15",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Never report a successful mint as a failure"
+ },
+ {
+  "hash": "113ee9b",
+  "date": "2026-10-14",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Restore and retire the Sep-29 style-variant art"
+ },
+ {
+  "hash": "d9a4e8f",
+  "date": "2026-10-14",
+  "kind": "New",
+  "area": "Mining",
+  "text": "3D scene + server-authoritative anti-cheat for depth"
+ },
+ {
+  "hash": "e8e8f5a",
+  "date": "2026-10-09",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Timeout Phantom connect/sign calls instead of hanging forever"
+ },
+ {
+  "hash": "7a680b3",
+  "date": "2026-10-09",
+  "kind": "New",
+  "area": "Mining",
+  "text": "Atmospheric dig rendering + live price ticker sidebar"
+ },
+ {
+  "hash": "d8da26f",
+  "date": "2026-10-09",
+  "kind": "New",
+  "area": "Mining",
+  "text": "Pool-priced resource market + tile-digging game"
+ },
+ {
+  "hash": "876690b",
+  "date": "2026-10-07",
+  "kind": "Fix",
+  "area": "My Assets",
+  "text": "Stop showing the same generic image for every NFT"
+ },
+ {
+  "hash": "8319629",
+  "date": "2026-10-07",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Use wallet.sendTransaction instead of Umi's sign+broadcast"
+ },
+ {
+  "hash": "68f6c1f",
+  "date": "2026-10-05",
+  "kind": "Fix",
+  "area": "Site",
+  "text": "Give the generic wallet error message real guidance"
+ },
+ {
+  "hash": "bdeedfc",
+  "date": "2026-10-05",
+  "kind": "Fix",
+  "area": "Blockchain",
+  "text": "Set maxRetries on every transaction send"
+ },
+ {
+  "hash": "6f3ea5c",
+  "date": "2026-10-05",
+  "kind": "New",
+  "area": "NFTs",
+  "text": "Holo-card tilt effect on the Astrochimps grid"
+ },
+ {
+  "hash": "5efb912",
+  "date": "2026-10-04",
+  "kind": "New",
+  "area": "Wallet",
+  "text": "Transaction tracker, error taxonomy, no-double-pay retries"
+ },
+ {
+  "hash": "4b330f7",
+  "date": "2026-10-04",
+  "kind": "Fix",
+  "area": "Names",
+  "text": "Dashboard was missing the wallet-adapter provider"
+ },
+ {
+  "hash": "6ef8e36",
+  "date": "2026-10-03",
+  "kind": "New",
+  "area": "Site",
+  "text": "Port legal/whitepaper pages, premium homepage redesign"
+ },
+ {
+  "hash": "c91d842",
+  "date": "2026-09-30",
+  "kind": "Fix",
+  "area": "db",
+  "text": "Close Security Advisor RLS/privilege gaps"
+ },
+ {
+  "hash": "6f2f8ad",
+  "date": "2026-09-30",
+  "kind": "New",
+  "area": "players",
+  "text": "Paid handle renames after a 3-day free trial"
+ },
+ {
+  "hash": "0d5e5b0",
+  "date": "2026-09-29",
+  "kind": "New",
+  "area": "Minting",
+  "text": "One of One designs reuse and shuffle instead of depleting"
+ },
+ {
+  "hash": "af2474d",
+  "date": "2026-09-29",
+  "kind": "Look",
+  "area": "",
+  "text": "Remove em-dashes and hyphen-joined clauses from all page copy"
+ },
+ {
+  "hash": "c2a8641",
+  "date": "2026-09-29",
+  "kind": "Fix",
+  "area": "auth",
+  "text": "Single-line sign-in message, Phantom couldn't render the old one"
+ },
+ {
+  "hash": "dc9634f",
+  "date": "2026-09-29",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Art variety for Standard/Rare, real Astrochimp art live"
+ },
+ {
+  "hash": "847ea10",
+  "date": "2026-09-27",
+  "kind": "Fix",
+  "area": "properties",
+  "text": "Repair broken image links baked into already-uploaded metadata"
+ },
+ {
+  "hash": "d99027e",
+  "date": "2026-09-27",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Rarity tiers for Astrochimps - Standard, Rare, One of One"
+ },
+ {
+  "hash": "b401117",
+  "date": "2026-09-26",
+  "kind": "New",
+  "area": "Properties",
+  "text": "Freeze reserved properties permanently at mint time"
+ },
+ {
+  "hash": "e86996a",
+  "date": "2026-09-26",
+  "kind": "New",
+  "area": "assets",
+  "text": "Restore resale listing UI, scoped to legacy properties only"
+ },
+ {
+  "hash": "d6a2506",
+  "date": "2026-09-26",
+  "kind": "New",
+  "area": "Market",
+  "text": "Consolidate Land into Market, retire the old buy/browse flow"
+ },
+ {
+  "hash": "19e6869",
+  "date": "2026-09-26",
+  "kind": "Fix",
+  "area": "properties",
+  "text": "Stop images cropping, separate old/new property systems"
+ },
+ {
+  "hash": "cbfa5eb",
+  "date": "2026-09-26",
+  "kind": "Fix",
+  "area": "properties",
+  "text": "Use Irys's gateway, not arweave.net, for uploaded art"
+ },
+ {
+  "hash": "102ca1f",
+  "date": "2026-09-25",
+  "kind": "New",
+  "area": "Properties",
+  "text": "Storefront page for buying the new property NFTs"
+ },
+ {
+  "hash": "8f7ef38",
+  "date": "2026-09-24",
+  "kind": "New",
+  "area": "properties",
+  "text": "Auto-detect art files by property id"
+ },
+ {
+  "hash": "9187f81",
+  "date": "2026-09-24",
+  "kind": "New",
+  "area": "properties",
+  "text": "Arweave upload pipeline for permanent property art"
+ },
+ {
+  "hash": "6f9ed12",
+  "date": "2026-09-24",
+  "kind": "New",
+  "area": "properties",
+  "text": "Add the buy/mint API for the new property NFTs"
+ },
+ {
+  "hash": "a0405fb",
+  "date": "2026-09-24",
+  "kind": "New",
+  "area": "properties",
+  "text": "Stand up the Properties NFT collection infrastructure"
+ },
+ {
+  "hash": "6ababc9",
+  "date": "2026-09-20",
+  "kind": "New",
+  "area": "assets",
+  "text": "Add \"My Assets\" page - see everything a player owns"
+ },
+ {
+  "hash": "748bc1f",
+  "date": "2026-09-20",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Make new Astrochimps actually join the collection, royalty-locked"
+ },
+ {
+  "hash": "0251ab0",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "admin",
+  "text": "Wire up the wallet-adapter provider create-collection needs"
+ },
+ {
+  "hash": "696f5e2",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "admin",
+  "text": "Correct stale copy telling people the Ledger must sign this"
+ },
+ {
+  "hash": "f89bce9",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "nav",
+  "text": "Restore a mobile Disconnect control, spaced away from the menu"
+ },
+ {
+  "hash": "2593180",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Make hidden/sm: utilities actually override custom CSS classes"
+ },
+ {
+  "hash": "5d2c6ab",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Fix the actual overflow on the landing page, not the symptom"
+ },
+ {
+  "hash": "34c6d62",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Clip horizontal overflow instead of letting the page scroll right"
+ },
+ {
+  "hash": "3851e4b",
+  "date": "2026-09-20",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Add the missing viewport meta tag"
+ },
+ {
+  "hash": "74b9622",
+  "date": "2026-09-19",
+  "kind": "Fix",
+  "area": "Blockchain",
+  "text": "Decouple who pays for collection creation from who controls it"
+ },
+ {
+  "hash": "2ab3a31",
+  "date": "2026-09-19",
+  "kind": "New",
+  "area": "Blockchain",
+  "text": "Astrochimps collection setup, 3% royalty to Astro Corp"
+ },
+ {
+  "hash": "6eb66bb",
+  "date": "2026-09-19",
+  "kind": "New",
+  "area": "Market",
+  "text": "Property resale - list, delist, buy from another player"
+ },
+ {
+  "hash": "05a3486",
+  "date": "2026-09-19",
+  "kind": "New",
+  "area": "Blockchain",
+  "text": "Tag all Astro Corp payments with an identifying memo"
+ },
+ {
+  "hash": "992eb2e",
+  "date": "2026-09-19",
+  "kind": "Fix",
+  "area": "Site design",
+  "text": "Card-featured border overlay was swallowing every click inside it"
+ },
+ {
+  "hash": "efa10c3",
+  "date": "2026-09-18",
+  "kind": "New",
+  "area": "bank",
+  "text": "Safu Bank page - $CHIMP + Gold together, with real activity history"
+ },
+ {
+  "hash": "9c5456d",
+  "date": "2026-09-18",
+  "kind": "New",
+  "area": "game",
+  "text": "Gold resource + rank ladder wired to real player data"
+ },
+ {
+  "hash": "7c15e1c",
+  "date": "2026-09-17",
+  "kind": "Fix",
+  "area": "Market",
+  "text": "Resolve property image server-side, not via client-side retry"
+ },
+ {
+  "hash": "3116bb6",
+  "date": "2026-09-17",
+  "kind": "Fix",
+  "area": "Market",
+  "text": "PropertyThumb tries jpg/png/jpeg/webp, not just jpg"
+ },
+ {
+  "hash": "8a3e5b4",
+  "date": "2026-09-16",
+  "kind": "New",
+  "area": "Market",
+  "text": "20 new listings, 13 new property types, blurbs, held status"
+ },
+ {
+  "hash": "d2c41a5",
+  "date": "2026-09-16",
+  "kind": "New",
+  "area": "Market",
+  "text": "Real property photos with placeholder fallback + card polish"
+ },
+ {
+  "hash": "46d3608",
+  "date": "2026-09-15",
+  "kind": "New",
+  "area": "Market",
+  "text": "Illustrated property cards (type-tinted geometric art)"
+ },
+ {
+  "hash": "73b61c0",
+  "date": "2026-09-14",
+  "kind": "New",
+  "area": "Market",
+  "text": "Primary property market - buy plots with"
+ },
+ {
+  "hash": "4772eec",
+  "date": "2026-09-11",
+  "kind": "New",
+  "area": "Site design",
+  "text": "Slow revolving nebula sweep behind the whole app"
+ },
+ {
+  "hash": "10f8e2f",
+  "date": "2026-09-10",
+  "kind": "Fix",
+  "area": "Mobile",
+  "text": "Mobile nav menu; tame Unbounded headings + CTAs + scenes on phones"
+ },
+ {
+  "hash": "218c9ab",
+  "date": "2026-09-10",
+  "kind": "New",
+  "area": "Site design",
+  "text": "Drop decorative emoji; geometric glyphs + initial tiles; faint scenes on data screens"
+ },
+ {
+  "hash": "9a623ec",
+  "date": "2026-09-10",
+  "kind": "New",
+  "area": "type",
+  "text": "Unbounded headings, Sora body, Space Mono readouts; uppercase CTAs"
+ },
+ {
+  "hash": "9159ef7",
+  "date": "2026-09-10",
+  "kind": "Fix",
+  "area": "Site design",
+  "text": "Move base bg to <html> so the fixed backdrop shows"
+ },
+ {
+  "hash": "bbf64fb",
+  "date": "2026-09-10",
+  "kind": "Rework",
+  "area": "Site design",
+  "text": "Single route-aware AppScene in layout, not per-page"
+ },
+ {
+  "hash": "39aa3dc",
+  "date": "2026-09-10",
+  "kind": "Fix",
+  "area": "Site design",
+  "text": "Lookout-flag scene saved as .jpg"
+ },
+ {
+  "hash": "b26b120",
+  "date": "2026-09-10",
+  "kind": "New",
+  "area": "Site design",
+  "text": "Atmospheric scene backgrounds on entry surfaces"
+ },
+ {
+  "hash": "37b8c1c",
+  "date": "2026-09-10",
+  "kind": "New",
+  "area": "nav",
+  "text": "Link the Mint page from the nav bar + a dashboard card"
+ },
+ {
+  "hash": "6daa67c",
+  "date": "2026-09-10",
+  "kind": "New",
+  "area": "nav",
+  "text": "Read real on-chain \\ balance after connect"
+ },
+ {
+  "hash": "23c489f",
+  "date": "2026-09-10",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Gate wallet UI behind mount to kill the hydration mismatch"
+ },
+ {
+  "hash": "05efe65",
+  "date": "2026-09-09",
+  "kind": "Fix",
+  "area": "Minting",
+  "text": "Restore SolanaProvider scoped to /mint; set metadataBase"
+ },
+ {
+  "hash": "62427a6",
+  "date": "2026-09-09",
+  "kind": "New",
+  "area": "brand",
+  "text": "Add logo + character art, favicon, OG card"
+ },
+ {
+  "hash": "650d19c",
+  "date": "2026-09-09",
+  "kind": "New",
+  "area": "brand",
+  "text": "Wire in the CHIMP logo + Astrochimp character assets"
+ },
+ {
+  "hash": "5b93af2",
+  "date": "2026-09-09",
+  "kind": "New",
+  "area": "Minting",
+  "text": "Mainnet Astrochimp test mint"
+ },
+ {
+  "hash": "1674db5",
+  "date": "2026-09-04",
+  "kind": "New",
+  "area": "Blockchain",
+  "text": "Generate devnet $CHIMP mint-authority keypair"
+ },
+ {
+  "hash": "f4077d9",
+  "date": "2026-09-02",
+  "kind": "New",
+  "area": "auth",
+  "text": "Wallet-free guest login"
+ },
+ {
+  "hash": "2da65ae",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Mobile -> open in Phantom's in-app browser (drop the deeplink handshake)"
+ },
+ {
+  "hash": "3de738b",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Clean redirect paths for Phantom deeplink"
+ },
+ {
+  "hash": "f455764",
+  "date": "2026-09-02",
+  "kind": "New",
+  "area": "Wallet",
+  "text": "Phantom mobile deeplink sign-in"
+ },
+ {
+  "hash": "be381f2",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Revert auth path to direct Phantom (window.phantom.solana)"
+ },
+ {
+  "hash": "91183c2",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Connect Phantom directly, drop the modal"
+ },
+ {
+  "hash": "10452bb",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Disable autoConnect — explicit connect only"
+ },
+ {
+  "hash": "3898d46",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Make sign-in resilient to repeat connects"
+ },
+ {
+  "hash": "62b872b",
+  "date": "2026-09-02",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "List Phantom adapter explicitly (Solflare via Standard)"
+ },
+ {
+  "hash": "449e193",
+  "date": "2026-09-01",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Always open the picker; add explicit 'Sign in with wallet' fallback"
+ },
+ {
+  "hash": "d4e78fb",
+  "date": "2026-09-01",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Drop explicit adapters, use Wallet Standard only"
+ },
+ {
+  "hash": "c95e4e9",
+  "date": "2026-09-01",
+  "kind": "New",
+  "area": "economy",
+  "text": "Lock v1 model — spend-only CHIMP, no play-to-earn"
+ },
+ {
+  "hash": "aa1238f",
+  "date": "2026-09-01",
+  "kind": "New",
+  "area": "engagement",
+  "text": "Daily streak system"
+ },
+ {
+  "hash": "ab9a6df",
+  "date": "2026-08-31",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "List Phantom + Solflare explicitly so the connect modal never dead-ends"
+ },
+ {
+  "hash": "06c67ca",
+  "date": "2026-08-31",
+  "kind": "New",
+  "area": "Site design",
+  "text": "Neon space-arcade redesign across all player screens"
+ },
+ {
+  "hash": "d2b126f",
+  "date": "2026-08-30",
+  "kind": "New",
+  "area": "",
+  "text": "Lock Season 1 economics (Group D #19-21 approved)"
+ },
+ {
+  "hash": "cb828f7",
+  "date": "2026-08-30",
+  "kind": "New",
+  "area": "Group G off-chain",
+  "text": "Weekly reward freeze pipeline (#34-36 partial)"
+ },
+ {
+  "hash": "6137027",
+  "date": "2026-08-28",
+  "kind": "New",
+  "area": "Group F",
+  "text": "Wallet-adapter refactor (#25-27,29,30)"
+ },
+ {
+  "hash": "ed30223",
+  "date": "2026-08-28",
+  "kind": "New",
+  "area": "",
+  "text": "Handle editing (#10) + tighter anti-cheat (#9)"
+ },
+ {
+  "hash": "520ae1d",
+  "date": "2026-08-28",
+  "kind": "New",
+  "area": "P1",
+  "text": "CHIMP appears in UI (Group E #22-24) - economy.ts helpers, /api/me week projection from weekly_xp_live, dashboard This-week stat + copy, nav-bar CHIMP chip"
+ }
+]
