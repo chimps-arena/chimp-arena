@@ -93,7 +93,7 @@ export function ReactionGame({ complete }: GameContext) {
       </div>
       <button
         onClick={handleClick}
-        className={`flex h-64 w-full select-none items-center justify-center rounded-2xl text-xl font-black transition-colors ${bg}`}
+        className={`flex h-64 w-full select-none items-center justify-center text-xl font-black uppercase tracking-wider transition-colors ${bg}`}
       >
         {label}
       </button>
@@ -101,7 +101,7 @@ export function ReactionGame({ complete }: GameContext) {
         {Array.from({ length: ROUNDS }).map((_, i) => (
           <span
             key={i}
-            className="flex-1 rounded bg-surface-2 py-1 text-center"
+            className="mono flex-1 bg-surface-2 py-1 text-center"
           >
             {times[i] != null ? `${times[i]}ms` : "·"}
           </span>

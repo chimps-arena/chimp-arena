@@ -176,7 +176,7 @@ export function AstroRun({ complete }: GameContext) {
         style={{ touchAction: "none" }}
       />
       {phase === "idle" && (
-        <button className="btn btn-primary" onClick={run}>
+        <button className="hud-btn" onClick={run}>
           Launch. Space or tap to jump
         </button>
       )}

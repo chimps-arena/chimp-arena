@@ -223,7 +223,7 @@ export function DebrisField({ complete }: GameContext) {
         style={{ maxWidth: W, aspectRatio: `${W} / ${H}`, touchAction: "none" }}
       />
       {phase === "idle" && (
-        <button className="btn btn-primary" onClick={run}>
+        <button className="hud-btn" onClick={run}>
           Launch. Arrow keys, A / D, or drag to steer
         </button>
       )}

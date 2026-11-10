@@ -70,7 +70,7 @@ export function TriviaGame({ start, complete }: GameContext) {
           {timeLeft}s
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+      <div className="h-1.5 w-full overflow-hidden bg-surface-2">
         <div
           className="h-full bg-accent transition-[width] duration-1000 ease-linear"
           style={{ width: `${(timeLeft / PER_Q_SECONDS) * 100}%` }}
@@ -87,7 +87,7 @@ export function TriviaGame({ start, complete }: GameContext) {
               key={i}
               disabled={picked !== null}
               onClick={() => lockIn(i)}
-              className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+              className={`border px-4 py-3 text-left text-sm transition ${
                 isPicked
                   ? "border-accent bg-accent/15"
                   : "border-border bg-surface-2 hover:border-accent/50"

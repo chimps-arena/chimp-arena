@@ -531,7 +531,7 @@ export function MiningGame({ start, complete }: GameContext) {
         )}
       </div>
       {phase === "idle" && (
-        <button className="btn btn-primary" onClick={run}>
+        <button className="hud-btn" onClick={run}>
           Drop in. Arrow keys or WASD - move into rock to dig it
         </button>
       )}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { useSession } from "@/components/session-provider";
+import { Lamp, PageHeader, Readout, tint } from "@/components/hud";
 import { BUY_CHIMP_URL } from "@/lib/links";
 import type { SubmitResult } from "@/lib/types";
 
@@ -94,20 +95,20 @@ export function GameShell({
   }, []);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <div>
-        <Link href="/dashboard" className="text-sm text-muted hover:text-foreground">
-          ← Mission Control
+    <div className="hud mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Link href="/dashboard" className="hud-label w-fit hover:text-foreground">
+          ◂ Mission Control
         </Link>
-        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{title}</h1>
-        <p className="text-muted">{subtitle}</p>
+        <PageHeader kicker={`Mission · ${slug.replace("-", " ")}`} title={title} blurb={subtitle} />
       </div>
 
-      <div className="card card-glow p-6">
+      <div className="hud-panel p-6">
         {phase === "intro" && (
           <div className="flex flex-col gap-4">
+            <div className="hud-label">Briefing</div>
             <div className="text-sm text-muted">{instructions}</div>
-            <button className="btn btn-primary w-fit" onClick={begin}>
+            <button className="hud-btn w-fit" onClick={begin}>
               {startLabel ?? "Start mission"}
             </button>
           </div>
@@ -125,8 +126,11 @@ export function GameShell({
 
         {phase === "error" && (
           <div className="flex flex-col gap-4">
+            <div className="hud-label flex items-center gap-2 !text-bad">
+              <Lamp color="var(--bad)" live /> Mission aborted
+            </div>
             <p className="text-bad">{error}</p>
-            <button className="btn btn-ghost w-fit" onClick={replay}>
+            <button className="hud-btn hud-btn-ghost w-fit" onClick={replay}>
               Back to start
             </button>
           </div>
@@ -138,7 +142,8 @@ export function GameShell({
 
 function Centered({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-40 items-center justify-center text-muted">
+    <div className="hud-label flex h-40 items-center justify-center gap-2">
+      <Lamp color="var(--hud-cyan)" live />
       {children}
     </div>
   );
@@ -152,73 +157,64 @@ function ResultView({
   onReplay: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-4 text-center">
-      <div className="text-lg font-bold">
-        Score: <span className="mono">{result.scoreAccepted}</span>
+    <div className="flex flex-col items-center gap-4 py-2 text-center">
+      <div className="hud-label flex items-center gap-2">
+        <Lamp color="var(--good)" live /> Mission complete
       </div>
-      {result.alreadyClaimedToday ? (
-        <p className="text-sm text-muted">
+      <div className="grid w-full max-w-md grid-cols-2 gap-3">
+        <div className="hud-panel p-4" style={tint("var(--hud-cyan)")}>
+          <Readout label="Score" value={result.scoreAccepted} />
+        </div>
+        <div className="hud-panel p-4" style={tint("var(--accent)")}>
+          <Readout
+            label="XP earned"
+            value={result.alreadyClaimedToday ? "—" : `+${result.xpAwarded}`}
+            color={result.alreadyClaimedToday ? undefined : "var(--accent)"}
+          />
+        </div>
+      </div>
+      {result.alreadyClaimedToday && (
+        <p className="max-w-md text-sm text-muted">
           {result.mining
             ? "XP already claimed today, but ore from this run is still banked."
             : "You already claimed this mission today, so no XP this run. Come back after 00:00 UTC. Your best score was updated if you beat it."}
         </p>
-      ) : (
-        <div
-          className="text-3xl font-bold text-accent"
-          style={{ textShadow: "0 0 24px color-mix(in srgb, var(--accent) 60%, transparent)" }}
-        >
-          +{result.xpAwarded} XP
-        </div>
       )}
-      {result.streak && (
-        <div
-          className="chip mono"
-          style={{
-            color: "var(--accent)",
-            borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)",
-          }}
-        >
-          🔥 {result.streak.count}-day streak
-          {result.streak.bonusXp > 0 && ` · +${result.streak.bonusXp} bonus`}
-          {result.streak.milestoneXp > 0 &&
-            ` · +${result.streak.milestoneXp} milestone`}
-        </div>
-      )}
-      {!result.alreadyClaimedToday && result.goldAwarded > 0 && (
-        <div
-          className="chip mono"
-          style={{
-            color: "var(--accent-2)",
-            borderColor: "color-mix(in srgb, var(--accent-2) 45%, transparent)",
-          }}
-        >
-          +{result.goldAwarded} Gold
-        </div>
-      )}
+      <div className="flex flex-wrap justify-center gap-2">
+        {result.streak && (
+          <span className="hud-tag" style={tint("var(--accent)")}>
+            🔥 {result.streak.count}-day streak
+            {result.streak.bonusXp > 0 && ` · +${result.streak.bonusXp} bonus`}
+            {result.streak.milestoneXp > 0 && ` · +${result.streak.milestoneXp} milestone`}
+          </span>
+        )}
+        {!result.alreadyClaimedToday && result.goldAwarded > 0 && (
+          <span className="hud-tag" style={tint("var(--accent-2)")}>
+            +{result.goldAwarded} Gold
+          </span>
+        )}
+        {result.mining &&
+          (Object.entries(result.mining.found) as [string, number][])
+            .filter(([key, n]) => n > 0 && key !== "gold")
+            .map(([key, n]) => (
+              <span key={key} className="hud-tag" style={tint("var(--accent-violet)")}>
+                +{n} {key[0].toUpperCase() + key.slice(1)}
+              </span>
+            ))}
+      </div>
       {result.mining && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="mono text-xs text-muted">
-            Depth {result.mining.depth} m · {result.mining.zone}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {(Object.entries(result.mining.found) as [string, number][])
-              .filter(([key, n]) => n > 0 && key !== "gold")
-              .map(([key, n]) => (
-                <span key={key} className="chip mono text-accent-violet" style={{ borderColor: "color-mix(in srgb, var(--accent-violet) 45%, transparent)" }}>
-                  +{n} {key[0].toUpperCase() + key.slice(1)}
-                </span>
-              ))}
-          </div>
-        </div>
+        <p className="mono text-xs text-muted">
+          Depth {result.mining.depth} m · {result.mining.zone}
+        </p>
       )}
       <div className="mono text-sm text-muted">
         Total XP: {result.totalXp.toLocaleString()}
       </div>
-      <div className="mt-2 flex gap-3">
-        <button className="btn btn-ghost" onClick={onReplay}>
+      <div className="mt-1 flex gap-3">
+        <button className="hud-btn hud-btn-ghost" onClick={onReplay}>
           Play again
         </button>
-        <Link className="btn btn-primary" href="/dashboard">
+        <Link className="hud-btn" href="/dashboard">
           Mission Control
         </Link>
       </div>
