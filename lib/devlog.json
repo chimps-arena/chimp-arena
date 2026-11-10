@@ -1,5 +1,33 @@
 [
  {
+  "hash": "ab0f4f9",
+  "date": "2026-11-10",
+  "kind": "New",
+  "area": "Site design",
+  "text": "HUD theme for the mini-game pages"
+ },
+ {
+  "hash": "212e63d",
+  "date": "2026-11-10",
+  "kind": "New",
+  "area": "devlog",
+  "text": "To-do list and updates side by side"
+ },
+ {
+  "hash": "37945ed",
+  "date": "2026-11-10",
+  "kind": "New",
+  "area": "devlog",
+  "text": "Team to-do list on the dev log"
+ },
+ {
+  "hash": "9c8706b",
+  "date": "2026-11-10",
+  "kind": "New",
+  "area": "devlog",
+  "text": "PIN-locked team dev log; guests out of weekly rewards"
+ },
+ {
   "hash": "17cf8f2",
   "date": "2026-11-03",
   "kind": "Fix",
