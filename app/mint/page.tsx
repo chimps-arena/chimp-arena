@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ChimpGallery } from "@/components/chimp-gallery";
 import { ChimpMint } from "@/components/chimp-mint";
-import { Lamp, PageHeader, Readout, tint } from "@/components/hud";
+import { Lamp, PageHeader, Readout, SectionHeader, tint } from "@/components/hud";
 import { MINT_PRICE_CHIMP } from "@/lib/chain/mint-config";
 
 export const metadata = {
@@ -9,6 +10,28 @@ export const metadata = {
   description: "Mint an Astrochimp NFT with $CHIMP on Solana. Standard and Rare tiers, plus a provably fair bonus One of One every 1,000 mints.",
   alternates: { canonical: "/mint" },
 };
+
+// The style gallery reads the live art list; refresh it hourly.
+export const revalidate = 3600;
+
+const PERKS = [
+  {
+    title: "Yours, on-chain",
+    blurb: "A Metaplex Core NFT in your own Solana wallet. Hold it, show it, or trade it on the market.",
+    color: "var(--hud-cyan)",
+  },
+  {
+    title: "Your pilot in the 3D world",
+    blurb: "Your Astrochimp becomes your playable character in the upcoming Astrochimpz 3D world.",
+    color: "var(--accent-violet)",
+    soon: true,
+  },
+  {
+    title: "A ticket to the bonus draw",
+    blurb: "Every mint enters its block of 1,000. When the block fills, one Astrochimp wins a bonus One of One.",
+    color: "var(--hud-amber)",
+  },
+] as const;
 
 export default function MintPage() {
   return (
@@ -64,6 +87,23 @@ export default function MintPage() {
 
         <ChimpMint />
       </div>
+
+      <section className="flex flex-col gap-4">
+        <SectionHeader title="What you get" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {PERKS.map((p) => (
+            <div key={p.title} className="hud-panel flex flex-col gap-2 p-5" style={tint(p.color)}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold uppercase tracking-wider" style={{ color: p.color }}>{p.title}</span>
+                {"soon" in p && <span className="hud-tag" style={tint(p.color)}>Coming soon</span>}
+              </div>
+              <p className="text-sm text-muted">{p.blurb}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <ChimpGallery />
     </div>
   );
 }
