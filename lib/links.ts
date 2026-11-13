@@ -16,3 +16,13 @@ export const SOLSCAN_TOKEN_URL = `https://solscan.io/token/${CHIMP_MINT}`;
 
 /** SOL -> $CHIMP on Raydium (the pool the chart tracks). */
 export const BUY_CHIMP_URL = `https://raydium.io/swap/?inputMint=So11111111111111111111111111111111111111112&outputMint=${CHIMP_MINT}`;
+
+/** Other web3 games shown in the footer - supporting the industry, and
+ *  showing we're happy to be compared. Not affiliated or endorsed. */
+export const SIMILAR_GAMES = [
+  { name: "BR1", href: "https://www.br1game.com/" },
+  { name: "Off The Grid", href: "https://gameoffthegrid.com/" },
+  { name: "Misfit Galaxy", href: "https://misfitgalaxy.com/" },
+  { name: "Infinity Rising", href: "https://infinityrising.com/" },
+  { name: "EVE Frontier", href: "https://evefrontier.com/en" },
+] as const;

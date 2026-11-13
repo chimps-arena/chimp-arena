@@ -7,7 +7,7 @@ import { TxTrackerProvider } from "@/components/tx-tracker";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 import { CopyContractAddress, SocialLinks } from "@/components/social-links";
-import { BUY_CHIMP_URL, CHART_URL, SOLSCAN_TOKEN_URL } from "@/lib/links";
+import { BUY_CHIMP_URL, CHART_URL, SIMILAR_GAMES, SOLSCAN_TOKEN_URL } from "@/lib/links";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
 
 // Body: clean, warm geometric sans.
@@ -114,6 +114,15 @@ export default function RootLayout({
                   <a href={SOLSCAN_TOKEN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Solscan</a>
                   <a href="/whitepaper" className="hover:text-foreground">Whitepaper</a>
                   <a href="/legal" className="hover:text-foreground">Legal</a>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-xs text-muted" style={{ borderColor: "var(--hud-edge)" }}>
+                  <span className="hud-label">Other web3 games</span>
+                  {SIMILAR_GAMES.map((g) => (
+                    <a key={g.name} href={g.href} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+                      {g.name}
+                    </a>
+                  ))}
+                  <span className="opacity-60">Not affiliated.</span>
                 </div>
               </div>
             </footer>
