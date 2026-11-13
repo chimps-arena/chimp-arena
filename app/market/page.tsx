@@ -3,7 +3,9 @@ import { MarketTabs } from "@/components/market-tabs";
 import { PageHeader } from "@/components/hud";
 
 export const metadata = {
-  title: "Market",
+  title: "Property market",
+  description: "Buy and trade Astrochimpz property NFTs in the Belt with $CHIMP on Solana.",
+  alternates: { canonical: "/market" },
 };
 
 export default function MarketPage() {

@@ -5,6 +5,7 @@ import { CHIMP_MINT } from "@/lib/chain/mint-config";
 
 export const metadata = {
   title: "$CHIMP logo",
+  alternates: { canonical: "/logo" },
   description: "Official Astrochimpz ($CHIMP) logo files for listings and press.",
 };
 

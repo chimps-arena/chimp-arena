@@ -5,7 +5,9 @@ import { Lamp, PageHeader, Readout, tint } from "@/components/hud";
 import { MINT_PRICE_CHIMP } from "@/lib/chain/mint-config";
 
 export const metadata = {
-  title: "Mint an Astrochimp",
+  title: "Mint an Astrochimp NFT",
+  description: "Mint an Astrochimp NFT with $CHIMP on Solana. Standard and Rare tiers, plus a provably fair bonus One of One every 1,000 mints.",
+  alternates: { canonical: "/mint" },
 };
 
 export default function MintPage() {

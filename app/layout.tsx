@@ -8,6 +8,7 @@ import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 import { CopyContractAddress, SocialLinks } from "@/components/social-links";
 import { BUY_CHIMP_URL, CHART_URL, SOLSCAN_TOKEN_URL } from "@/lib/links";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
 
 // Body: clean, warm geometric sans.
 const bodyFont = Sora({
@@ -37,14 +38,19 @@ const hudFont = Chakra_Petch({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
-  title: "CHIMP Arena",
-  description:
-    "Missions, rivalry and crew competition for the $CHIMP community. Adoption first.",
+  metadataBase: new URL(SITE_ORIGIN),
+  title: {
+    default: "Astrochimpz | Play-to-earn space game on Solana ($CHIMP)",
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: ["Astrochimpz", "$CHIMP", "CHIMP token", "Solana game", "play to earn", "web3 game", "NFT game", "Astrochimp NFT", "GameFi"],
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "CHIMP Arena · Astrochimpz",
+    type: "website",
+    url: SITE_ORIGIN,
+    title: "Astrochimpz · Play-to-earn space game on Solana",
     description:
       "Missions, rivalry and crew competition for the $CHIMP community. Fortune lies in the unknown.",
     siteName: "Astrochimpz",
@@ -53,7 +59,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     site: "@Astrochimpz",
-    title: "CHIMP Arena · Astrochimpz",
+    title: "Astrochimpz · Play-to-earn space game on Solana",
     description:
       "Missions, rivalry and crew competition for the $CHIMP community. Fortune lies in the unknown.",
     images: ["/og.jpg"],

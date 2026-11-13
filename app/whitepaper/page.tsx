@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Whitepaper — CHIMP Arena",
-  description: "Astrochimpz ($CHIMP) roadmap and tokenomics.",
+  title: "Whitepaper",
+  description: "Astrochimpz ($CHIMP) whitepaper: the game, the roadmap and the tokenomics.",
+  alternates: { canonical: "/whitepaper" },
 };
 
 /**

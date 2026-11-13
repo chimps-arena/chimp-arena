@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Provably fair bonus draw",
+  alternates: { canonical: "/fairness" },
   description: "How the bonus One of One Astrochimp is drawn after every 1,000 mints, and how to verify it yourself.",
 };
 

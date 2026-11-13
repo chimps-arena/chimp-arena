@@ -56,7 +56,7 @@ export default function Home() {
 
         <div className="flex min-w-0 flex-col gap-5">
           <span className="hud-label flex items-center gap-2">
-            <Lamp color="var(--good)" live /> $CHIMP · live on Solana
+            <Lamp color="var(--good)" live /> Astrochimpz · $CHIMP live on Solana
           </span>
           <h1 className="text-[2.1rem] font-bold uppercase leading-[1.05] sm:text-6xl">
             Run missions.
@@ -66,7 +66,7 @@ export default function Home() {
             <span className="text-[color:var(--hud-cyan)]">Own the belt.</span>
           </h1>
           <p className="max-w-prose text-muted">
-            CHIMP Arena turns daily mini-games into XP, and XP into crew power.
+            Astrochimpz turns daily mini-games into XP, and XP into crew power.
             Spend <span className="text-foreground">$CHIMP</span> on Astrochimps
             and gear. Connect a wallet, pick a side, and climb.
           </p>

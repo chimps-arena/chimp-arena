@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Legal — CHIMP Arena",
+  title: "Legal",
   description: "Terms, Privacy & Disclaimer for Astrochimpz ($CHIMP).",
+  alternates: { canonical: "/legal" },
 };
 
 /**
