@@ -8,6 +8,7 @@ import { GuestButton } from "@/components/guest-button";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
 import { missionBySlug } from "@/lib/game/config";
 import { Lamp, PageHeader, SectionHeader, tint } from "@/components/hud";
+import { PriorityScorePanel } from "@/components/priority-score";
 
 type Resource = "gold" | "cobalt" | "palladium" | "crystal";
 
@@ -146,6 +147,8 @@ export default function BankPage() {
           </p>
         </div>
       </div>
+
+      {!isGuest && <PriorityScorePanel />}
 
       <section className="flex flex-col gap-4">
         <SectionHeader title="Ore hold" />
