@@ -1,5 +1,19 @@
 [
  {
+  "hash": "6f53787",
+  "date": "2026-11-15",
+  "kind": "New",
+  "area": "bank",
+  "text": "Priority User Score, phase A"
+ },
+ {
+  "hash": "849bf08",
+  "date": "2026-11-15",
+  "kind": "Fix",
+  "area": "Site",
+  "text": "Buy $CHIMP opens Raydium with native SOL preselected"
+ },
+ {
   "hash": "26b6135",
   "date": "2026-11-13",
   "kind": "New",
