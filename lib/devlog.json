@@ -1,5 +1,12 @@
 [
  {
+  "hash": "9751daf",
+  "date": "2026-11-15",
+  "kind": "New",
+  "area": "devlog",
+  "text": "Attach screenshots to to-do tasks"
+ },
+ {
   "hash": "abb765b",
   "date": "2026-11-15",
   "kind": "Fix",
