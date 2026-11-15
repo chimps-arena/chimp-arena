@@ -50,6 +50,32 @@ export interface DevlogTask {
   urgent: boolean;
   doneAt: string | null;
   doneNote: string | null;
+  images: { id: number; url: string }[];
+}
+
+/** Private storage bucket for task screenshots (migration 0040). */
+export const DEVLOG_BUCKET = "devlog";
+const IMAGE_LINK_SECONDS = 60 * 60;
+
+/** Signed links for each task's images, which only last an hour. */
+async function taskImages(taskIds: number[]) {
+  const byTask = new Map<number, { id: number; url: string }[]>();
+  if (taskIds.length === 0) return byTask;
+  const db = supabaseAdmin();
+  const { data: rows } = await db
+    .from("devlog_task_images")
+    .select("id, task_id, path")
+    .in("task_id", taskIds)
+    .order("created_at");
+  if (!rows?.length) return byTask;
+  const { data: signed } = await db.storage
+    .from(DEVLOG_BUCKET)
+    .createSignedUrls(rows.map((r) => r.path), IMAGE_LINK_SECONDS);
+  rows.forEach((r, i) => {
+    const url = signed?.[i]?.signedUrl;
+    if (url) byTask.set(r.task_id, [...(byTask.get(r.task_id) ?? []), { id: r.id, url }]);
+  });
+  return byTask;
 }
 
 /** Open tasks (urgent first, oldest first), then the 30 most recently done. */
@@ -63,7 +89,9 @@ export async function devlogTasks(): Promise<DevlogTask[] | null> {
       .order("done_at", { ascending: false }).limit(30),
   ]);
   if (open.error || done.error) return null;
-  return [...open.data, ...done.data].map((r) => ({
+  const rows = [...open.data, ...done.data];
+  const images = await taskImages(rows.map((r) => r.id));
+  return rows.map((r) => ({
     id: r.id,
     createdAt: r.created_at,
     title: r.title,
@@ -72,6 +100,7 @@ export async function devlogTasks(): Promise<DevlogTask[] | null> {
     urgent: r.urgent,
     doneAt: r.done_at,
     doneNote: r.done_note,
+    images: images.get(r.id) ?? [],
   }));
 }
 

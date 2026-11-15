@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { PageHeader, SectionHeader, tint } from "@/components/hud";
 import { DEVLOG_COOKIE, devlogPosts, devlogTasks, devlogToken, tokenValid, type DevlogTask } from "@/lib/devlog";
 import shipped from "@/lib/devlog.json";
-import { addTask, completeTask, lockDevlog, reopenTask, unlockDevlog } from "./actions";
+import { DevlogImageInput } from "@/components/devlog-image-input";
+import { addTask, attachImages, completeTask, lockDevlog, reopenTask, unlockDevlog } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,21 @@ const field = "border border-border bg-surface-2/50 px-3 py-2 text-sm";
 /** Side by side on wide screens, each column scrolls on its own. */
 const column = "flex min-w-0 flex-col gap-4 lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-2";
 
+/** Thumbnails that open the full image; links expire after an hour. */
+function TaskImages({ images }: { images: DevlogTask["images"] }) {
+  if (images.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {images.map((img) => (
+        <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="block border border-border hover:border-[color:var(--hud-cyan)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img.url} alt="Attached screenshot" loading="lazy" className="h-24 w-auto max-w-[12rem] object-cover" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string }) {
   const open = tasks?.filter((t) => !t.doneAt) ?? [];
   const done = tasks?.filter((t) => t.doneAt) ?? [];
@@ -77,6 +93,7 @@ function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string })
           <label className="flex items-center gap-2 text-sm text-muted">
             <input type="checkbox" name="urgent" /> Urgent
           </label>
+          <DevlogImageInput />
           <button className="hud-btn ml-auto !py-2 !text-[0.7rem]">Add task</button>
         </div>
       </form>
@@ -90,9 +107,14 @@ function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string })
             <span className="font-semibold">{t.title}</span>
           </div>
           {t.details && <p className="whitespace-pre-line text-sm text-muted">{t.details}</p>}
+          <TaskImages images={t.images} />
           <div className="text-xs text-muted">
             #{t.id} · added {day(t.createdAt)}{t.addedBy && ` by ${t.addedBy}`}
           </div>
+          <form action={attachImages.bind(null, t.id)} className="flex flex-wrap items-center gap-2">
+            <DevlogImageInput />
+            <button className="text-xs text-muted underline hover:text-foreground">Upload</button>
+          </form>
           <form action={completeTask.bind(null, t.id)} className="flex flex-wrap gap-2">
             <input name="note" maxLength={500} placeholder="What was done (optional)" className={`${field} min-w-0 flex-1`} />
             <button className="hud-btn hud-btn-ghost !py-2 !text-[0.7rem]">Mark done</button>
@@ -107,6 +129,7 @@ function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string })
             {done.map((t) => (
               <li key={t.id} className="flex flex-wrap items-baseline gap-2 text-sm">
                 <span className="text-muted line-through">{t.title}</span>
+                {t.images.length > 0 && <span className="text-xs text-muted">📎 {t.images.length}</span>}
                 {t.doneNote && <span className="text-good">{t.doneNote}</span>}
                 <span className="text-xs text-muted">{day(t.doneAt!)}</span>
                 <form action={reopenTask.bind(null, t.id)} className="ml-auto">
