@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { sendDevlogMail } from "@/lib/devlog-mail";
 import { DEVLOG_BUCKET, DEVLOG_COOKIE, devlogToken, pinMatches, tokenValid } from "@/lib/devlog";
 
 export async function unlockDevlog(formData: FormData) {
@@ -69,17 +71,23 @@ export async function addTask(formData: FormData) {
   const title = text(formData.get("title"), 300);
   if (title) {
     const addedBy = text(formData.get("addedBy"), 40);
+    const details = text(formData.get("details"), 2000);
+    const urgent = formData.get("urgent") === "on";
     const { data: task } = await supabaseAdmin()
       .from("devlog_tasks")
-      .insert({
-        title,
-        details: text(formData.get("details"), 2000),
-        added_by: addedBy,
-        urgent: formData.get("urgent") === "on",
-      })
+      .insert({ title, details, added_by: addedBy, urgent })
       .select("id")
       .single();
-    if (task) await saveImages(task.id, formData);
+    if (task) {
+      await saveImages(task.id, formData);
+      after(() =>
+        sendDevlogMail(`${urgent ? "URGENT task" : "New task"} #${task.id}: ${title}`, [
+          `${urgent ? "Urgent task" : "New task"} #${task.id}${addedBy ? `, added by ${addedBy}` : ""}:`,
+          title,
+          details && `\n${details}`,
+        ]),
+      );
+    }
     // Remember the name for the next task this browser adds.
     if (addedBy) {
       (await cookies()).set("devlog_name", addedBy, { path: "/devlog", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
@@ -97,11 +105,24 @@ export async function attachImages(id: number, formData: FormData) {
 
 export async function completeTask(id: number, formData: FormData) {
   await requireUnlocked();
-  await supabaseAdmin()
+  const note = text(formData.get("note"), 500);
+  const { data: task } = await supabaseAdmin()
     .from("devlog_tasks")
-    .update({ done_at: new Date().toISOString(), done_note: text(formData.get("note"), 500) })
+    .update({ done_at: new Date().toISOString(), done_note: note })
     .eq("id", id)
-    .is("done_at", null);
+    .is("done_at", null)
+    .select("title, created_at")
+    .maybeSingle();
+  if (task) {
+    const days = Math.floor((Date.now() - Date.parse(task.created_at)) / 86_400_000);
+    after(() =>
+      sendDevlogMail(`Done #${id}: ${task.title}`, [
+        `Task #${id} was marked done after ${days} day${days === 1 ? "" : "s"}:`,
+        task.title,
+        note && `\nWhat was done: ${note}`,
+      ]),
+    );
+  }
   redirect("/devlog#todo");
 }
 

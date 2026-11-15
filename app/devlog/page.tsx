@@ -77,12 +77,82 @@ function TaskImages({ images }: { images: DevlogTask["images"] }) {
   );
 }
 
-function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string }) {
-  const open = tasks?.filter((t) => !t.doneAt) ?? [];
+type TaskSort = "urgent" | "waiting" | "newest";
+const SORTS: { key: TaskSort; label: string }[] = [
+  { key: "urgent", label: "Urgent first" },
+  { key: "waiting", label: "Longest waiting" },
+  { key: "newest", label: "Newest" },
+];
+
+const daysWaiting = (iso: string) => Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+
+/** How long a task has sat open; turns amber after 3 days, red after 7. */
+function Waiting({ since }: { since: string }) {
+  const d = daysWaiting(since);
+  const color = d >= 7 ? "var(--bad)" : d >= 3 ? "var(--hud-amber)" : "var(--muted)";
+  return (
+    <span className="hud-tag" style={tint(color)}>
+      {d === 0 ? "Added today" : `Waiting ${d} day${d === 1 ? "" : "s"}`}
+    </span>
+  );
+}
+
+function sortTasks(list: DevlogTask[], sort: TaskSort) {
+  const age = (t: DevlogTask) => Date.parse(t.createdAt);
+  return [...list].sort((a, b) =>
+    sort === "newest"
+      ? age(b) - age(a)
+      : sort === "waiting"
+        ? age(a) - age(b)
+        : Number(b.urgent) - Number(a.urgent) || age(a) - age(b),
+  );
+}
+
+function TodoList({
+  tasks,
+  name,
+  sort,
+  urgentOnly,
+}: {
+  tasks: DevlogTask[] | null;
+  name: string;
+  sort: TaskSort;
+  urgentOnly: boolean;
+}) {
+  const allOpen = tasks?.filter((t) => !t.doneAt) ?? [];
+  const open = sortTasks(urgentOnly ? allOpen.filter((t) => t.urgent) : allOpen, sort);
   const done = tasks?.filter((t) => t.doneAt) ?? [];
+  const href = (next: { sort?: TaskSort; urgent?: boolean }) => {
+    const q = new URLSearchParams();
+    const sv = next.sort ?? sort;
+    const uv = next.urgent ?? urgentOnly;
+    if (sv !== "urgent") q.set("sort", sv);
+    if (uv) q.set("urgent", "1");
+    const qs = q.toString();
+    return `/devlog${qs ? `?${qs}` : ""}#todo`;
+  };
   return (
     <section id="todo" className="flex min-w-0 scroll-mt-24 flex-col gap-4">
-      <SectionHeader title="To-do" aside={tasks ? `${open.length} open` : undefined} />
+      <SectionHeader
+        title="To-do"
+        aside={tasks ? `${allOpen.length} open · ${allOpen.filter((t) => t.urgent).length} urgent` : undefined}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <nav className="hud-switch" aria-label="Sort tasks">
+          {SORTS.map((o) => (
+            <a key={o.key} href={href({ sort: o.key })} aria-current={sort === o.key ? "page" : undefined}>
+              {o.label}
+            </a>
+          ))}
+        </nav>
+        <a
+          href={href({ urgent: !urgentOnly })}
+          className="hud-tag"
+          style={tint(urgentOnly ? "var(--bad)" : "var(--muted)")}
+        >
+          {urgentOnly ? "✓ Urgent only" : "Urgent only"}
+        </a>
+      </div>
       <div className={column}>
 
       <form action={addTask} className="hud-panel flex flex-col gap-3 p-5">
@@ -99,12 +169,15 @@ function TodoList({ tasks, name }: { tasks: DevlogTask[] | null; name: string })
       </form>
 
       {tasks === null && <div className="hud-panel p-5 text-sm text-bad">The to-do list couldn&apos;t load. Try again shortly.</div>}
-      {tasks && open.length === 0 && <div className="hud-panel p-5 text-sm text-muted">Nothing open.</div>}
+      {tasks && open.length === 0 && (
+        <div className="hud-panel p-5 text-sm text-muted">{urgentOnly ? "Nothing urgent open." : "Nothing open."}</div>
+      )}
       {open.map((t) => (
         <div key={t.id} className="hud-panel flex flex-col gap-3 p-5" style={t.urgent ? tint("var(--bad)") : undefined}>
           <div className="flex flex-wrap items-baseline gap-2">
             {t.urgent && <span className="hud-tag" style={tint("var(--bad)")}>Urgent</span>}
-            <span className="font-semibold">{t.title}</span>
+            <Waiting since={t.createdAt} />
+            <span className="w-full font-semibold">{t.title}</span>
           </div>
           {t.details && <p className="whitespace-pre-line text-sm text-muted">{t.details}</p>}
           <TaskImages images={t.images} />
@@ -169,10 +242,16 @@ function Locked({ wrong, configured }: { wrong: boolean; configured: boolean }) 
   );
 }
 
-export default async function DevlogPage({ searchParams }: { searchParams: Promise<{ wrong?: string }> }) {
+export default async function DevlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ wrong?: string; sort?: string; urgent?: string }>;
+}) {
+  const params = await searchParams;
+  const sort: TaskSort = SORTS.some((o) => o.key === params.sort) ? (params.sort as TaskSort) : "urgent";
   const jar = await cookies();
   if (!tokenValid(jar.get(DEVLOG_COOKIE)?.value)) {
-    return <Locked wrong={(await searchParams).wrong === "1"} configured={devlogToken() !== null} />;
+    return <Locked wrong={params.wrong === "1"} configured={devlogToken() !== null} />;
   }
 
   const [posts, tasks] = await Promise.all([devlogPosts(), devlogTasks()]);
@@ -188,7 +267,7 @@ export default async function DevlogPage({ searchParams }: { searchParams: Promi
       </PageHeader>
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-6">
-        <TodoList tasks={tasks} name={jar.get("devlog_name")?.value ?? ""} />
+        <TodoList tasks={tasks} name={jar.get("devlog_name")?.value ?? ""} sort={sort} urgentOnly={params.urgent === "1"} />
 
         <section className="flex min-w-0 flex-col gap-4">
           <SectionHeader title="Updates" aside={posts ? `${posts.length} posts` : undefined} />
