@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { resolvePropertyImage } from "@/lib/chain/property-art";
+import { fastImage } from "@/lib/nft-image";
 import { PROPERTY_NFT_SYMBOL } from "@/lib/chain/property-mint-config";
 
 export const runtime = "nodejs";
 
 /**
- * Metaplex off-chain metadata for one property NFT. Unlike Astrochimps
- * (one shared metadata URI for every mint, since they're all identical),
- * each property has its own name/art, so this is per-property and baked
- * into the URI at mint time - see app/api/land/claim.
+ * Metaplex off-chain metadata for one property NFT, which every property
+ * NFT's on-chain uri points at. Each property has its own name/art, so
+ * this is per-property.
+ *
+ * Properties used to point at Arweave JSON whose ~2.7 MB PNGs take ~11s
+ * through the Irys gateway, and Phantom never showed them (dev log #13,
+ * Nov 2026). This serves the same details with the art's small web copy
+ * from our own CDN - how the Astrochimps that do show are set up. The
+ * Arweave originals are untouched.
  */
 export async function GET(
   req: Request,
@@ -20,7 +26,7 @@ export async function GET(
 
   const { data: property } = await supabaseAdmin()
     .from("properties")
-    .select("name, zone, type, blurb")
+    .select("name, zone, type, blurb, image_url")
     .eq("id", propertyId)
     .maybeSingle();
 
@@ -28,7 +34,9 @@ export async function GET(
     return NextResponse.json({ error: "unknown property" }, { status: 404 });
   }
 
-  const image = resolvePropertyImage(property.type);
+  const art = property.image_url ? fastImage(property.image_url) : resolvePropertyImage(property.type);
+  const image = !art ? `${origin}/brand/chimp-logo.png` : art.startsWith("/") ? `${origin}${art}` : art;
+  const type = image.endsWith(".webp") ? "image/webp" : image.endsWith(".jpg") ? "image/jpeg" : "image/png";
 
   return NextResponse.json(
     {
@@ -36,13 +44,14 @@ export async function GET(
       symbol: PROPERTY_NFT_SYMBOL,
       description:
         property.blurb ?? `A property deed in ${property.zone}, CHIMP Arena.`,
-      image: image ? `${origin}${image}` : `${origin}/brand/chimp-logo.png`,
-      external_url: origin,
+      image,
+      external_url: "https://astrochimpz.com",
       attributes: [
         { trait_type: "Zone", value: property.zone },
         { trait_type: "Type", value: property.type },
       ],
+      properties: { files: [{ uri: image, type }], category: "image" },
     },
-    { headers: { "cache-control": "public, max-age=300" } },
+    { headers: { "cache-control": "public, max-age=300, s-maxage=3600" } },
   );
 }
