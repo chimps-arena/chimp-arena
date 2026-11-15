@@ -1,5 +1,12 @@
 [
  {
+  "hash": "179c7ce",
+  "date": "2026-11-15",
+  "kind": "New",
+  "area": "devlog",
+  "text": "Sort and filter the to-do list; email the team on changes"
+ },
+ {
   "hash": "9751daf",
   "date": "2026-11-15",
   "kind": "New",
