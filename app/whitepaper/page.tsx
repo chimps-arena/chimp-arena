@@ -43,58 +43,50 @@ const STATUS_STYLE: Record<string, string> = {
   Upcoming: "text-muted border-border",
 };
 
-const ALLOCATION = [
-  {
-    label: "Treasury",
-    pct: 25,
-    wallet: "B5QJGdkQ2r14movaf36NNaVmLqNBqqUMdsQPP2GUbCFS",
-    short: "Community-governed reserve",
-    detail:
-      "Held on-chain and operated as a community treasury. Token holders vote - with their wallets - on how funds are appropriated. A republic-style representative model is the aim, but the community always has final say.",
-    bullets: [
-      "Only community wallets vote (founders, corp & project wallets excluded)",
-      "Funds new game levels, character designers, tooling, live-ops",
-      "Every proposal & vote settles transparently on Solana",
-    ],
-  },
-  {
-    label: "Founders",
-    pct: 20,
-    wallet: "DrZK5sb5Tixa7VZgMoMLTVv5JXpTSzxeQ1JxvUYSfgmg",
-    short: "Distributed to the founding crew",
-    detail: "The founding crew's allocation, distributed to the founding team.",
-  },
-  {
-    label: "Ecosystem Rewards",
-    pct: 20,
-    wallet: "6Vq9GTXWRaTBAZmmDx5fMLqV2Q5meHuaoiCojStQvdvy",
-    short: "Player rewards, quests, airdrops",
-    detail:
-      "Fuels the player economy - in-game rewards, quest payouts, seasonal airdrops, tournaments, and loyalty programs.",
-  },
-  {
-    label: "Community & Partners",
-    pct: 15,
-    wallet: "6Vq9GTXWRaTBAZmmDx5fMLqV2Q5meHuaoiCojStQvdvy",
-    short: "Creators, KOLs, integrations",
-    detail:
-      "Reserved for creators, content partners, KOLs, and third-party integrations that grow the Astroworld universe.",
-  },
+/** Founder tokenomics plan, Nov 16 2026 (dev log #18). Wallets are linked
+ *  only where the address is settled; lock addresses get added once the
+ *  Streamflow locks exist. */
+const ALLOCATION: {
+  label: string;
+  pct: number;
+  short: string;
+  detail: string;
+  wallet?: string;
+  proof?: { href: string; text: string };
+}[] = [
   {
     label: "Liquidity",
-    pct: 10,
+    pct: 20,
     wallet: "3mGmGvdAqcENBnzEwuTqRuoJwHWrQsVrd79J7PyqAyJV",
-    short: "Raydium pool - deep, live, on-chain",
+    short: "Raydium pool - already allocated",
     detail:
-      "Listed on Raydium with on-chain liquidity backing every swap. This wallet holds the LP position address.",
+      "Paired on Raydium with on-chain liquidity backing every swap. Pool ownership has been burned, so the liquidity can't be pulled (anti-rug).",
+    proof: {
+      href: "https://x.com/Astrochimpz/status/2121126329558929521",
+      text: "Burn proof on X",
+    },
+  },
+  {
+    label: "Founding Team",
+    pct: 16,
+    short: "Equal shares, unlocked in stages",
+    detail:
+      "Paid out slowly and in equal amounts to every team member until each share is fully received. Unlocks linearly through Streamflow, starting only once $CHIMP reaches a $100 million market cap.",
   },
   {
     label: "Corporation Reserve",
     pct: 10,
     wallet: "2HJouoXc3KrWULcFqE2t1eQRY2EDjSTWL6KB3bhAQSPU",
-    short: "Legal · Dev · Marketing · Infra · Salaries",
+    short: "Astro Corp wallet - time-based unlock",
     detail:
-      "Sustains the project across market cycles. Funds operations, payroll, infrastructure, legal, and growth.",
+      "Sustains the project across market cycles: legal, development, marketing and infrastructure. Unlocks linearly over time through Streamflow.",
+  },
+  {
+    label: "Liquidity Reserve",
+    pct: 54,
+    short: "Locked until a $1 billion market cap",
+    detail:
+      "Held back to deepen liquidity as the project grows. Unlocks linearly through Streamflow, starting only once $CHIMP reaches a $1 billion market cap.",
   },
 ];
 
@@ -159,25 +151,44 @@ export default function WhitepaperPage() {
                 </div>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-muted">{a.detail}</p>
-              {a.bullets && (
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-                  {a.bullets.map((b) => (
-                    <li key={b}>{b}</li>
-                  ))}
-                </ul>
-              )}
-              <a
-                href={`https://solscan.io/account/${a.wallet}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mono mt-3 inline-block text-[11px] text-muted hover:text-foreground"
-                title={a.wallet}
-              >
-                {short(a.wallet)} ↗
-              </a>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                {a.wallet && (
+                  <a
+                    href={`https://solscan.io/account/${a.wallet}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono text-[11px] text-muted hover:text-foreground"
+                    title={a.wallet}
+                  >
+                    {short(a.wallet)} ↗
+                  </a>
+                )}
+                {a.proof && (
+                  <a
+                    href={a.proof.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono text-[11px] text-muted hover:text-foreground"
+                  >
+                    {a.proof.text} ↗
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
+        <p className="mt-4 text-sm text-muted">
+          All token locks are pending attorney review and the proper legal
+          filings.{" "}
+          <a
+            href="https://x.com/Astrochimpz/status/2120960456042872966"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent underline"
+          >
+            More on X
+          </a>
+        </p>
       </section>
 
       <section className="mt-12">

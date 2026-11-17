@@ -26,4 +26,5 @@ export const SIMILAR_GAMES = [
   { name: "Misfit Galaxy", href: "https://misfitgalaxy.com/" },
   { name: "Infinity Rising", href: "https://infinityrising.com/" },
   { name: "EVE Frontier", href: "https://evefrontier.com/en" },
+  { name: "Citadel", href: "https://www.thecitadel.com/" },
 ] as const;
