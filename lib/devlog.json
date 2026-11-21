@@ -1,5 +1,12 @@
 [
  {
+  "hash": "9415fe2",
+  "date": "2026-11-21",
+  "kind": "Fix",
+  "area": "NFTs",
+  "text": "Make the properties collection look like the one Phantom trusts"
+ },
+ {
   "hash": "af901cf",
   "date": "2026-11-19",
   "kind": "New",
