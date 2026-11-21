@@ -1,0 +1,1366 @@
+"use client";
+
+/**
+ * Astroworld - live multiplayer third-person world (simulated: no wallet, no
+ * items, no payments). Talks to the Colyseus "hub" room in server/.
+ *
+ * - Everyone is one of the real Astrochimpz NFT characters, rigged and animated.
+ * - Every property from the property market stands in the world as its own
+ *   building with its art, name and owner.
+ * - The Core is a safe zone; out in the districts it's a shooter: mouse aim,
+ *   over-the-shoulder camera, aim-down-sights, sprint/crouch/jump, recoil,
+ *   reloads. Hits are decided by the server, never by the shooter's machine.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import * as THREE from "three";
+import { Callbacks, Client, type Room } from "@colyseus/sdk";
+import {
+  BUILDING_RADIUS,
+  CHARACTERS,
+  CHAT_MAX_LENGTH,
+  characterById,
+  characterForNftName,
+  DEFAULT_CHARACTER_ID,
+  DISTRICTS,
+  FIRE_INTERVAL_MS,
+  GRAVITY,
+  HUB_SPEED,
+  inSafeZone,
+  isCharacterId,
+  JUMP_VELOCITY,
+  layoutProperties,
+  MAX_HP,
+  MOVE_SPEED,
+  rayVsPlayer,
+  SAFE_RADIUS,
+  SHOT_RANGE,
+  TIER_COLOR,
+  TIER_LABEL,
+  WORLD_RADIUS,
+  CORE_ZONE,
+  type CharacterLook,
+  type HubChatBroadcast,
+  type HubKillBroadcast,
+  type HubMode,
+  type HubRespawnMessage,
+  type HubShotBroadcast,
+  type Placement,
+} from "@chimp-arena/shared";
+import { idlePose, type PoseInput } from "./chimp-rig";
+import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
+import { Building, type WorldProperty } from "./buildings";
+import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldScenery } from "./world";
+import { Effects, fx, RoverModel } from "./fx";
+
+const SERVER_URL = process.env.NEXT_PUBLIC_HUB_SERVER_URL ?? "http://localhost:2567";
+const SKIN_KEY = "astroworld:skin";
+
+/** Client-side copy of the server's HubPlayer schema fields. */
+interface NetPlayer {
+  name: string;
+  skin: string;
+  mode: string;
+  x: number;
+  y: number;
+  z: number;
+  ry: number;
+  pitch: number;
+  crouch: boolean;
+  hp: number;
+  alive: boolean;
+  kills: number;
+  deaths: number;
+}
+
+interface HubState {
+  players: Map<string, NetPlayer>;
+}
+
+type Status = "connecting" | "online" | "offline";
+
+const SEND_EVERY_MS = 66;
+const BUBBLE_MS = 6000;
+const MAG_SIZE = 30;
+const RELOAD_MS = 1500;
+const ROVER_TURN = 1.7;
+const ROVER_SPEED = HUB_SPEED.rover * 0.92;
+const LOOK_SENS = 0.0022;
+const NEAR_DISTANCE = 95;
+
+/* ============================== local storage ============================== */
+
+function loadSkin(): string {
+  try {
+    // Only designs on the current roster (retired styles fall back to the default).
+    const saved = localStorage.getItem(SKIN_KEY);
+    return isCharacterId(saved) ? saved : DEFAULT_CHARACTER_ID;
+  } catch {
+    return DEFAULT_CHARACTER_ID;
+  }
+}
+function saveSkin(id: string) {
+  try {
+    localStorage.setItem(SKIN_KEY, id);
+  } catch {
+    /* private mode - fine, it just won't be remembered */
+  }
+}
+
+/* ============================== shared input ============================== */
+
+/** Touch controls write here; the controller reads it each frame. */
+interface TouchInput {
+  move: { x: number; y: number };
+  look: { dx: number; dy: number };
+  fire: boolean;
+  aim: boolean;
+  jump: boolean;
+}
+
+/** HUD values the controller reports when they change. */
+interface LocalHud {
+  ammo: number;
+  reloading: boolean;
+  aiming: boolean;
+  armed: boolean;
+  locked: boolean;
+  zone: string;
+}
+
+/* ============================== remote players ============================== */
+
+function NameTag({
+  name,
+  look,
+  bubble,
+  height,
+  hp,
+  showHp,
+}: {
+  name: string;
+  look: CharacterLook;
+  bubble?: string;
+  height: number;
+  hp: number;
+  showHp: boolean;
+}) {
+  const tier = TIER_COLOR[look.tier];
+  return (
+    <Html position={[0, height, 0]} center distanceFactor={12} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+      <div className="flex flex-col items-center gap-1 whitespace-nowrap">
+        {bubble && <div className="max-w-[220px] whitespace-normal rounded-lg bg-black/80 px-2 py-1 text-center text-xs text-white shadow">{bubble}</div>}
+        <div className="flex items-center gap-1.5 rounded py-0.5 pl-0.5 pr-2 text-white" style={{ background: "rgba(10,8,20,0.8)", borderBottom: `2px solid ${tier}` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={look.image} alt="" className="h-6 w-6 rounded-sm object-cover" style={{ outline: `1px solid ${tier}` }} />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold">{name}</div>
+            <div className="text-[8px] font-bold uppercase tracking-wider" style={{ color: tier }}>
+              {look.name} · {TIER_LABEL[look.tier]}
+            </div>
+          </div>
+        </div>
+        {showHp && (
+          <div className="h-1 w-14 overflow-hidden rounded bg-black/60">
+            <div className="h-full bg-red-500" style={{ width: `${(hp / MAX_HP) * 100}%` }} />
+          </div>
+        )}
+      </div>
+    </Html>
+  );
+}
+
+function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string }) {
+  const group = useRef<THREE.Group>(null);
+  const pose = useRef<PoseInput>(idlePose());
+  const placed = useRef(false);
+  const [view, setView] = useState(() => ({ skin: player.skin, mode: player.mode, alive: player.alive, hp: player.hp, armed: false }));
+  const look = characterById(view.skin);
+
+  useFrame((_, rawDt) => {
+    const g = group.current;
+    if (!g) return;
+    const dt = Math.max(rawDt, 1e-3);
+    const armed = player.mode === "walk" && !inSafeZone(player.x, player.z);
+    if (player.skin !== view.skin || player.mode !== view.mode || player.alive !== view.alive || player.hp !== view.hp || armed !== view.armed) {
+      setView({ skin: player.skin, mode: player.mode, alive: player.alive, hp: player.hp, armed });
+    }
+    if (!placed.current) {
+      g.position.set(player.x, player.y, player.z);
+      g.rotation.y = player.ry;
+      placed.current = true;
+    }
+    const k = 1 - Math.exp(-14 * dt);
+    const px = g.position.x;
+    const pz = g.position.z;
+    g.position.x += (player.x - px) * k;
+    g.position.z += (player.z - pz) * k;
+    g.position.y += (player.y - g.position.y) * k;
+    let dr = player.ry - g.rotation.y;
+    dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+    g.rotation.y += dr * k;
+
+    const vx = (g.position.x - px) / dt;
+    const vz = (g.position.z - pz) / dt;
+    const p = pose.current;
+    p.speed = Math.hypot(vx, vz);
+    p.forward = vx * Math.sin(g.rotation.y) + vz * Math.cos(g.rotation.y);
+    p.y = g.position.y;
+    p.crouch = player.crouch;
+    p.pitch = player.pitch;
+    p.armed = armed && player.alive;
+    p.dead = !player.alive;
+    p.seated = player.mode === "rover";
+    p.sinceShot += dt;
+  });
+
+  useEffect(
+    () =>
+      fx.on((e) => {
+        // Kick the rifle back when this player's shots arrive.
+        if (e.kind === "flash" && group.current && Math.hypot(e.at.x - group.current.position.x, e.at.z - group.current.position.z) < 2.5) {
+          pose.current.sinceShot = 0;
+        }
+      }),
+    [],
+  );
+
+  const getPose = useCallback(() => pose.current, []);
+  const rover = view.mode === "rover";
+  return (
+    <group ref={group}>
+      {rover && <RoverModel color={look.glow} />}
+      <group position={rover ? [0, 0.55, -0.3] : [0, 0, 0]}>
+        <CharacterBody look={look} pose={getPose} />
+      </group>
+      {view.alive && <NameTag name={player.name} look={look} bubble={bubble} height={rover ? 3.3 : 2.45} hp={view.hp} showHp={view.armed && view.hp < MAX_HP} />}
+    </group>
+  );
+}
+
+/* ============================== local player ============================== */
+
+interface LocalState {
+  fov: number;
+  x: number;
+  z: number;
+  y: number;
+  vy: number;
+  yaw: number;
+  pitch: number;
+  heading: number;
+  crouch: boolean;
+  ammo: number;
+  reloadUntil: number;
+  lastShot: number;
+  firing: boolean;
+  aiming: boolean;
+  camInit: boolean;
+  lastSent: { at: number; x: number; z: number; ry: number; y: number; pitch: number; crouch: boolean };
+  hud: LocalHud;
+}
+
+function zoneAt(x: number, z: number): string {
+  if (inSafeZone(x, z)) return CORE_ZONE;
+  const d = DISTRICTS.find((dd) => Math.abs(x - dd.x) < DISTRICT_HALF && Math.abs(z - dd.z) < DISTRICT_HALF);
+  return d ? d.zone : "Wastes";
+}
+
+interface LocalCtx {
+  st: LocalState;
+  keys: Set<string>;
+  touch: TouchInput;
+  me: NetPlayer;
+  mode: HubMode;
+  camera: THREE.Camera;
+  el: HTMLElement;
+  room: Room;
+  colliders: [number, number, number][];
+  group: THREE.Group | null;
+  pose: PoseInput;
+  look: CharacterLook;
+  onHud: (h: LocalHud) => void;
+}
+
+/** One frame of the local player: input -> movement -> shooting -> network -> camera -> HUD. */
+function stepLocal(c: LocalCtx, rawDt: number) {
+  const { keys: keySet, touch, me, mode, camera, el, room, colliders, pose: poseIn, look, onHud } = c;
+  const dt = Math.min(rawDt, 0.1);
+  const st = c.st;
+  const k = keySet;
+      const now = performance.now();
+  const alive = me.alive;
+  const rover = mode === "rover";
+
+  // Touch look.
+  st.yaw -= touch.look.dx * 0.005;
+  st.pitch = THREE.MathUtils.clamp(st.pitch - touch.look.dy * 0.005, -1.2, 1.2);
+  touch.look.dx = 0;
+  touch.look.dy = 0;
+  const aiming = (st.aiming || touch.aim) && !rover && alive;
+
+  let fwd = (k.has("w") || k.has("arrowup") ? 1 : 0) - (k.has("s") || k.has("arrowdown") ? 1 : 0) - touch.move.y;
+  let strafe = (k.has("d") || k.has("arrowright") ? 1 : 0) - (k.has("a") || k.has("arrowleft") ? 1 : 0) + touch.move.x;
+  fwd = THREE.MathUtils.clamp(fwd, -1, 1);
+  strafe = THREE.MathUtils.clamp(strafe, -1, 1);
+  if (!alive) fwd = strafe = 0;
+
+  let speedNow = 0;
+  let forwardNow = 0;
+  if (rover) {
+    // Tank controls; the camera swings in behind the rover's heading.
+    st.heading -= strafe * ROVER_TURN * dt * (fwd < 0 ? -1 : 1);
+    const v = fwd * ROVER_SPEED * (fwd < 0 ? 0.5 : 1);
+    st.x += Math.sin(st.heading) * v * dt;
+    st.z += Math.cos(st.heading) * v * dt;
+    let dy = st.heading - st.yaw;
+    dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    st.yaw += dy * (1 - Math.exp(-4 * dt));
+    speedNow = Math.abs(v);
+    st.y = 0;
+    st.vy = 0;
+  } else {
+    const sprint = (k.has("shift") && fwd > 0 && !aiming && !st.crouch) || (touch.move.y < -0.95 && !aiming);
+    const pace = st.crouch ? MOVE_SPEED.crouch : aiming ? MOVE_SPEED.aim : sprint ? MOVE_SPEED.sprint : MOVE_SPEED.walk;
+    const len = Math.hypot(fwd, strafe);
+    const mx = len > 1 ? strafe / len : strafe;
+    const mz = len > 1 ? fwd / len : fwd;
+    // Camera-relative: forward is where you look, strafe is to the right.
+    const sin = Math.sin(st.yaw);
+    const cos = Math.cos(st.yaw);
+    const vx = (sin * mz - cos * mx) * pace;
+    const vz = (cos * mz + sin * mx) * pace;
+    st.x += vx * dt;
+    st.z += vz * dt;
+    speedNow = Math.hypot(vx, vz);
+    forwardNow = mz * pace;
+    st.heading = st.yaw;
+
+    // Jump + gravity.
+    if ((k.has(" ") || touch.jump) && st.y <= 0.001 && alive) {
+      st.vy = JUMP_VELOCITY;
+      st.crouch = false;
+    }
+    touch.jump = false;
+    st.vy -= GRAVITY * dt;
+    st.y = Math.max(0, st.y + st.vy * dt);
+    if (st.y === 0) st.vy = 0;
+  }
+
+  // World edge and solid buildings.
+  const r = Math.hypot(st.x, st.z);
+  if (r > WORLD_RADIUS - 1) {
+    st.x *= (WORLD_RADIUS - 1) / r;
+    st.z *= (WORLD_RADIUS - 1) / r;
+  }
+  const bodyR = rover ? 1.8 : 0.5;
+  for (const [cx, cz, cr] of colliders) {
+    const dx = st.x - cx;
+    const dz = st.z - cz;
+    const d = Math.hypot(dx, dz);
+    const min = cr + bodyR;
+    if (d < min && d > 1e-6) {
+      st.x = cx + (dx / d) * min;
+      st.z = cz + (dz / d) * min;
+    }
+  }
+
+  // If the server disagrees by a lot (rejected moves, lag), trust it.
+  if (alive && Math.hypot(me.x - st.x, me.z - st.z) > 6 && now - st.lastSent.at > 600) {
+    st.x = me.x;
+    st.z = me.z;
+  }
+
+  const g = c.group;
+  if (g) {
+    g.position.set(st.x, st.y, st.z);
+    g.rotation.y = st.heading;
+  }
+
+  const armed = !rover && alive && !inSafeZone(st.x, st.z);
+
+  // Reload / fire.
+  if (st.reloadUntil !== 0 && now >= st.reloadUntil) {
+    st.ammo = MAG_SIZE;
+    st.reloadUntil = 0;
+  }
+  const reloading = st.reloadUntil !== 0;
+  const camDir = new THREE.Vector3();
+  camera.getWorldDirection(camDir);
+  if ((st.firing || touch.fire) && armed && !reloading && now - st.lastShot >= FIRE_INTERVAL_MS + 5) {
+    if (st.ammo <= 0) {
+      st.reloadUntil = now + RELOAD_MS;
+    } else {
+      st.lastShot = now;
+      st.ammo--;
+      poseIn.sinceShot = 0;
+      const spread = aiming ? 0.004 : st.crouch ? 0.012 : 0.022 + Math.min(speedNow, 9) * 0.004;
+      const dir = camDir
+        .clone()
+        .add(new THREE.Vector3((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread))
+        .normalize();
+      // What's under the crosshair? Nearest other player along the camera ray.
+      const camPos = camera.position;
+      const camDist = camPos.distanceTo(new THREE.Vector3(st.x, st.y + 1.4, st.z));
+      let reach = SHOT_RANGE + camDist;
+      (room.state as HubState).players.forEach((p, id) => {
+        if (id === room.sessionId || !p.alive) return;
+        const hit = rayVsPlayer(camPos, dir, { x: p.x, y: p.y, z: p.z }, p.mode === "rover" ? 1.7 : 0.55, p.mode === "rover" ? 2.2 : 1.95);
+        if (hit && hit.t > camDist && hit.t < reach) reach = hit.t;
+      });
+      const target = camPos.clone().addScaledVector(dir, reach);
+      const right = new THREE.Vector3(-Math.cos(st.yaw), 0, Math.sin(st.yaw)).multiplyScalar(0.2);
+      const muzzle = new THREE.Vector3(st.x, st.y + (st.crouch ? 1.05 : 1.42), st.z)
+        .add(right)
+        .add(new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw)).multiplyScalar(0.85));
+      const shotDir = target.clone().sub(muzzle).normalize();
+      room.send("shoot", { o: { x: muzzle.x, y: muzzle.y, z: muzzle.z }, d: { x: shotDir.x, y: shotDir.y, z: shotDir.z } });
+      const end = muzzle.clone().addScaledVector(shotDir, Math.min(muzzle.distanceTo(target), SHOT_RANGE));
+      fx.emit({ kind: "flash", at: muzzle });
+      fx.emit({ kind: "tracer", from: muzzle, to: end, color: look.glow });
+      // Recoil: kick up, a little sideways.
+      st.pitch = Math.min(1.2, st.pitch + (aiming ? 0.006 : 0.012));
+      st.yaw += (Math.random() - 0.5) * 0.006;
+    }
+  }
+
+  // Animation inputs.
+  const p = poseIn;
+  p.speed = speedNow;
+  p.forward = forwardNow;
+  p.y = st.y;
+  p.crouch = st.crouch && !rover;
+  p.armed = armed;
+  p.pitch = st.pitch;
+  p.seated = rover;
+  p.dead = !alive;
+  p.sinceShot += dt;
+
+  // Report to the server at a fixed rate when something changed.
+  const ls = st.lastSent;
+  const changed =
+    Math.hypot(st.x - ls.x, st.z - ls.z) > 0.01 ||
+    Math.abs(st.heading - ls.ry) > 0.01 ||
+    Math.abs(st.y - ls.y) > 0.02 ||
+    Math.abs(st.pitch - ls.pitch) > 0.02 ||
+    st.crouch !== ls.crouch;
+  if (alive && changed && now - ls.at >= SEND_EVERY_MS) {
+    room.send("move", { x: st.x, z: st.z, y: st.y, ry: st.heading, pitch: st.pitch, crouch: st.crouch && !rover });
+    st.lastSent = { at: now, x: st.x, z: st.z, ry: st.heading, y: st.y, pitch: st.pitch, crouch: st.crouch };
+  }
+
+  // Over-the-shoulder camera (pulled in for aim-down-sights).
+  const eye = rover ? 3.2 : st.crouch ? 1.25 : 1.65;
+  const back = rover ? 10 : aiming ? 1.7 : 3.4;
+  const shoulder = rover ? 0 : aiming ? 0.55 : 0.75;
+  const pitch = rover ? Math.min(st.pitch, 0.3) - 0.15 : st.pitch;
+  const f = new THREE.Vector3(Math.sin(st.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(st.yaw) * Math.cos(pitch));
+  const rightV = new THREE.Vector3(-Math.cos(st.yaw), 0, Math.sin(st.yaw));
+  const pivot = new THREE.Vector3(st.x, st.y + eye, st.z);
+  const desired = pivot.clone().addScaledVector(f, -back).addScaledVector(rightV, shoulder);
+  desired.y = Math.max(0.4, desired.y);
+  if (!st.camInit) {
+    camera.position.copy(desired);
+    st.camInit = true;
+  } else {
+    camera.position.lerp(desired, 1 - Math.exp(-18 * dt));
+  }
+  camera.lookAt(pivot.clone().addScaledVector(f, 30).addScaledVector(rightV, shoulder));
+  const pc = camera as THREE.PerspectiveCamera;
+  st.fov += ((aiming ? 48 : rover ? 72 : 70) - st.fov) * (1 - Math.exp(-12 * dt));
+  if (Math.abs(pc.fov - st.fov) > 0.01) {
+    pc.fov = st.fov;
+    pc.updateProjectionMatrix();
+  }
+
+  // Tell the HUD only when something it shows changed.
+  const locked = document.pointerLockElement === el;
+  const zone = zoneAt(st.x, st.z);
+  const h = st.hud;
+  if (h.ammo !== st.ammo || h.reloading !== reloading || h.aiming !== aiming || h.armed !== armed || h.locked !== locked || h.zone !== zone) {
+    st.hud = { ammo: st.ammo, reloading, aiming, armed, locked, zone };
+    onHud(st.hud);
+  }
+  }
+
+function LocalPlayer({
+  room,
+  me,
+  look,
+  mode,
+  bubble,
+  colliders,
+  getTouch,
+  onHud,
+  onToggleRover,
+  respawnSeq,
+  getRespawn,
+}: {
+  room: Room;
+  me: NetPlayer;
+  look: CharacterLook;
+  mode: HubMode;
+  bubble?: string;
+  colliders: [number, number, number][];
+  getTouch: () => TouchInput;
+  onHud: (h: LocalHud) => void;
+  onToggleRover: () => void;
+  respawnSeq: number;
+  getRespawn: () => HubRespawnMessage | null;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const { camera, gl } = useThree();
+  const pose = useRef<PoseInput>(idlePose());
+  const s = useRef<LocalState>({
+    fov: 70,
+    x: me.x,
+    z: me.z,
+    y: 0,
+    vy: 0,
+    yaw: me.ry,
+    pitch: 0,
+    heading: me.ry,
+    crouch: false,
+    ammo: MAG_SIZE,
+    reloadUntil: 0,
+    lastShot: 0,
+    firing: false,
+    aiming: false,
+    camInit: false,
+    lastSent: { at: 0, x: me.x, z: me.z, ry: me.ry, y: 0, pitch: 0, crouch: false },
+    hud: { ammo: -1, reloading: false, aiming: false, armed: false, locked: false, zone: "" },
+  });
+  const keys = useRef(new Set<string>());
+
+  // Snap to the server's respawn point.
+  useEffect(() => {
+    const spot = getRespawn();
+    if (!spot) return;
+    const st = s.current;
+    st.x = spot.x;
+    st.z = spot.z;
+    st.y = 0;
+    st.vy = 0;
+    st.yaw = st.heading = spot.ry;
+    st.pitch = 0;
+    st.ammo = MAG_SIZE;
+    st.lastSent = { ...st.lastSent, at: performance.now(), x: spot.x, z: spot.z };
+  }, [respawnSeq, getRespawn]);
+
+  // Keyboard, mouse and pointer lock.
+  useEffect(() => {
+    const el = gl.domElement;
+    const typing = () => {
+      const a = document.activeElement;
+      return a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement;
+    };
+    const down = (e: KeyboardEvent) => {
+      if (typing()) return;
+      const k = e.key.toLowerCase();
+      if (e.repeat && (k === "c" || k === "control" || k === "f")) return;
+      keys.current.add(k);
+      if (k === "c" || k === "control") s.current.crouch = !s.current.crouch;
+      if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) s.current.reloadUntil = performance.now() + RELOAD_MS;
+      if (k === "f") onToggleRover();
+      if ([" ", "arrowup", "arrowdown", "tab"].includes(k)) e.preventDefault();
+    };
+    const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
+    const blur = () => {
+      keys.current.clear();
+      s.current.firing = false;
+      s.current.aiming = false;
+    };
+    const move = (e: MouseEvent) => {
+      if (document.pointerLockElement !== el) return;
+      const st = s.current;
+      const sens = LOOK_SENS * (st.aiming ? 0.55 : 1);
+      st.yaw -= e.movementX * sens;
+      st.pitch = THREE.MathUtils.clamp(st.pitch - e.movementY * sens, -1.2, 1.2);
+    };
+    const mdown = (e: MouseEvent) => {
+      if (document.pointerLockElement !== el) {
+        if (e.target === el) void el.requestPointerLock();
+        return;
+      }
+      if (e.button === 0) s.current.firing = true;
+      if (e.button === 2) s.current.aiming = true;
+    };
+    const mup = (e: MouseEvent) => {
+      if (e.button === 0) s.current.firing = false;
+      if (e.button === 2) s.current.aiming = false;
+    };
+    const ctx = (e: Event) => e.preventDefault();
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", blur);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mousedown", mdown);
+    window.addEventListener("mouseup", mup);
+    el.addEventListener("contextmenu", ctx);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", blur);
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mousedown", mdown);
+      window.removeEventListener("mouseup", mup);
+      el.removeEventListener("contextmenu", ctx);
+    };
+  }, [gl, onToggleRover]);
+
+  useFrame((_, rawDt) =>
+    stepLocal(
+      { st: s.current, keys: keys.current, touch: getTouch(), me, mode, camera, el: gl.domElement, room, colliders, group: group.current, pose: pose.current, look, onHud },
+      rawDt,
+    ),
+  );
+
+  const getPose = useCallback(() => pose.current, []);
+  return (
+    <group ref={group}>
+      {mode === "rover" && <RoverModel color={look.glow} />}
+      <group position={mode === "rover" ? [0, 0.55, -0.3] : [0, 0, 0]}>
+        <CharacterBody look={look} pose={getPose} />
+      </group>
+      {bubble && <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} />}
+    </group>
+  );
+}
+
+/* ============================== buildings ============================== */
+
+function PropertyField({ props, places }: { props: WorldProperty[]; places: Map<string, Placement> }) {
+  const camera = useThree((st) => st.camera);
+  const [near, setNear] = useState<Set<string>>(new Set());
+  const tick = useRef(0);
+  const accent = useMemo(() => {
+    const m = new Map<string, string>(DISTRICTS.map((d) => [d.zone, d.accent]));
+    m.set(CORE_ZONE, "#a855f7");
+    return m;
+  }, []);
+
+  useFrame((_, dt) => {
+    tick.current += dt;
+    if (tick.current < 0.35) return;
+    tick.current = 0;
+    const next = new Set<string>();
+    for (const p of props) {
+      const at = places.get(p.id);
+      if (at && Math.hypot(at.x - camera.position.x, at.z - camera.position.z) < NEAR_DISTANCE) next.add(p.id);
+    }
+    if (next.size !== near.size || [...next].some((id) => !near.has(id))) setNear(next);
+  });
+
+  return (
+    <>
+      {props.map((p) => {
+        const at = places.get(p.id);
+        return at ? <Building key={p.id} prop={p} place={at} accent={accent.get(p.zone) ?? "#a855f7"} near={near.has(p.id)} /> : null;
+      })}
+    </>
+  );
+}
+
+/* ============================== networking ============================== */
+
+interface Connection {
+  status: Status;
+  room: Room | null;
+  ids: string[];
+  error: string | null;
+}
+
+const CONNECTING: Connection = { status: "connecting", room: null, ids: [], error: null };
+
+interface Kill extends HubKillBroadcast {
+  at: number;
+}
+
+function useHubRoom(name: string | undefined, initialSkin: string) {
+  const [attempt, setAttempt] = useState(0);
+  const [conn, setConn] = useState<Connection>(CONNECTING);
+  const [chat, setChat] = useState<HubChatBroadcast[]>([]);
+  const [kills, setKills] = useState<Kill[]>([]);
+  const [hitAt, setHitAt] = useState(0);
+  const [respawnSeq, setRespawnSeq] = useState(0);
+  const respawn = useRef<HubRespawnMessage | null>(null);
+  const skinRef = useRef(initialSkin);
+
+  const retry = useCallback(() => {
+    setConn(CONNECTING);
+    setAttempt((a) => a + 1);
+  }, []);
+  const getRespawn = useCallback(() => respawn.current, []);
+  const setJoinSkin = useCallback((skin: string) => {
+    skinRef.current = skin;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let room: Room | null = null;
+
+    (async () => {
+      try {
+        const joined = await new Client(SERVER_URL).joinOrCreate("hub", { name, skin: skinRef.current });
+        if (cancelled) {
+          void joined.leave();
+          return;
+        }
+        room = joined;
+        const players = new Set<string>();
+        const refresh = () => setConn((c) => ({ ...c, ids: [...players] }));
+
+        const cb = Callbacks.get(joined);
+        cb.onAdd("players", (_p, id) => {
+          players.add(String(id));
+          refresh();
+        });
+        cb.onRemove("players", (_p, id) => {
+          players.delete(String(id));
+          refresh();
+        });
+        joined.onMessage("chat", (line: HubChatBroadcast) => setChat((prev) => [...prev.slice(-49), line]));
+        joined.onMessage("kill", (k: HubKillBroadcast) => setKills((prev) => [...prev.slice(-5), { ...k, at: Date.now() }]));
+        joined.onMessage("shot", (shot: HubShotBroadcast) => {
+          if (shot.from === joined.sessionId) {
+            if (shot.hit) {
+              setHitAt(Date.now());
+              fx.emit({ kind: "impact", at: shot.end });
+            }
+            return;
+          }
+          const shooter = (joined.state as HubState).players.get(shot.from);
+          fx.emit({ kind: "flash", at: shot.o });
+          fx.emit({ kind: "tracer", from: shot.o, to: shot.end, color: characterById(shooter?.skin).glow });
+          if (shot.hit) fx.emit({ kind: "impact", at: shot.end });
+        });
+        joined.onMessage("respawn", (spot: HubRespawnMessage) => {
+          respawn.current = spot;
+          setRespawnSeq((n) => n + 1);
+        });
+        joined.onLeave(() => {
+          if (!cancelled) setConn((c) => ({ ...c, status: "offline", error: "Disconnected from Astroworld." }));
+        });
+
+        setConn({ status: "online", room: joined, ids: [...players], error: null });
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        setConn({ status: "offline", room: null, ids: [], error: `Can't reach the game server (${msg}).` });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (room) void room.leave();
+    };
+  }, [name, attempt]);
+
+  return { ...conn, chat, kills, hitAt, respawnSeq, getRespawn, retry, setJoinSkin };
+}
+
+/* ============================== UI pieces ============================== */
+
+function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const base = useRef<HTMLDivElement>(null);
+  const R = 48;
+  const update = (e: React.PointerEvent) => {
+    const rect = base.current!.getBoundingClientRect();
+    let dx = e.clientX - (rect.left + rect.width / 2);
+    let dy = e.clientY - (rect.top + rect.height / 2);
+    const len = Math.hypot(dx, dy);
+    if (len > R) {
+      dx = (dx / len) * R;
+      dy = (dy / len) * R;
+    }
+    setKnob({ x: dx, y: dy });
+    onMove(dx / R, dy / R);
+  };
+  const reset = () => {
+    setKnob({ x: 0, y: 0 });
+    onMove(0, 0);
+  };
+  return (
+    <div
+      ref={base}
+      className="pointer-events-auto relative h-32 w-32 touch-none rounded-full border border-white/25 bg-black/40"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        update(e);
+      }}
+      onPointerMove={(e) => e.buttons && update(e)}
+      onPointerUp={reset}
+      onPointerCancel={reset}
+    >
+      <div className="absolute left-1/2 top-1/2 h-12 w-12 rounded-full bg-violet-500/80" style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))` }} />
+    </div>
+  );
+}
+
+function Minimap({ players, meId, places }: { players: { id: string; x: number; z: number; ry: number }[]; meId: string | null; places: Placement[] }) {
+  const S = 150;
+  const k = S / 2 / (WORLD_RADIUS + 10);
+  const tx = (x: number) => S / 2 + x * k;
+  const tz = (z: number) => S / 2 - z * k;
+  return (
+    <svg width={S} height={S} className="rounded-full border border-violet-400/40 bg-black/60">
+      <circle cx={S / 2} cy={S / 2} r={SAFE_RADIUS * k} fill="rgba(16,185,129,0.15)" stroke="#10b981" strokeWidth={1} />
+      {DISTRICTS.map((d) => (
+        <rect
+          key={d.zone}
+          x={tx(d.x - DISTRICT_HALF)}
+          y={tz(d.z + DISTRICT_HALF)}
+          width={DISTRICT_HALF * 2 * k}
+          height={DISTRICT_HALF * 2 * k}
+          fill="rgba(239,68,68,0.12)"
+          stroke={d.accent}
+          strokeWidth={0.8}
+        />
+      ))}
+      {places.map((p, i) => (
+        <rect key={i} x={tx(p.x) - 1} y={tz(p.z) - 1} width={2} height={2} fill="#6b7280" />
+      ))}
+      {players.map((p) =>
+        p.id === meId ? (
+          <g key={p.id} transform={`translate(${tx(p.x)} ${tz(p.z)}) rotate(${(-p.ry * 180) / Math.PI + 180})`}>
+            <path d="M0,-5 L3.5,4 L0,2 L-3.5,4 Z" fill="#fbbf24" />
+          </g>
+        ) : (
+          <circle key={p.id} cx={tx(p.x)} cy={tz(p.z)} r={2.2} fill="#a855f7" />
+        ),
+      )}
+    </svg>
+  );
+}
+
+function CharacterCard({ c, current, owned, onPick }: { c: CharacterLook; current: boolean; owned: boolean; onPick: (id: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(c.id)}
+      className={`group relative overflow-hidden rounded-lg border text-left transition ${current ? "border-amber-400 ring-2 ring-amber-400/60" : "border-white/10 hover:border-violet-400"}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={c.image} alt={c.name} loading="lazy" className="aspect-square w-full object-cover" />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4 text-[11px] font-semibold text-white">
+        {c.name}
+        {owned && <span className="ml-1 rounded bg-emerald-500/80 px-1 text-[9px] uppercase">Yours</span>}
+      </div>
+      <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[8px] font-bold uppercase tracking-wider" style={{ color: TIER_COLOR[c.tier] }}>
+        {TIER_LABEL[c.tier]}
+      </span>
+    </button>
+  );
+}
+
+function CharacterPicker({ current, owned, onPick, onClose }: { current: string; owned: Set<string>; onPick: (id: string) => void; onClose: () => void }) {
+  const tiers: CharacterLook["tier"][] = ["one_of_one", "rare", "common"];
+  const mine = CHARACTERS.filter((c) => owned.has(c.id));
+  const grid = (list: CharacterLook[]) => (
+    <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6">
+      {list.map((c) => (
+        <CharacterCard key={c.id} c={c} current={c.id === current} owned={owned.has(c.id)} onPick={onPick} />
+      ))}
+    </div>
+  );
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 p-3" onClick={onClose}>
+      <div className="max-h-full w-full max-w-4xl overflow-y-auto rounded-xl border border-violet-500/40 bg-[#110d22] p-4 text-white" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-lg font-bold">Choose your Astrochimp</div>
+            <div className="text-xs text-white/60">Test build: try any design. Later, only NFTs you hold can be worn.</div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1 text-sm hover:bg-white/20">
+            Close
+          </button>
+        </div>
+        {mine.length > 0 && (
+          <>
+            <div className="mt-4 text-xs font-bold uppercase tracking-widest text-emerald-300">Your chimps</div>
+            {grid(mine)}
+          </>
+        )}
+        {tiers.map((tier) => (
+          <div key={tier}>
+            <div className="mt-4 text-xs font-bold uppercase tracking-widest" style={{ color: TIER_COLOR[tier] }}>
+              {TIER_LABEL[tier]} · {CHARACTERS.filter((c) => c.tier === tier).length}
+            </div>
+            {grid(CHARACTERS.filter((c) => c.tier === tier))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== the page ============================== */
+
+interface Snap {
+  players: { id: string; name: string; x: number; z: number; ry: number; kills: number; deaths: number }[];
+  hp: number;
+  alive: boolean;
+}
+
+export function HubScene({ playerName, loggedIn }: { playerName?: string; loggedIn: boolean }) {
+  const [skin, setSkin] = useState(loadSkin);
+  const { status, room, ids, error, chat, kills, hitAt, respawnSeq, getRespawn, retry, setJoinSkin } = useHubRoom(playerName, skin);
+  const [draft, setDraft] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const [touch] = useState(() => window.matchMedia("(pointer: coarse)").matches);
+  const [picking, setPicking] = useState(false);
+  const [owned, setOwned] = useState<Set<string>>(new Set());
+  const [props, setProps] = useState<WorldProperty[]>([]);
+  const [hud, setHud] = useState<LocalHud>({ ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE });
+  const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
+  const [scores, setScores] = useState(false);
+  const chatInput = useRef<HTMLInputElement>(null);
+  const touchInput = useRef<TouchInput>({ move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, aim: false, jump: false });
+  const lastLook = useRef<{ x: number; y: number } | null>(null);
+
+  const state = room?.state as HubState | undefined;
+  const look = characterById(skin);
+
+  // Mode is remembered per session, so a fresh join always starts on foot.
+  const [modeFor, setModeFor] = useState<{ session: string; mode: HubMode } | null>(null);
+  const myMode: HubMode = room && modeFor?.session === room.sessionId ? modeFor.mode : "walk";
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+
+  // Artist models that have passed scripts/check-models.mjs.
+  const [models, setModels] = useState<ModelIndex>({});
+  useEffect(() => {
+    let live = true;
+    void fetchModelIndex().then((m) => {
+      if (live) setModels(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // Properties from the market.
+  useEffect(() => {
+    let live = true;
+    fetch("/api/world")
+      .then((r) => r.json())
+      .then((d: { properties?: WorldProperty[] }) => {
+        if (live && d.properties) setProps(d.properties);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // Which designs does this wallet actually hold?
+  useEffect(() => {
+    if (!loggedIn) return;
+    let live = true;
+    fetch("/api/me/assets", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { nfts?: { name: string }[] }) => {
+        if (!live || !d.nfts) return;
+        const mine = new Set<string>();
+        for (const n of d.nfts) {
+          const c = characterForNftName(n.name);
+          if (c) mine.add(c.id);
+        }
+        setOwned(mine);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [loggedIn]);
+
+  // HUD snapshot of server state, 10x a second.
+  useEffect(() => {
+    if (!room || !state) return;
+    const t = setInterval(() => {
+      const players: Snap["players"] = [];
+      state.players.forEach((p, id) => players.push({ id, name: p.name, x: p.x, z: p.z, ry: p.ry, kills: p.kills, deaths: p.deaths }));
+      const me = state.players.get(room.sessionId);
+      setSnap({ players, hp: me?.hp ?? MAX_HP, alive: me?.alive ?? true });
+    }, 100);
+    return () => clearInterval(t);
+  }, [room, state]);
+
+  const places = useMemo(() => layoutProperties(props), [props]);
+  const placeList = useMemo(() => [...places.values()], [places]);
+  const colliders = useMemo<[number, number, number][]>(
+    () => [
+      ...STATIC_COLLIDERS,
+      [SHOWROOM.x, SHOWROOM.z, 4.6],
+      ...placeList.map((p): [number, number, number] => [p.x - Math.sin(p.ry) * 1.5, p.z - Math.cos(p.ry) * 1.5, BUILDING_RADIUS - 1.5]),
+    ],
+    [placeList],
+  );
+
+  const toggleMode = useCallback(() => {
+    if (!room) return;
+    const next: HubMode = myMode === "walk" ? "rover" : "walk";
+    room.send("mode", { mode: next });
+    setModeFor({ session: room.sessionId, mode: next });
+  }, [room, myMode]);
+
+  const pickSkin = useCallback(
+    (id: string) => {
+      setSkin(id);
+      saveSkin(id);
+      setJoinSkin(id);
+      room?.send("skin", { skin: id });
+      setPicking(false);
+    },
+    [room, setJoinSkin],
+  );
+
+  // Enter/T = chat, Tab = scores.
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (document.activeElement === chatInput.current) return;
+      if (e.key === "Enter" || e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        document.exitPointerLock?.();
+        chatInput.current?.focus();
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        setScores(true);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "Tab") setScores(false);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
+  const bubbles = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const line of chat) if (now - line.at < BUBBLE_MS) out.set(line.from, line.text);
+    return out;
+  }, [chat, now]);
+
+  const sendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = draft.trim();
+    if (room && text) room.send("chat", { text });
+    setDraft("");
+    chatInput.current?.blur();
+  };
+
+  const getTouch = useCallback(() => touchInput.current, []);
+  const setMove = useCallback((x: number, y: number) => {
+    touchInput.current.move = { x, y };
+  }, []);
+  const setTouchFlag = useCallback((flag: "fire" | "aim" | "jump", on: boolean) => {
+    touchInput.current[flag] = on;
+  }, []);
+  const lookStart = useCallback((e: React.PointerEvent) => {
+    lastLook.current = { x: e.clientX, y: e.clientY };
+  }, []);
+  const lookMove = useCallback((e: React.PointerEvent) => {
+    const last = lastLook.current;
+    if (!last) return;
+    touchInput.current.look.dx += e.clientX - last.x;
+    touchInput.current.look.dy += e.clientY - last.y;
+    lastLook.current = { x: e.clientX, y: e.clientY };
+  }, []);
+  const lookEnd = useCallback(() => {
+    lastLook.current = null;
+  }, []);
+
+  const recentKills = kills.filter((k) => now - k.at < 6000);
+  const killer = !snap.alive ? [...kills].reverse().find((k) => room && k.victim === room.sessionId) : undefined;
+  const hitShown = now - hitAt < 300;
+  const safe = hud.zone === CORE_ZONE;
+  const myStats = snap.players.find((p) => room && p.id === room.sessionId);
+
+  return (
+    <div className="relative h-[calc(100dvh-140px)] min-h-[480px] w-full select-none overflow-hidden rounded-xl border border-violet-500/30 bg-[#07051a]">
+      <Canvas camera={{ fov: 70, near: 0.1, far: 1400, position: [0, 20, 40] }} dpr={[1, 1.6]}>
+        <color attach="background" args={["#07051a"]} />
+        <fog attach="fog" args={["#0c0820", 120, 520]} />
+        <ambientLight intensity={0.45} />
+        <hemisphereLight args={["#b9a6ff", "#1b1326", 0.7]} />
+        <directionalLight position={[60, 90, 40]} intensity={1.5} />
+        <ModelIndexContext.Provider value={models}>
+        <WorldScenery showroomRover={<RoverModel color="#a855f7" />} />
+        <PropertyField props={props} places={places} />
+        <Effects />
+
+        {room &&
+          state &&
+          ids.map((id) => {
+            const p = state.players.get(id);
+            if (!p) return null;
+            if (id === room.sessionId) {
+              return (
+                <LocalPlayer
+                  key={id}
+                  room={room}
+                  me={p}
+                  look={look}
+                  mode={myMode}
+                  bubble={bubbles.get(id)}
+                  colliders={colliders}
+                  getTouch={getTouch}
+                  onHud={setHud}
+                  onToggleRover={toggleMode}
+                  respawnSeq={respawnSeq}
+                  getRespawn={getRespawn}
+                />
+              );
+            }
+            return <RemoteChimp key={id} player={p} bubble={bubbles.get(id)} />;
+          })}
+        </ModelIndexContext.Provider>
+      </Canvas>
+
+      {/* crosshair */}
+      {room && myMode === "walk" && snap.alive && (
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          {hud.armed ? (
+            <div className="relative" style={{ width: hud.aiming ? 18 : 34, height: hud.aiming ? 18 : 34, transition: "all 120ms" }}>
+              <span className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
+              <span className="absolute bottom-0 left-1/2 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
+              <span className="absolute left-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
+              <span className="absolute right-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
+              <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+              {hitShown && <span className="absolute inset-[-6px] text-center text-2xl font-black leading-[46px] text-red-400">✕</span>}
+            </div>
+          ) : (
+            <span className="block h-1.5 w-1.5 rounded-full bg-white/70" />
+          )}
+        </div>
+      )}
+
+      {/* status + minimap */}
+      <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-2">
+        <div className="rounded-lg bg-black/60 px-3 py-2 text-xs text-white">
+          <div className={`font-bold uppercase tracking-wider ${safe ? "text-emerald-300" : "text-red-400"}`}>
+            {hud.zone} · {safe ? "Safe zone" : "Combat zone"}
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-white/80">
+            <span className={`inline-block h-2 w-2 rounded-full ${status === "online" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400" : "bg-red-500"}`} />
+            {status === "online" ? `${ids.length} chimp${ids.length === 1 ? "" : "s"} online · ${props.length} properties` : status === "connecting" ? "Connecting…" : "Offline"}
+          </div>
+          <div className="mt-0.5 text-[10px] text-white/50">Test build · nothing here costs or pays anything</div>
+        </div>
+        {room && <Minimap players={snap.players} meId={room.sessionId} places={placeList} />}
+      </div>
+
+      {/* character + rover buttons, kill feed */}
+      <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              document.exitPointerLock?.();
+              setPicking(true);
+            }}
+            className="flex items-center gap-2 rounded-lg border border-violet-400/60 bg-black/70 py-1 pl-1 pr-3 text-xs font-bold text-white hover:bg-black/90"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={look.image} alt="" className="h-7 w-7 rounded object-cover" />
+            <span className="leading-tight">
+              {look.name}
+              <span className="block text-[9px] uppercase tracking-wider" style={{ color: TIER_COLOR[look.tier] }}>
+                {TIER_LABEL[look.tier]} · change
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={toggleMode}
+            disabled={!room}
+            className="rounded-lg border border-amber-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 hover:bg-black/90 disabled:opacity-40"
+          >
+            {myMode === "walk" ? "🚙 Rover (F)" : "🚶 Walk (F)"}
+          </button>
+        </div>
+        <div className="pointer-events-none flex flex-col items-end gap-1">
+          {recentKills.map((k) => (
+            <div key={`${k.at}-${k.victim}`} className="rounded bg-black/65 px-2 py-0.5 text-xs text-white">
+              <span className="font-semibold text-amber-300">{k.killerName}</span> {k.headshot ? "🎯" : "✦"} <span className="font-semibold text-red-300">{k.victimName}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* health + ammo */}
+      {room && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">{myStats ? `${myStats.kills} kills · ${myStats.deaths} deaths` : ""}</div>
+          <div className="h-2.5 w-56 overflow-hidden rounded-full border border-white/20 bg-black/60">
+            <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${(snap.hp / MAX_HP) * 100}%` }} />
+          </div>
+        </div>
+      )}
+      {room && hud.armed && (
+        <div className="pointer-events-none absolute bottom-4 right-4 text-right text-white">
+          <div className="text-3xl font-black tabular-nums">
+            {hud.reloading ? "··" : hud.ammo}
+            <span className="text-base text-white/50"> / {MAG_SIZE}</span>
+          </div>
+          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: look.glow }}>
+            {hud.reloading ? "Reloading…" : hud.ammo === 0 ? "Press R to reload" : "Astral rifle"}
+          </div>
+        </div>
+      )}
+
+      {/* hurt vignette */}
+      {room && snap.hp < MAX_HP && snap.alive && (
+        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
+      )}
+
+      {/* chat */}
+      <div className="absolute bottom-3 left-3 flex w-[min(340px,calc(100%-180px))] flex-col gap-1.5">
+        <div className="pointer-events-none flex max-h-36 flex-col justify-end overflow-hidden text-xs">
+          {chat.slice(-7).map((line) => (
+            <div key={line.id} className="mb-0.5 w-fit max-w-full rounded bg-black/55 px-2 py-0.5 text-white">
+              <span className="font-semibold" style={{ color: line.color }}>
+                {line.name}:
+              </span>{" "}
+              {line.text}
+            </div>
+          ))}
+        </div>
+        <form onSubmit={sendChat}>
+          <input
+            ref={chatInput}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") e.currentTarget.blur();
+            }}
+            maxLength={CHAT_MAX_LENGTH}
+            disabled={!room}
+            placeholder={room ? "Chat (Enter or T)" : "Chat offline"}
+            className="w-full rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-violet-400 focus:outline-none"
+          />
+        </form>
+      </div>
+
+      {/* click-to-play (desktop) */}
+      {room && !touch && !hud.locked && !picking && snap.alive && (
+        <div className="pointer-events-none absolute inset-x-0 top-[34%] flex justify-center">
+          <div className="rounded-xl border border-violet-400/40 bg-black/75 px-5 py-3 text-center text-white">
+            <div className="text-sm font-bold">Click the world to play</div>
+            <div className="mt-1 grid grid-cols-2 gap-x-6 text-left text-[11px] leading-5 text-white/70">
+              <span>WASD · move</span>
+              <span>Mouse · aim</span>
+              <span>Shift · sprint</span>
+              <span>Left click · fire</span>
+              <span>Space · jump</span>
+              <span>Right click · aim down sights</span>
+              <span>C · crouch</span>
+              <span>R · reload</span>
+              <span>F · rover</span>
+              <span>Tab · scoreboard</span>
+              <span>Enter · chat</span>
+              <span>Esc · free the mouse</span>
+            </div>
+            <div className="mt-1 text-[10px] text-emerald-300/80">Weapons are holstered inside the Core. Head out to a district to fight.</div>
+          </div>
+        </div>
+      )}
+
+      {/* scoreboard */}
+      {scores && (
+        <div className="pointer-events-none absolute left-1/2 top-16 w-80 -translate-x-1/2 rounded-xl border border-violet-400/40 bg-black/80 p-3 text-sm text-white">
+          <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/50">
+            <span>Chimp</span>
+            <span>K / D</span>
+          </div>
+          {[...snap.players]
+            .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)
+            .map((p) => (
+              <div key={p.id} className={`flex justify-between py-0.5 ${room && p.id === room.sessionId ? "text-amber-300" : ""}`}>
+                <span className="truncate">{p.name}</span>
+                <span className="tabular-nums">
+                  {p.kills} / {p.deaths}
+                </span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* death */}
+      {room && !snap.alive && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-950/40">
+          <div className="text-center text-white">
+            <div className="text-3xl font-black uppercase tracking-widest text-red-400">Eliminated</div>
+            {killer && (
+              <div className="mt-1 text-sm">
+                by {killer.killerName}
+                {killer.headshot ? " · headshot" : ""}
+              </div>
+            )}
+            <div className="mt-2 text-xs text-white/60">Respawning in the Core… (test build: nothing was lost)</div>
+          </div>
+        </div>
+      )}
+
+      {/* touch controls */}
+      {touch && room && (
+        <>
+          <div className="absolute inset-y-0 right-0 w-1/2 touch-none" onPointerDown={lookStart} onPointerMove={lookMove} onPointerUp={lookEnd} onPointerCancel={lookEnd} />
+          <div className="absolute bottom-20 left-4">
+            <Joystick onMove={setMove} />
+          </div>
+          <div className="absolute bottom-20 right-4 flex flex-col items-end gap-2">
+            <button
+              type="button"
+              className="h-16 w-16 rounded-full bg-red-600/80 text-xs font-bold text-white"
+              onPointerDown={() => setTouchFlag("fire", true)}
+              onPointerUp={() => setTouchFlag("fire", false)}
+              onPointerCancel={() => setTouchFlag("fire", false)}
+            >
+              FIRE
+            </button>
+            <div className="flex gap-2">
+              <button type="button" className="h-12 w-12 rounded-full bg-white/20 text-[10px] font-bold text-white" onPointerDown={() => setTouchFlag("aim", true)} onPointerUp={() => setTouchFlag("aim", false)}>
+                AIM
+              </button>
+              <button type="button" className="h-12 w-12 rounded-full bg-white/20 text-[10px] font-bold text-white" onPointerDown={() => setTouchFlag("jump", true)}>
+                JUMP
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {picking && <CharacterPicker current={skin} owned={owned} onPick={pickSkin} onClose={() => setPicking(false)} />}
+
+      {/* connection problems */}
+      {status === "offline" && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-w-sm rounded-xl border border-violet-500/40 bg-[#110d22] p-5 text-center text-sm text-white">
+            <div className="text-base font-bold">Astroworld is offline</div>
+            <p className="mt-2 text-white/70">{error}</p>
+            {process.env.NODE_ENV !== "production" && (
+              <p className="mt-2 text-xs text-white/50">
+                Dev tip: start the game server with <code className="text-amber-300">npm run server:dev</code>
+              </p>
+            )}
+            <button type="button" onClick={retry} className="mt-4 rounded-lg bg-violet-600 px-4 py-2 font-semibold hover:bg-violet-500">
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
