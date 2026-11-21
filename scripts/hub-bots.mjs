@@ -63,7 +63,12 @@ async function bot(i) {
   room.onMessage("chat", () => {});
   room.onMessage("shot", () => {});
   room.onMessage("kill", () => {});
-  await new Promise((r) => setTimeout(r, 300)); // first state patch
+  // Wait for our own player to arrive in the synced state (slower over the internet).
+  const deadline = Date.now() + 15000;
+  while (!room.state?.players?.get(room.sessionId)) {
+    if (Date.now() > deadline) throw new Error(`no state from ${SERVER} after 15s`);
+    await new Promise((r) => setTimeout(r, 100));
+  }
 
   const me = room.state.players.get(room.sessionId);
   const b = { i, room, look, x: me.x, z: me.z, ry: me.ry, route: [], spawn: { x: me.x, z: me.z }, lastShot: 0, shots: 0 };
@@ -170,6 +175,6 @@ if (process.env.HUB_BOTS_SECONDS) {
     const shots = bots.reduce((n, b) => n + b.shots, 0);
     console.log(`check: ${seen}/${COUNT} players seen, ${moved}/${COUNT} moved (server-accepted), ${skins}/${COUNT} wearing their NFT character, ${shots} shots, ${kills} kills, ${chats} chat lines`);
     await Promise.all(bots.map((b) => b.room.leave()));
-    process.exit(seen === COUNT && moved === COUNT && skins === COUNT ? 0 : 1);
+    process.exit(seen >= COUNT && moved === COUNT && skins === COUNT ? 0 : 1); // real players may be online too
   }, Number(process.env.HUB_BOTS_SECONDS) * 1000);
 }
