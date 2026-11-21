@@ -13,7 +13,8 @@
     "@chimp-arena/shared": "*",
     "@colyseus/schema": "^5.0.42",
     "colyseus": "^0.18.9",
-    "express": "^4"
+    "express": "^4",
+    "obscenity": "^0.4.6"
   },
   "devDependencies": {
     "@colyseus/testing": "^0.18.6",

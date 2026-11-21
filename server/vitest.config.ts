@@ -9,5 +9,8 @@ export default defineConfig({
     // and its own IPC protocol chokes trying to parse the unrelated message.
     // The threads pool doesn't expose process.send() at all, so this never fires.
     pool: "threads",
+    // Each room test file boots its own Colyseus server on the same default
+    // port, so files run one after another instead of racing for it.
+    fileParallelism: false,
   },
 });

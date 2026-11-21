@@ -6,10 +6,12 @@
 import config from "@colyseus/tools";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { MiningRoom } from "./rooms/MiningRoom";
+import { HubRoom } from "./rooms/HubRoom";
 
 export default config({
   initializeGameServer: (gameServer) => {
     gameServer.define("mining", MiningRoom);
+    gameServer.define("hub", HubRoom);
   },
   initializeTransport: () => new WebSocketTransport(),
 });

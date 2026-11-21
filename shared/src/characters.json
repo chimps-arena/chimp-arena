@@ -1,0 +1,472 @@
+[
+  {
+    "id": "chimp-1of1-cleopatra",
+    "name": "Cleopatra",
+    "tier": "one_of_one",
+    "image": "/nft-thumbs/5MAFxTDSu9FzSB9kqLx9djNxAq7QPd5oxMBTGcEHH4PC.webp",
+    "suit": "#7070ad",
+    "trim": "#906d6f",
+    "glow": "#d9a551",
+    "fur": "#8c5432"
+  },
+  {
+    "id": "chimp-1of1-dex",
+    "name": "Dex",
+    "tier": "one_of_one",
+    "image": "/nft-thumbs/6T95Lk9uSDeocxtG4KHKhGeWWWKdyybqKAyPjswcWNvh.webp",
+    "suit": "#130e0f",
+    "trim": "#34292e",
+    "glow": "#c877eb",
+    "fur": "#544934"
+  },
+  {
+    "id": "chimp-1of1-kill-boy-tommy",
+    "name": "Kill Boy Tommy",
+    "tier": "one_of_one",
+    "image": "/nft-thumbs/6G2rCTRKFj8NNLSV5oGXKwUQqRoS6RbpNBh9rXRHH5XP.webp",
+    "suit": "#6e5190",
+    "trim": "#4e366c",
+    "glow": "#ca6cf1",
+    "fur": "#8b5b72"
+  },
+  {
+    "id": "chimp-1of1-lex",
+    "name": "Lex",
+    "tier": "one_of_one",
+    "image": "/nft-thumbs/F3KGRDDixwq1CJFu5nCqLpy4mGLRVNWvSfKnQxTtfLn6.webp",
+    "suit": "#140c11",
+    "trim": "#6d5390",
+    "glow": "#6dadcf",
+    "fur": "#534637"
+  },
+  {
+    "id": "chimp-1of1-napoleon",
+    "name": "Napoleon",
+    "tier": "one_of_one",
+    "image": "/nft-thumbs/3gTvsoKcwXC2Hxqh6n1seMeAN9WVtRPZ82igbUpwgUs7.webp",
+    "suit": "#15050e",
+    "trim": "#af90d2",
+    "glow": "#c88c58",
+    "fur": "#93684f"
+  },
+  {
+    "id": "rare-apex-rex",
+    "name": "Apex Rex",
+    "tier": "rare",
+    "image": "/nft-thumbs/EZD8t1QoiNLnwzn1zN9isa6Gtm7T6qeNUi4uaakWL3j2.webp",
+    "suit": "#120b13",
+    "trim": "#322633",
+    "glow": "#c755e9",
+    "fur": "#69494c"
+  },
+  {
+    "id": "rare-aria",
+    "name": "Aria",
+    "tier": "rare",
+    "image": "/nft-thumbs/8kh8pHBGVm2dyTWUd5P54k2Ch3xLeqnwA1NqDUGga4qw.webp",
+    "suit": "#30142f",
+    "trim": "#503170",
+    "glow": "#d451ec",
+    "fur": "#6c3234"
+  },
+  {
+    "id": "rare-ash-cold",
+    "name": "Ash Cold",
+    "tier": "rare",
+    "image": "/nft-thumbs/9Ngy1WNQJAG8SQdRZo12d6W8eW5yG9AzvAvrArVpZcdC.webp",
+    "suit": "#6e538e",
+    "trim": "#8e6cb2",
+    "glow": "#b07be9",
+    "fur": "#6a4d51"
+  },
+  {
+    "id": "rare-atisha-the-b",
+    "name": "Atisha The B",
+    "tier": "rare",
+    "image": "/nft-thumbs/4nCx13VUujfvbchv6NrX7c5AmZTEbN6Wq9fD7RkHmrUr.webp",
+    "suit": "#4f4b72",
+    "trim": "#7270ae",
+    "glow": "#8ec8ed",
+    "fur": "#4e3131"
+  },
+  {
+    "id": "rare-bad-mike",
+    "name": "Bad Mike",
+    "tier": "rare",
+    "image": "/nft-thumbs/G3pzXiJAm1ZG7oDxbpAhEvW1jEgmpJ5TSu6njY8BiBrD.webp",
+    "suit": "#4d4c71",
+    "trim": "#6f74a8",
+    "glow": "#a94b17",
+    "fur": "#4d332f"
+  },
+  {
+    "id": "rare-bertha-brick-hit",
+    "name": "Bertha Brick Hit",
+    "tier": "rare",
+    "image": "/nft-thumbs/AVUDCyC4sAewZewPfbyPKMaRjYqqk6w2vUrgcVHPkGvc.webp",
+    "suit": "#28162f",
+    "trim": "#4a3250",
+    "glow": "#7298e3",
+    "fur": "#8e564b"
+  },
+  {
+    "id": "rare-caesar",
+    "name": "Caesar",
+    "tier": "rare",
+    "image": "/nft-thumbs/84dA9NVSdGvUGmTD1a1jsJhhM5BVVT895Ue6RPUwTg1z.webp",
+    "suit": "#b28f8c",
+    "trim": "#6c73af",
+    "glow": "#e4ac76",
+    "fur": "#916951"
+  },
+  {
+    "id": "rare-deezy-chimp",
+    "name": "Deezy Chimp",
+    "tier": "rare",
+    "image": "/nft-thumbs/6S4XxUpmuXYEviZart1YqsxuHnHvejhuV4ryHXPuvNkj.webp",
+    "suit": "#140d0f",
+    "trim": "#4b344e",
+    "glow": "#cb71ee",
+    "fur": "#544632"
+  },
+  {
+    "id": "rare-ella",
+    "name": "Ella",
+    "tier": "rare",
+    "image": "/nft-thumbs/FhYdB9s6wYAXN4QnLp1dUSpVPtB5iSWfgSmBppw11N4R.webp",
+    "suit": "#2b072b",
+    "trim": "#294e50",
+    "glow": "#cf8b50",
+    "fur": "#70304f"
+  },
+  {
+    "id": "rare-eva",
+    "name": "Eva",
+    "tier": "rare",
+    "image": "/nft-thumbs/kKx5ebUmtyoYZBsjzFcWZbyoAByxxefGTccKEA9UUNp.webp",
+    "suit": "#110715",
+    "trim": "#30706d",
+    "glow": "#e451cc",
+    "fur": "#af2e90"
+  },
+  {
+    "id": "rare-foxtrot",
+    "name": "Foxtrot",
+    "tier": "rare",
+    "image": "/nft-thumbs/y2ftfDzqr72hutfeKH37zYkjqu5t1QXQmQbdW75uN8V.webp",
+    "suit": "#120e12",
+    "trim": "#4f506f",
+    "glow": "#53b0c9",
+    "fur": "#976c59"
+  },
+  {
+    "id": "rare-isabella",
+    "name": "Isabella",
+    "tier": "rare",
+    "image": "/nft-thumbs/3LFJDG5q9fhrnMjcMg7pSFC7Vn8f7SfxTJneHVjDHAhm.webp",
+    "suit": "#704caf",
+    "trim": "#d2ab8f",
+    "glow": "#c78d54",
+    "fur": "#ab7351"
+  },
+  {
+    "id": "rare-kanuchi",
+    "name": "Kanuchi",
+    "tier": "rare",
+    "image": "/nft-thumbs/EdEtNNwuG5axiP42ZD5SZVu4AmTuPrModcv9cuvxw8i1.webp",
+    "suit": "#140c11",
+    "trim": "#4c314f",
+    "glow": "#b05be6",
+    "fur": "#aa726b"
+  },
+  {
+    "id": "rare-lady-winter",
+    "name": "Lady Winter",
+    "tier": "rare",
+    "image": "/nft-thumbs/FMwecuPLjPHVP4WVaoAE548i39DYTgspPgNoTLDhFL5Z.webp",
+    "suit": "#4a3453",
+    "trim": "#6e528e",
+    "glow": "#af57cf",
+    "fur": "#6c4c4e"
+  },
+  {
+    "id": "rare-lord-julian",
+    "name": "Lord Julian",
+    "tier": "rare",
+    "image": "/nft-thumbs/EEhMGKY3TZtk4tYbY6oymJXDCkCreH2LmhVcV1xNjEc2.webp",
+    "suit": "#130b12",
+    "trim": "#33124d",
+    "glow": "#e59770",
+    "fur": "#4f2c2d"
+  },
+  {
+    "id": "rare-lucian",
+    "name": "Lucian",
+    "tier": "rare",
+    "image": "/nft-thumbs/EkidEArd8mgxz2YEHVxiyP2KLKnvBfxBiYnLiAjr3DV9.webp",
+    "suit": "#0d040f",
+    "trim": "#32164b",
+    "glow": "#a853cd",
+    "fur": "#4e2b32"
+  },
+  {
+    "id": "rare-major-mike",
+    "name": "Major Mike",
+    "tier": "rare",
+    "image": "/nft-thumbs/2t6b6tTxdbjkqoYBp5oqDKsJG9hJ4P4xsS6mgNjYMryy.webp",
+    "suit": "#29142f",
+    "trim": "#4e2b72",
+    "glow": "#b64fe9",
+    "fur": "#4c2c30"
+  },
+  {
+    "id": "rare-rambo",
+    "name": "Rambo",
+    "tier": "rare",
+    "image": "/nft-thumbs/DCfAmgFCtkpf4uJiekmsHrMEsvQVegu9He7TNBYfRucz.webp",
+    "suit": "#6c7190",
+    "trim": "#4f526e",
+    "glow": "#cf75e7",
+    "fur": "#6b382c"
+  },
+  {
+    "id": "rare-senex",
+    "name": "Senex",
+    "tier": "rare",
+    "image": "/nft-thumbs/9SRBsQjLwquXDmSF7UG89gFYQz2jWwd6dVpYN5nLyTnc.webp",
+    "suit": "#120d0a",
+    "trim": "#342929",
+    "glow": "#ebb171",
+    "fur": "#4b372e"
+  },
+  {
+    "id": "rare-soloman",
+    "name": "Soloman",
+    "tier": "rare",
+    "image": "/nft-thumbs/AghMLVPGBaX6BesJiKSQLob9Lg2rjBVpB6VWaxvxursD.webp",
+    "suit": "#120a12",
+    "trim": "#4c354c",
+    "glow": "#b08359",
+    "fur": "#6f4f51"
+  },
+  {
+    "id": "rare-victoria",
+    "name": "Victoria",
+    "tier": "rare",
+    "image": "/nft-thumbs/CtsWSqTR3R8LYAvRVu6iHJdtk7u5ADhBfUAnBHnquRGL.webp",
+    "suit": "#130909",
+    "trim": "#93708e",
+    "glow": "#e7ae73",
+    "fur": "#ad7051"
+  },
+  {
+    "id": "std-alena-the-wrench",
+    "name": "Alena The Wrench",
+    "tier": "common",
+    "image": "/nft-thumbs/8cTQfRdtSVBovdjRikCVPmH14GJb9BKQQkfpUpZxWoT3.webp",
+    "suit": "#4d344d",
+    "trim": "#120b0f",
+    "glow": "#e4976f",
+    "fur": "#6c4c52"
+  },
+  {
+    "id": "std-alisa",
+    "name": "Alisa",
+    "tier": "common",
+    "image": "/nft-thumbs/Ha22iuAc58gEniRgJUH9eXU3Q8tr5TC9xT3u942o4zFD.webp",
+    "suit": "#4e3170",
+    "trim": "#704e8f",
+    "glow": "#54cbf8",
+    "fur": "#704c54"
+  },
+  {
+    "id": "std-asher",
+    "name": "Asher",
+    "tier": "common",
+    "image": "/nft-thumbs/G6Vs2cdYpSpSFu8Ym7VXgnY8LeTuEL25nw3E8NUqDMMa.webp",
+    "suit": "#271a2f",
+    "trim": "#4c366d",
+    "glow": "#50cbf2",
+    "fur": "#4f3335"
+  },
+  {
+    "id": "std-astrodog",
+    "name": "Astrodog",
+    "tier": "common",
+    "image": "/nft-thumbs/D3Q8kGM7L8Tx4m6KGZNe6RkVwiGGWbiAFG7tTwM7asLy.webp",
+    "suit": "#edb18e",
+    "trim": "#312f6e",
+    "glow": "#e59459",
+    "fur": "#d39372"
+  },
+  {
+    "id": "std-astrogaurd-safu-security",
+    "name": "Astrogaurd - Safu Security",
+    "tier": "common",
+    "image": "/nft-thumbs/2sxbC2QU1y7qARtanapY8KyFMqsCrhrJuyi5KitBCjs6.webp",
+    "suit": "#100e14",
+    "trim": "#352b4e",
+    "glow": "#91b1f1",
+    "fur": "#ae8572"
+  },
+  {
+    "id": "std-astrokitty",
+    "name": "Astrokitty",
+    "tier": "common",
+    "image": "/nft-thumbs/35eWTLN41PpNH1cnFGf9QUMceMfCPPpXz4wTiiUCVnF2.webp",
+    "suit": "#190c2a",
+    "trim": "#4e304f",
+    "glow": "#e675f4",
+    "fur": "#8a556e"
+  },
+  {
+    "id": "std-big-time-danny",
+    "name": "Big Time Danny",
+    "tier": "common",
+    "image": "/nft-thumbs/2z35sfDfDxXBx7Gd4zq9g8dLZnvuBbL4GwG5jJfFyJep.webp",
+    "suit": "#110b13",
+    "trim": "#524c90",
+    "glow": "#77a8f2",
+    "fur": "#513533"
+  },
+  {
+    "id": "std-big-trader-joe",
+    "name": "Big Trader Joe",
+    "tier": "common",
+    "image": "/nft-thumbs/J82P9dtkCuUYLHQYjThztD3c2Sx5cN49zHB4awUXQ3xJ.webp",
+    "suit": "#130e12",
+    "trim": "#6f4d70",
+    "glow": "#4fadb3",
+    "fur": "#6e4c54"
+  },
+  {
+    "id": "std-billy-the-chimp",
+    "name": "Billy the Chimp",
+    "tier": "common",
+    "image": "/nft-thumbs/HsTfg71WEReAe1xK9nEs5E74GnRd3iCLGPof2W1jPP1X.webp",
+    "suit": "#4c3034",
+    "trim": "#160c0d",
+    "glow": "#e7ab75",
+    "fur": "#704a4e"
+  },
+  {
+    "id": "std-castro",
+    "name": "Castro",
+    "tier": "common",
+    "image": "/nft-thumbs/GuB7i9rEVcj9Wc1e5WDW14n27mYWaKCDecHx1hDH3BYV.webp",
+    "suit": "#110a0d",
+    "trim": "#36262d",
+    "glow": "#528fe8",
+    "fur": "#6f4f51"
+  },
+  {
+    "id": "std-dan-the-bolt",
+    "name": "Dan The Bolt",
+    "tier": "common",
+    "image": "/nft-thumbs/28VrFesHJAGruw24RCCmJKfdz8VduX95f47MkrWZfhC1.webp",
+    "suit": "#36292d",
+    "trim": "#524872",
+    "glow": "#cd8954",
+    "fur": "#4b3432"
+  },
+  {
+    "id": "std-dave-from-dock-7",
+    "name": "Dave From Dock 7",
+    "tier": "common",
+    "image": "/nft-thumbs/Dvdyq2zHvoF4gYc59h4xpGWRGMKkvNrqJybonqwDCMgQ.webp",
+    "suit": "#312c2f",
+    "trim": "#504950",
+    "glow": "#ad6f19",
+    "fur": "#4a3730"
+  },
+  {
+    "id": "std-death",
+    "name": "Death",
+    "tier": "common",
+    "image": "/nft-thumbs/7ReYoWwZckBTgs1PzCAo8vrpgPMwwE6Q53hd1ZwNfkp5.webp",
+    "suit": "#322732",
+    "trim": "#6b5270",
+    "glow": "#7892e5",
+    "fur": "#8c6872"
+  },
+  {
+    "id": "std-drink-mixer",
+    "name": "Drink Mixer",
+    "tier": "common",
+    "image": "/nft-thumbs/HgPez4YTEKfSpY7Y6Bvj5xMb63mo9RwS1mMkBxZ3epdF.webp",
+    "suit": "#160d10",
+    "trim": "#321290",
+    "glow": "#c97130",
+    "fur": "#4e2a30"
+  },
+  {
+    "id": "std-lan-the-racecar-driver",
+    "name": "Lan The Racecar Driver",
+    "tier": "common",
+    "image": "/nft-thumbs/BMjNuU3AwSbcjvEX6JNzNhVM5wSNBYN3X3MD3kGjhG1C.webp",
+    "suit": "#0f0c13",
+    "trim": "#322a4f",
+    "glow": "#1876ab",
+    "fur": "#ae8876"
+  },
+  {
+    "id": "std-missy-wif-you",
+    "name": "Missy Wif You",
+    "tier": "common",
+    "image": "/nft-thumbs/2jc1MWXWjJRJQuTP99ZFmLxbuG4ckfng2s1qtXgWFut9.webp",
+    "suit": "#736871",
+    "trim": "#342d30",
+    "glow": "#b78656",
+    "fur": "#ae8972"
+  },
+  {
+    "id": "std-pompus-the-first",
+    "name": "Pompus The First",
+    "tier": "common",
+    "image": "/nft-thumbs/58rif1adc9gwPwjEAkCGBAsStBg7Ak4TGStDwpMbNPFQ.webp",
+    "suit": "#130a0c",
+    "trim": "#8f74af",
+    "glow": "#aa692d",
+    "fur": "#50302e"
+  },
+  {
+    "id": "std-sneako",
+    "name": "Sneako",
+    "tier": "common",
+    "image": "/nft-thumbs/9Ykq8cxRu2n5DyZZrFkDB8hU7GkrVxxRnkoPXk96294s.webp",
+    "suit": "#160b10",
+    "trim": "#70508f",
+    "glow": "#af6c34",
+    "fur": "#4d2d2f"
+  },
+  {
+    "id": "std-techno-left-the-building",
+    "name": "Techno Left The Building",
+    "tier": "common",
+    "image": "/nft-thumbs/EuFefFBks21zg4bAx2rqgPk6KzrY9mdzSZaTnDz8kVsP.webp",
+    "suit": "#302850",
+    "trim": "#0e0b15",
+    "glow": "#4eccf0",
+    "fur": "#734338"
+  },
+  {
+    "id": "std-undercover-dave",
+    "name": "Undercover Dave",
+    "tier": "common",
+    "image": "/nft-thumbs/Fq2Le5WoQNv68wQaDde8UsDBNveWS8pPLPymywi72Xmz.webp",
+    "suit": "#4b3332",
+    "trim": "#6e536e",
+    "glow": "#d08851",
+    "fur": "#6e4d51"
+  },
+  {
+    "id": "std-weapon-specialist-ryan",
+    "name": "Weapon Specialist Ryan",
+    "tier": "common",
+    "image": "/nft-thumbs/GX8TEcqzqp3uSkiMPJkvZYAPzgAyaD5t7hcQ8ZygUmH5.webp",
+    "suit": "#322630",
+    "trim": "#110c0e",
+    "glow": "#9150ef",
+    "fur": "#6c5051"
+  }
+]
