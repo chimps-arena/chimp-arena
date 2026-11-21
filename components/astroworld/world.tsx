@@ -10,6 +10,9 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Html, Lightformer, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { DISTRICTS, ROAD_ANGLES, SAFE_RADIUS, WORLD_RADIUS, LOT_SPACING } from "@chimp-arena/shared";
+import { preloadCoreItems, ResourceExchange } from "./items";
+
+preloadCoreItems();
 
 /** Solid things the local player can't walk through: [x, z, radius]. */
 export const STATIC_COLLIDERS: [number, number, number][] = [[0, 0, 6.5]];
@@ -314,6 +317,7 @@ export function WorldScenery({ showroomRover }: { showroomRover: React.ReactNode
       <Roads />
       <SafeWall />
       <Tower />
+      <ResourceExchange />
       <Rocks />
       <group position={[SHOWROOM.x, 0, SHOWROOM.z]}>
         <mesh position={[0, 0.15, 0]}>

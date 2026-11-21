@@ -13,6 +13,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
+import { ItemPedestal, productFor } from "./items";
 
 export interface WorldProperty {
   id: string;
@@ -472,6 +473,12 @@ export const Building = memo(function Building({
       <group position={[4, 3.9, 6.2]} rotation={[0, -0.25, 0]}>
         {near && prop.image ? <ArtBoard url={prop.image} accent={accent} /> : <B m={M.frame} p={[0, 0, 0]} s={[4.8, 3.6, 0.1]} />}
       </group>
+      {/* what this property produces, on a pedestal at the front of the lot */}
+      {near && productFor(prop.type, prop.id) && (
+        <group position={[-2.6, 0, 5.4]}>
+          <ItemPedestal id={productFor(prop.type, prop.id)!} size={1} />
+        </group>
+      )}
       {prop.forSale && (
         <mesh position={[-5.5, 0.9, 6]}>
           <boxGeometry args={[1.4, 1.8, 0.1]} />
