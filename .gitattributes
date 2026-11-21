@@ -9,3 +9,7 @@
 *.ktx2 filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
+# Web-ready models served by the site: plain git, NOT LFS. Vercel doesn't
+# fetch LFS objects by default, so LFS-tracked files would deploy as pointer
+# text and fail to load. These are small (optimized by scripts/optimize-models.mjs).
+public/models/** -filter -diff -merge binary

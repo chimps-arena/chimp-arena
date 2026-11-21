@@ -16,7 +16,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExterna
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { Callbacks, Client, type Room } from "@colyseus/sdk";
+import { Callbacks, Client, CloseCode, type Room } from "@colyseus/sdk";
 import {
   BUILDING_RADIUS,
   CHARACTERS,
@@ -53,6 +53,7 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
+import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
 
 const SHOWROOM_ROVER = <RoverModel color="#a855f7" />;
@@ -701,9 +702,11 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
   const respawn = useRef<HubRespawnMessage | null>(null);
   const skinRef = useRef(initialSkin);
   const autoRetries = useRef(0);
+  const autoRejoins = useRef(0);
 
   const retry = useCallback(() => {
     autoRetries.current = 0;
+    autoRejoins.current = 0;
     setConn(CONNECTING);
     setAttempt((a) => a + 1);
   }, []);
@@ -757,8 +760,17 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
           respawn.current = spot;
           setRespawnSeq((n) => n + 1);
         });
-        joined.onLeave(() => {
-          if (!cancelled) setConn((c) => ({ ...c, status: "offline", error: "Disconnected from Astroworld." }));
+        joined.onLeave((code) => {
+          if (cancelled) return;
+          // Dropped for good (the SDK's own reconnect didn't make it): join again
+          // quietly a few times before showing "offline". CONSENTED = left on purpose.
+          if (code !== CloseCode.CONSENTED && autoRejoins.current < 5) {
+            autoRejoins.current++;
+            setConn((c) => ({ ...c, status: "connecting" }));
+            retryTimer = setTimeout(() => setAttempt((a) => a + 1), 1000);
+            return;
+          }
+          setConn((c) => ({ ...c, status: "offline", error: "Disconnected from Astroworld." }));
         });
 
         setConn({ status: "online", room: joined, ids: [...players], error: null });
@@ -1367,6 +1379,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     () => [
       ...STATIC_COLLIDERS,
       [SHOWROOM.x, SHOWROOM.z, 4.6],
+      ...exchangeColliders(),
       ...placeList.map((p): [number, number, number] => [p.x - Math.sin(p.ry) * 1.5, p.z - Math.cos(p.ry) * 1.5, BUILDING_RADIUS - 1.5]),
     ],
     [placeList],

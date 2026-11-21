@@ -56,6 +56,11 @@ function patrolRoute() {
 }
 
 const bots = [];
+let shuttingDown = false;
+process.on("SIGINT", () => {
+  shuttingDown = true;
+  process.exit(0);
+});
 
 async function bot(i) {
   const look = picks[i % picks.length];
@@ -144,6 +149,10 @@ async function bot(i) {
   room.onLeave(() => {
     clearInterval(b.tick);
     clearInterval(b.social);
+    // Long-running bot populations survive network drops: rejoin fresh.
+    if (!process.env.HUB_BOTS_SECONDS && !shuttingDown) {
+      setTimeout(() => bot(i).then((nb) => bots.splice(bots.indexOf(b), 1, nb)).catch((e) => console.log(`[bot ${i}] rejoin failed: ${e.message}`)), 2000);
+    }
   });
   bots.push(b);
   return b;

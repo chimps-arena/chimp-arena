@@ -285,7 +285,11 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
    * client SDK reconnects on its own; if it doesn't make it, onLeave runs.
    */
   onDrop(client: Client): void {
-    this.allowReconnection(client, RECONNECT_SECONDS);
+    // Rejects with "not joined" when the drop hits a client that was itself
+    // still (re)connecting - e.g. a reconnect attempt that dropped again on a
+    // bad network. Nothing to hold then: the player leaves and the client
+    // joins fresh (see the client's auto-rejoin).
+    this.allowReconnection(client, RECONNECT_SECONDS).catch(() => {});
   }
 
   onReconnect(client: Client): void {
