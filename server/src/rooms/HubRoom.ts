@@ -111,10 +111,19 @@ export function spawnPoint(): HubRespawnMessage {
  * each), so a flood of join requests can't spin up rooms until it falls over.
  */
 export const MAX_HUB_ROOMS = Number(process.env.MAX_HUB_ROOMS ?? 25);
+/** How long a dropped player's spot is held for them to reconnect. */
+export const RECONNECT_SECONDS = 20;
 let openRooms = 0;
 
 export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> {
   maxClients = HUB_MAX_PLAYERS;
+  /**
+   * Seconds a matched player has to open the room connection. The 3D world
+   * is heavy to start (on slow phones the page can be busy for a while after
+   * matchmaking), so the default window was too short and players got
+   * "seat reservation expired".
+   */
+  seatReservationTimeout = 45;
   private counted = false;
 
   private tracks = new WeakMap<HubPlayerT, Track>();
@@ -270,6 +279,22 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     this.tracks.set(player, { lastMoveAt: Date.now(), lastShotAt: 0, chatTimes: [] });
   }
 
+  /**
+   * Unexpected disconnect (phone switching networks, Wi-Fi blip): keep the
+   * player in the world and hold their place for RECONNECT_SECONDS. The
+   * client SDK reconnects on its own; if it doesn't make it, onLeave runs.
+   */
+  onDrop(client: Client): void {
+    this.allowReconnection(client, RECONNECT_SECONDS);
+  }
+
+  onReconnect(client: Client): void {
+    const player = this.state.players.get(client.sessionId);
+    const track = player && this.tracks.get(player);
+    if (track) track.lastMoveAt = Date.now();
+  }
+
+  /** Left for good: closed the page, or the reconnect window ran out. */
   onLeave(client: Client): void {
     this.state.players.delete(client.sessionId);
   }

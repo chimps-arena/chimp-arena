@@ -110,6 +110,22 @@ describe("HubRoom (Astroworld)", () => {
     expect(lines.length).toBe(4); // CHAT_BURST
   });
 
+  it("holds a dropped player's spot, but removes a player who leaves on purpose", async () => {
+    const room = await colyseus.createRoom("hub");
+    const dropper = await colyseus.connectTo(room, { name: "Wifi Blip" });
+    const quitter = await colyseus.connectTo(room, { name: "Quitter" });
+    await colyseus.connectTo(room); // keeps the room alive
+    const server = colyseus.getRoomById<State>(room.roomId);
+
+    await dropper.leave(false); // connection lost, no goodbye
+    await quitter.leave(true); // closed the page
+    await waitFor(() => !server.state.players.has(quitter.sessionId));
+    await settle();
+
+    expect(server.state.players.has(dropper.sessionId)).toBe(true);
+    expect(server.state.players.has(quitter.sessionId)).toBe(false);
+  });
+
   describe("combat", () => {
     /** Two players placed out in the districts, 10 m apart on the x axis. */
     async function duel() {
