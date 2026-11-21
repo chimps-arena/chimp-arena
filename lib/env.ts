@@ -42,20 +42,25 @@ export function assertPublicEnv() {
 
 /* ----- Server-only secrets ----- */
 
+/**
+ * Each secret is validated when it's read, not all at once: a page that only
+ * needs the database doesn't fail because the mint-signing key is absent.
+ * That matters for Vercel Preview builds, which deliberately don't get the
+ * real mint key - anything that actually signs a mint still throws loudly.
+ */
 export function serverEnv() {
   return {
-    supabaseUrl: required(
-      "NEXT_PUBLIC_SUPABASE_URL",
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-    ),
-    serviceRoleKey: required(
-      "SUPABASE_SERVICE_ROLE_KEY",
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    ),
-    jwtSecret: required("JWT_SECRET", process.env.JWT_SECRET),
-    mintDelegateSecret: required(
-      "MPL_CORE_MINT_DELEGATE_SECRET",
-      process.env.MPL_CORE_MINT_DELEGATE_SECRET,
-    ),
+    get supabaseUrl() {
+      return required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+    },
+    get serviceRoleKey() {
+      return required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
+    },
+    get jwtSecret() {
+      return required("JWT_SECRET", process.env.JWT_SECRET);
+    },
+    get mintDelegateSecret() {
+      return required("MPL_CORE_MINT_DELEGATE_SECRET", process.env.MPL_CORE_MINT_DELEGATE_SECRET);
+    },
   };
 }
