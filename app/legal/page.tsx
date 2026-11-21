@@ -192,6 +192,11 @@ export default function LegalPage() {
             <b>Gameplay data</b> - Moon Rock Run scores and inputs you submit
             to the site.
           </li>
+          <li>
+            <b>Email address</b> - only if you choose to sign up for launch
+            news on the homepage. We use it solely to send project updates,
+            never sell it, and delete it on request.
+          </li>
         </ul>
         <P>
           We never ask for, receive, or store your private keys, seed

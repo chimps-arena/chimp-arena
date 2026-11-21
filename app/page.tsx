@@ -12,12 +12,8 @@ import { Reveal } from "@/components/reveal";
 import { CrewMark } from "@/components/glyphs";
 import { Lamp, SectionHeader, tint } from "@/components/hud";
 import { CREWS } from "@/lib/game/config";
-
-const TRUST_SIGNALS = [
-  { label: "Mint authority revoked", blurb: "No new $CHIMP can ever be printed." },
-  { label: "Freeze authority revoked", blurb: "Wallets can never be frozen or censored." },
-  { label: "Ownership renounced", blurb: "The contract runs on autopilot, enforced by Solana." },
-];
+import { ProofStrip } from "@/components/home/proof-strip";
+import { WhereWereGoing } from "@/components/home/where-were-going";
 
 const FEATURE_CARDS = [
   {
@@ -105,20 +101,11 @@ export default function Home() {
         <ChimpTicker />
       </Reveal>
 
-      {/* ---------- trust strip ---------- */}
-      <section className="grid gap-4 sm:grid-cols-3">
-        {TRUST_SIGNALS.map((t, i) => (
-          <Reveal key={t.label} delay={i * 0.08}>
-            <div className="hud-panel h-full p-5" style={tint("var(--good)")}>
-              <div className="hud-label flex items-center gap-2 !text-foreground">
-                <Lamp color="var(--good)" />
-                {t.label}
-              </div>
-              <p className="mt-1 text-sm text-muted">{t.blurb}</p>
-            </div>
-          </Reveal>
-        ))}
-      </section>
+      {/* ---------- social proof: live counts, listings, receipts ---------- */}
+      <ProofStrip />
+
+      {/* ---------- roadmap + launch sign-up ---------- */}
+      <WhereWereGoing />
 
       {/* ---------- crews ---------- */}
       <section>
