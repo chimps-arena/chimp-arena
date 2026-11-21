@@ -55,7 +55,10 @@ import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldScenery } from "./world";
 import { Effects, fx, RoverModel } from "./fx";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_HUB_SERVER_URL ?? "http://localhost:2567";
+/** Game server: env override, else the Fly.io deployment in production builds, else local dev. */
+const SERVER_URL =
+  process.env.NEXT_PUBLIC_HUB_SERVER_URL ??
+  (process.env.NODE_ENV === "production" ? "https://astrochimpz-world.fly.dev" : "http://localhost:2567");
 const SKIN_KEY = "astroworld:skin";
 
 /** Client-side copy of the server's HubPlayer schema fields. */
