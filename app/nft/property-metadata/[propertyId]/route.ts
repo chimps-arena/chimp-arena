@@ -44,14 +44,16 @@ export async function GET(
     IRYS_IMAGES[propertyId] ??
     (property.image_url ? fastImage(property.image_url) : resolvePropertyImage(property.type));
   const image = !art ? `${origin}/brand/chimp-logo.png` : art.startsWith("/") ? `${origin}${art}` : art;
-  const type = image.endsWith(".webp") ? "image/webp" : image.endsWith(".jpg") ? "image/jpeg" : "image/png";
+  // Irys URLs have no extension; everything in IRYS_IMAGES is WebP.
+  const type =
+    IRYS_IMAGES[propertyId] || image.endsWith(".webp") ? "image/webp" : image.endsWith(".jpg") ? "image/jpeg" : "image/png";
 
   return NextResponse.json(
     {
       name: property.name,
       symbol: PROPERTY_NFT_SYMBOL,
       description:
-        property.blurb ?? `A property deed in ${property.zone}, Astroworld.`,
+        property.blurb ?? `A property deed in ${property.zone}, Astrochimpz.`,
       image,
       external_url: "https://astrochimpz.com",
       attributes: [
