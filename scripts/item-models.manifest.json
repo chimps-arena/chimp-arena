@@ -1,0 +1,20 @@
+{
+  "sourceDir": "../astro-resources/Resources copy",
+  "outDir": "public/models/items",
+  "texture": 1024,
+  "models": {
+    "ore-gold": "Raw Ore/Gold Ore/Gold Ore - Drop - Ultra Low Poly - 100.glb",
+    "ore-cobalt": "Raw Ore/Cobalt Ore/Cobalt Ore - Drop - Ultra Low Poly - 100.glb",
+    "ore-palladium": "Raw Ore/Palladium Ore/Palldium Ore - Drop - Ultra Low Poly - 100.glb",
+    "ore-crystal": "Raw Ore/Uncut Crystal/Raw Crystal - Drop - Ultra Low Poly - 100.glb",
+    "bar-gold": "Refined Resource/Gold/Gold - Bar - Ultra Low Poly - 100.glb",
+    "bar-cobalt": "Refined Resource/Cobalt/Cobalt - Bar - Ultra Low Poly - 100.glb",
+    "bar-palladium": "Refined Resource/Palladium/Palladium - Bar - Ultra Low Poly - 100.glb",
+    "crystal-cut": "Refined Resource/Crystal/Crystal - Cut Crystal - Shard - Ultra Low Poly - 100.glb",
+    "crystal-charged": "Charged Crystal/Charged Crystal - Mesh - Ultra Low Poly - 100 (Must Animate Charge effect).glb",
+    "kit-fuel": "Fuel Kit/Fuel Kit - Mesh - Ultra Low Poly - 100.glb",
+    "kit-charge": "Charge Kit/Fuel Kit - Mesh - Ultra Low Poly - 100.glb",
+    "kit-drink": "Drink Kit/Moisture Kit - Drop - Ultra Low Poly - 100.glb",
+    "kit-food": "Food Kit/Food Kit - Drop - Ultra Low Poly - 100.glb"
+  }
+}
