@@ -1,5 +1,19 @@
 [
  {
+  "hash": "d760ee4",
+  "date": "2026-11-21",
+  "kind": "New",
+  "area": "Homepage",
+  "text": "Live social proof, roadmap and launch-news sign-up"
+ },
+ {
+  "hash": "ae2ed83",
+  "date": "2026-11-21",
+  "kind": "Fix",
+  "area": "NFTs",
+  "text": "Property metadata says WebP for Irys art; tidier description"
+ },
+ {
   "hash": "9415fe2",
   "date": "2026-11-21",
   "kind": "Fix",
