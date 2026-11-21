@@ -38,15 +38,15 @@ const G = {
 };
 
 const M = {
-  hull: new THREE.MeshStandardMaterial({ color: "#2a2638", metalness: 0.7, roughness: 0.35 }),
-  hullLight: new THREE.MeshStandardMaterial({ color: "#4a4658", metalness: 0.6, roughness: 0.4 }),
-  concrete: new THREE.MeshStandardMaterial({ color: "#3a3640", metalness: 0.2, roughness: 0.85 }),
-  rust: new THREE.MeshStandardMaterial({ color: "#6b3a22", metalness: 0.5, roughness: 0.7 }),
+  hull: new THREE.MeshStandardMaterial({ color: "#4a4562", metalness: 0.55, roughness: 0.32 }),
+  hullLight: new THREE.MeshStandardMaterial({ color: "#7a748f", metalness: 0.45, roughness: 0.38 }),
+  concrete: new THREE.MeshStandardMaterial({ color: "#6a6474", metalness: 0.1, roughness: 0.8 }),
+  rust: new THREE.MeshStandardMaterial({ color: "#8a4a2a", metalness: 0.4, roughness: 0.65 }),
   glass: new THREE.MeshPhysicalMaterial({ color: "#a5e8ff", transparent: true, opacity: 0.25, roughness: 0.05, metalness: 0.2, depthWrite: false }),
   solar: new THREE.MeshStandardMaterial({ color: "#14204a", metalness: 0.9, roughness: 0.2, emissive: "#0a1a5a", emissiveIntensity: 0.3 }),
   plant: new THREE.MeshStandardMaterial({ color: "#2f8a3f", roughness: 0.8 }),
   rock: new THREE.MeshStandardMaterial({ color: "#4a3a30", roughness: 0.95, flatShading: true }),
-  frame: new THREE.MeshStandardMaterial({ color: "#121018", metalness: 0.8, roughness: 0.3 }),
+  frame: new THREE.MeshStandardMaterial({ color: "#2a2638", metalness: 0.6, roughness: 0.3 }),
   dark: new THREE.MeshBasicMaterial({ color: "#05040a" }),
 };
 
@@ -413,7 +413,7 @@ function ArtBoard({ url, accent }: { url: string; accent: string }) {
       <B m={M.frame} p={[0, 0, -0.06]} s={[w + 0.35, h + 0.35, 0.1]} />
       <B m={glow(accent)} p={[0, -h / 2 - 0.2, 0]} s={[w + 0.35, 0.08, 0.04]} />
       <mesh geometry={G.plane} position={[0, 0, 0.001]} scale={[w, h, 1]}>
-        {tex ? <meshBasicMaterial map={tex} toneMapped={false} /> : <meshBasicMaterial color="#1a1726" />}
+        {tex ? <meshBasicMaterial key="art" map={tex} toneMapped={false} /> : <meshBasicMaterial key="blank" color="#1a1726" />}
       </mesh>
       {/* legs */}
       <B m={M.frame} p={[-w / 2 + 0.3, -h / 2 - 1, -0.1]} s={[0.15, 2, 0.15]} />
@@ -422,9 +422,9 @@ function ArtBoard({ url, accent }: { url: string; accent: string }) {
   );
 }
 
-function Sign({ prop, accent, y }: { prop: WorldProperty; accent: string; y: number }) {
+function Sign({ prop, accent, y, hidden }: { prop: WorldProperty; accent: string; y: number; hidden: boolean }) {
   return (
-    <Html position={[0, y, 0]} center distanceFactor={22} zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
+    <Html position={[0, y, 0]} center distanceFactor={15} zIndexRange={[5, 0]} style={{ pointerEvents: "none", display: hidden ? "none" : undefined }}>
       <div
         className="whitespace-nowrap rounded-md bg-black/80 px-2.5 py-1 text-center text-white shadow-lg"
         style={{ borderBottom: `3px solid ${accent}` }}
@@ -448,12 +448,15 @@ export const Building = memo(function Building({
   place,
   accent,
   near,
+  labelMounted,
 }: {
   prop: WorldProperty;
   place: Placement;
   accent: string;
   /** Close enough to load art and show the sign. */
   near: boolean;
+  /** Sign has been shown before: keep it mounted (hidden when far) instead of remounting. */
+  labelMounted: boolean;
 }) {
   const arch = ARCHES[prop.type] ?? storefront(5, accent);
   const body = useMemo(() => arch(accent), [arch, accent]);
@@ -461,7 +464,7 @@ export const Building = memo(function Building({
     <group position={[place.x, 0, place.z]} rotation={[0, place.ry, 0]}>
       {/* lot */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} geometry={G.plane} scale={[14, 14, 1]}>
-        <meshStandardMaterial color="#1d1a26" metalness={0.4} roughness={0.7} />
+        <meshStandardMaterial color="#2e2a3c" metalness={0.25} roughness={0.7} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 6.95]} geometry={G.plane} scale={[14, 0.12, 1]} material={glow(accent)} />
       <group position={[0, 0, -1.5]}>{body}</group>
@@ -475,7 +478,7 @@ export const Building = memo(function Building({
           <meshBasicMaterial color="#10b981" toneMapped={false} />
         </mesh>
       )}
-      {near && <Sign prop={prop} accent={accent} y={SIGN_HEIGHT[prop.type] ?? 10.5} />}
+      {(near || labelMounted) && <Sign prop={prop} accent={accent} y={SIGN_HEIGHT[prop.type] ?? 10.5} hidden={!near} />}
     </group>
   );
 });

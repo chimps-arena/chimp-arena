@@ -12,7 +12,7 @@
  *   reloads. Hits are decided by the server, never by the shooter's machine.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -52,8 +52,10 @@ import {
 import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
-import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldScenery } from "./world";
+import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
 import { Effects, fx, RoverModel } from "./fx";
+
+const SHOWROOM_ROVER = <RoverModel color="#a855f7" />;
 
 /** Game server: env override, else the Fly.io deployment in production builds, else local dev. */
 const SERVER_URL =
@@ -91,7 +93,8 @@ const RELOAD_MS = 1500;
 const ROVER_TURN = 1.7;
 const ROVER_SPEED = HUB_SPEED.rover * 0.92;
 const LOOK_SENS = 0.0022;
-const NEAR_DISTANCE = 95;
+/** Buildings within this range show their sign and load their art. */
+const NEAR_DISTANCE = 55;
 
 /* ============================== local storage ============================== */
 
@@ -142,6 +145,7 @@ function NameTag({
   height,
   hp,
   showHp,
+  hidden = false,
 }: {
   name: string;
   look: CharacterLook;
@@ -149,10 +153,12 @@ function NameTag({
   height: number;
   hp: number;
   showHp: boolean;
+  /** Hide without unmounting - drei's Html can't safely unmount mid-render. */
+  hidden?: boolean;
 }) {
   const tier = TIER_COLOR[look.tier];
   return (
-    <Html position={[0, height, 0]} center distanceFactor={12} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+    <Html position={[0, height, 0]} center distanceFactor={12} zIndexRange={[10, 0]} style={{ pointerEvents: "none", display: hidden ? "none" : undefined }}>
       <div className="flex flex-col items-center gap-1 whitespace-nowrap">
         {bubble && <div className="max-w-[220px] whitespace-normal rounded-lg bg-black/80 px-2 py-1 text-center text-xs text-white shadow">{bubble}</div>}
         <div className="flex items-center gap-1.5 rounded py-0.5 pl-0.5 pr-2 text-white" style={{ background: "rgba(10,8,20,0.8)", borderBottom: `2px solid ${tier}` }}>
@@ -238,7 +244,7 @@ function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string })
       <group position={rover ? [0, 0.55, -0.3] : [0, 0, 0]}>
         <CharacterBody look={look} pose={getPose} />
       </group>
-      {view.alive && <NameTag name={player.name} look={look} bubble={bubble} height={rover ? 3.3 : 2.45} hp={view.hp} showHp={view.armed && view.hp < MAX_HP} />}
+      <NameTag name={player.name} look={look} bubble={bubble} height={rover ? 3.3 : 2.45} hp={view.hp} showHp={view.armed && view.hp < MAX_HP} hidden={!view.alive} />
     </group>
   );
 }
@@ -408,7 +414,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
       const camPos = camera.position;
       const camDist = camPos.distanceTo(new THREE.Vector3(st.x, st.y + 1.4, st.z));
       let reach = SHOT_RANGE + camDist;
-      (room.state as HubState).players.forEach((p, id) => {
+      (room.state as HubState).players?.forEach((p, id) => {
         if (id === room.sessionId || !p.alive) return;
         const hit = rayVsPlayer(camPos, dir, { x: p.x, y: p.y, z: p.z }, p.mode === "rover" ? 1.7 : 0.55, p.mode === "rover" ? 2.2 : 1.95);
         if (hit && hit.t > camDist && hit.t < reach) reach = hit.t;
@@ -627,7 +633,7 @@ function LocalPlayer({
       <group position={mode === "rover" ? [0, 0.55, -0.3] : [0, 0, 0]}>
         <CharacterBody look={look} pose={getPose} />
       </group>
-      {bubble && <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} />}
+      <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} hidden={!bubble} />
     </group>
   );
 }
@@ -636,7 +642,10 @@ function LocalPlayer({
 
 function PropertyField({ props, places }: { props: WorldProperty[]; places: Map<string, Placement> }) {
   const camera = useThree((st) => st.camera);
-  const [near, setNear] = useState<Set<string>>(new Set());
+  // `near` = within sign range now; `seen` = ever been near (its label stays
+  // mounted after that and is only hidden, see NameTag).
+  const [view, setView] = useState<{ near: Set<string>; seen: Set<string> }>({ near: new Set(), seen: new Set() });
+  const near = view.near;
   const tick = useRef(0);
   const accent = useMemo(() => {
     const m = new Map<string, string>(DISTRICTS.map((d) => [d.zone, d.accent]));
@@ -653,14 +662,16 @@ function PropertyField({ props, places }: { props: WorldProperty[]; places: Map<
       const at = places.get(p.id);
       if (at && Math.hypot(at.x - camera.position.x, at.z - camera.position.z) < NEAR_DISTANCE) next.add(p.id);
     }
-    if (next.size !== near.size || [...next].some((id) => !near.has(id))) setNear(next);
+    if (next.size !== near.size || [...next].some((id) => !near.has(id))) {
+      setView((v) => ({ near: next, seen: [...next].some((id) => !v.seen.has(id)) ? new Set([...v.seen, ...next]) : v.seen }));
+    }
   });
 
   return (
     <>
       {props.map((p) => {
         const at = places.get(p.id);
-        return at ? <Building key={p.id} prop={p} place={at} accent={accent.get(p.zone) ?? "#a855f7"} near={near.has(p.id)} /> : null;
+        return at ? <Building key={p.id} prop={p} place={at} accent={accent.get(p.zone) ?? "#a855f7"} near={near.has(p.id)} labelMounted={view.seen.has(p.id)} /> : null;
       })}
     </>
   );
@@ -685,13 +696,14 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
   const [attempt, setAttempt] = useState(0);
   const [conn, setConn] = useState<Connection>(CONNECTING);
   const [chat, setChat] = useState<HubChatBroadcast[]>([]);
-  const [kills, setKills] = useState<Kill[]>([]);
-  const [hitAt, setHitAt] = useState(0);
+  const [stores] = useState(createHudStores);
   const [respawnSeq, setRespawnSeq] = useState(0);
   const respawn = useRef<HubRespawnMessage | null>(null);
   const skinRef = useRef(initialSkin);
+  const autoRetries = useRef(0);
 
   const retry = useCallback(() => {
+    autoRetries.current = 0;
     setConn(CONNECTING);
     setAttempt((a) => a + 1);
   }, []);
@@ -703,10 +715,12 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
   useEffect(() => {
     let cancelled = false;
     let room: Room | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     (async () => {
       try {
         const joined = await new Client(SERVER_URL).joinOrCreate("hub", { name, skin: skinRef.current });
+        autoRetries.current = 0;
         if (cancelled) {
           void joined.leave();
           return;
@@ -725,11 +739,11 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
           refresh();
         });
         joined.onMessage("chat", (line: HubChatBroadcast) => setChat((prev) => [...prev.slice(-49), line]));
-        joined.onMessage("kill", (k: HubKillBroadcast) => setKills((prev) => [...prev.slice(-5), { ...k, at: Date.now() }]));
+        joined.onMessage("kill", (k: HubKillBroadcast) => stores.kills.set([...stores.kills.get().slice(-5), { ...k, at: Date.now() }]));
         joined.onMessage("shot", (shot: HubShotBroadcast) => {
           if (shot.from === joined.sessionId) {
             if (shot.hit) {
-              setHitAt(Date.now());
+              stores.hit.set(Date.now());
               fx.emit({ kind: "impact", at: shot.end });
             }
             return;
@@ -750,6 +764,13 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
         setConn({ status: "online", room: joined, ids: [...players], error: null });
       } catch (err) {
         if (cancelled) return;
+        // A slow first load or a network blip shouldn't kick anyone out:
+        // retry quietly a couple of times before showing "offline".
+        if (autoRetries.current < 2) {
+          autoRetries.current++;
+          retryTimer = setTimeout(() => setAttempt((a) => a + 1), 1500);
+          return;
+        }
         const msg = err instanceof Error ? err.message : String(err);
         setConn({ status: "offline", room: null, ids: [], error: `Can't reach the game server (${msg}).` });
       }
@@ -757,11 +778,12 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       if (room) void room.leave();
     };
-  }, [name, attempt]);
+  }, [name, attempt, stores]);
 
-  return { ...conn, chat, kills, hitAt, respawnSeq, getRespawn, retry, setJoinSkin };
+  return { ...conn, chat, stores, respawnSeq, getRespawn, retry, setJoinSkin };
 }
 
 /* ============================== UI pieces ============================== */
@@ -803,29 +825,42 @@ function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
   );
 }
 
-function Minimap({ players, meId, places }: { players: { id: string; x: number; z: number; ry: number }[]; meId: string | null; places: Placement[] }) {
-  const S = 150;
-  const k = S / 2 / (WORLD_RADIUS + 10);
-  const tx = (x: number) => S / 2 + x * k;
-  const tz = (z: number) => S / 2 - z * k;
+const MAP_SIZE = 150;
+const MAP_K = MAP_SIZE / 2 / (WORLD_RADIUS + 10);
+const mapX = (x: number) => MAP_SIZE / 2 + x * MAP_K;
+const mapZ = (z: number) => MAP_SIZE / 2 - z * MAP_K;
+
+/** Districts + building dots: never change, so drawn once (memo), not 10x a second. */
+const MinimapBase = memo(function MinimapBase({ places }: { places: Placement[] }) {
   return (
-    <svg width={S} height={S} className="rounded-full border border-violet-400/40 bg-black/60">
-      <circle cx={S / 2} cy={S / 2} r={SAFE_RADIUS * k} fill="rgba(16,185,129,0.15)" stroke="#10b981" strokeWidth={1} />
+    <g>
+      <circle cx={MAP_SIZE / 2} cy={MAP_SIZE / 2} r={SAFE_RADIUS * MAP_K} fill="rgba(16,185,129,0.15)" stroke="#10b981" strokeWidth={1} />
       {DISTRICTS.map((d) => (
         <rect
           key={d.zone}
-          x={tx(d.x - DISTRICT_HALF)}
-          y={tz(d.z + DISTRICT_HALF)}
-          width={DISTRICT_HALF * 2 * k}
-          height={DISTRICT_HALF * 2 * k}
+          x={mapX(d.x - DISTRICT_HALF)}
+          y={mapZ(d.z + DISTRICT_HALF)}
+          width={DISTRICT_HALF * 2 * MAP_K}
+          height={DISTRICT_HALF * 2 * MAP_K}
           fill="rgba(239,68,68,0.12)"
           stroke={d.accent}
           strokeWidth={0.8}
         />
       ))}
       {places.map((p, i) => (
-        <rect key={i} x={tx(p.x) - 1} y={tz(p.z) - 1} width={2} height={2} fill="#6b7280" />
+        <rect key={i} x={mapX(p.x) - 1} y={mapZ(p.z) - 1} width={2} height={2} fill="#6b7280" />
       ))}
+    </g>
+  );
+});
+
+function Minimap({ players, meId, places }: { players: { id: string; x: number; z: number; ry: number }[]; meId: string | null; places: Placement[] }) {
+  const S = MAP_SIZE;
+  const tx = mapX;
+  const tz = mapZ;
+  return (
+    <svg width={S} height={S} className="rounded-full border border-violet-400/40 bg-black/85">
+      <MinimapBase places={places} />
       {players.map((p) =>
         p.id === meId ? (
           <g key={p.id} transform={`translate(${tx(p.x)} ${tz(p.z)}) rotate(${(-p.ry * 180) / Math.PI + 180})`}>
@@ -900,6 +935,357 @@ function CharacterPicker({ current, owned, onPick, onClose }: { current: string;
   );
 }
 
+/**
+ * The 3D world. Memoized and fed only stable props, so the HUD (which ticks
+ * many times a second: minimap, health, ammo, kill feed) never makes React
+ * re-process the whole scene - that re-processing was most of the frame cost.
+ */
+interface World3DProps {
+  room: Room | null;
+  ids: string[];
+  look: CharacterLook;
+  mode: HubMode;
+  bubbles: Map<string, string>;
+  colliders: [number, number, number][];
+  props: WorldProperty[];
+  places: Map<string, Placement>;
+  models: ModelIndex;
+  getTouch: () => TouchInput;
+  onHud: (h: LocalHud) => void;
+  onToggleRover: () => void;
+  respawnSeq: number;
+  getRespawn: () => HubRespawnMessage | null;
+}
+
+const World3D = memo(function World3D({
+  room,
+  ids,
+  look,
+  mode,
+  bubbles,
+  colliders,
+  props,
+  places,
+  models,
+  getTouch,
+  onHud,
+  onToggleRover,
+  respawnSeq,
+  getRespawn,
+}: World3DProps) {
+  const state = room?.state as HubState | undefined;
+  return (
+    <Canvas
+      className="!absolute inset-0"
+      camera={{ fov: 70, near: 0.1, far: 2600, position: [0, 20, 40] }}
+      dpr={[1, 1.6]}
+      gl={{ toneMappingExposure: 1.15 }}
+      onCreated={({ gl, scene }) => {
+        // Dev-only hooks for scripts/astroworld-snapshot.mjs (draw-call stats, perf experiments).
+        if (process.env.NODE_ENV !== "production") Object.assign(window, { __awGl: gl, __awScene: scene });
+      }}
+    >
+      <color attach="background" args={["#120c2a"]} />
+      <fog attach="fog" args={["#3a2760", 160, 700]} />
+      <WorldLighting />
+      <ModelIndexContext.Provider value={models}>
+      <WorldScenery showroomRover={SHOWROOM_ROVER} />
+      <PropertyField props={props} places={places} />
+      <Effects />
+
+      {room &&
+        state &&
+        ids.map((id) => {
+          const p = state.players.get(id);
+          if (!p) return null;
+          if (id === room.sessionId) {
+            return (
+              <LocalPlayer
+                key={id}
+                room={room}
+                me={p}
+                look={look}
+                mode={mode}
+                bubble={bubbles.get(id)}
+                colliders={colliders}
+                getTouch={getTouch}
+                onHud={onHud}
+                onToggleRover={onToggleRover}
+                respawnSeq={respawnSeq}
+                getRespawn={getRespawn}
+              />
+            );
+          }
+          return <RemoteChimp key={id} player={p} bubble={bubbles.get(id)} />;
+        })}
+      </ModelIndexContext.Provider>
+    </Canvas>
+  );
+});
+
+/* ============================== live HUD ============================== */
+
+/** Minimal external store: the HUD subscribes, the 3D world and network write. */
+interface Store<T> {
+  get: () => T;
+  set: (v: T) => void;
+  subscribe: (cb: () => void) => () => void;
+}
+function createStore<T>(initial: T): Store<T> {
+  let value = initial;
+  const subs = new Set<() => void>();
+  return {
+    get: () => value,
+    set: (v: T) => {
+      value = v;
+      subs.forEach((cb) => cb());
+    },
+    subscribe: (cb) => {
+      subs.add(cb);
+      return () => subs.delete(cb);
+    },
+  };
+}
+function useStore<T>(store: Store<T>): T {
+  return useSyncExternalStore(store.subscribe, store.get, store.get);
+}
+
+interface HudStores {
+  hud: Store<LocalHud>;
+  kills: Store<Kill[]>;
+  hit: Store<number>;
+}
+function createHudStores(): HudStores {
+  return {
+    hud: createStore<LocalHud>({ ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE }),
+    kills: createStore<Kill[]>([]),
+    hit: createStore(0),
+  };
+}
+
+/**
+ * Everything on screen that changes many times a second (crosshair, health,
+ * ammo, minimap, kill feed, scoreboard, death screen). It owns its own clock
+ * and server-state polling, so none of that re-renders the page or the world.
+ */
+function LiveHud({
+  room,
+  status,
+  online,
+  propertyCount,
+  placeList,
+  look,
+  mode,
+  touch,
+  picking,
+  scores,
+  stores,
+  onToggleRover,
+  onOpenPicker,
+}: {
+  room: Room | null;
+  status: Status;
+  online: number;
+  propertyCount: number;
+  placeList: Placement[];
+  look: CharacterLook;
+  mode: HubMode;
+  touch: boolean;
+  picking: boolean;
+  scores: boolean;
+  stores: HudStores;
+  onToggleRover: () => void;
+  onOpenPicker: () => void;
+}) {
+  const hud = useStore(stores.hud);
+  const kills = useStore(stores.kills);
+  const hitAt = useStore(stores.hit);
+  const [now, setNow] = useState(() => Date.now());
+  const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+
+  // Server-state snapshot for the HUD, 10x a second.
+  useEffect(() => {
+    const state = room?.state as HubState | undefined;
+    if (!room || !state) return;
+    const t = setInterval(() => {
+      const players: Snap["players"] = [];
+      state.players?.forEach((p, id) => players.push({ id, name: p.name, x: p.x, z: p.z, ry: p.ry, kills: p.kills, deaths: p.deaths }));
+      const me = state.players?.get(room.sessionId);
+      setSnap({ players, hp: me?.hp ?? MAX_HP, alive: me?.alive ?? true });
+    }, 100);
+    return () => clearInterval(t);
+  }, [room]);
+
+  const recentKills = kills.filter((k) => now - k.at < 6000);
+  const killer = !snap.alive ? [...kills].reverse().find((k) => room && k.victim === room.sessionId) : undefined;
+  const hitShown = now - hitAt < 300;
+  const safe = hud.zone === CORE_ZONE;
+  const myStats = snap.players.find((p) => room && p.id === room.sessionId);
+
+  return (
+    <>
+    {/* crosshair */}
+    {room && mode === "walk" && snap.alive && (
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {hud.armed ? (
+          <div className="relative" style={{ width: hud.aiming ? 18 : 34, height: hud.aiming ? 18 : 34, transition: "all 120ms" }}>
+            <span className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
+            <span className="absolute bottom-0 left-1/2 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
+            <span className="absolute left-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
+            <span className="absolute right-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
+            <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+            {hitShown && <span className="absolute inset-[-6px] text-center text-2xl font-black leading-[46px] text-red-400">✕</span>}
+          </div>
+        ) : (
+          <span className="block h-1.5 w-1.5 rounded-full bg-white/70" />
+        )}
+      </div>
+    )}
+
+    {/* status + minimap */}
+    <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col gap-2">
+      <div className="rounded-lg bg-black/60 px-3 py-2 text-xs text-white">
+        <div className={`font-bold uppercase tracking-wider ${safe ? "text-emerald-300" : "text-red-400"}`}>
+          {hud.zone} · {safe ? "Safe zone" : "Combat zone"}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-white/80">
+          <span className={`inline-block h-2 w-2 rounded-full ${status === "online" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400" : "bg-red-500"}`} />
+          {status === "online" ? `${online} chimp${online === 1 ? "" : "s"} online · ${propertyCount} properties` : status === "connecting" ? "Connecting…" : "Offline"}
+        </div>
+        <div className="mt-0.5 text-[10px] text-white/50">Test build · nothing here costs or pays anything</div>
+      </div>
+      {room && <Minimap players={snap.players} meId={room.sessionId} places={placeList} />}
+    </div>
+
+    {/* character + rover buttons, kill feed */}
+    <div className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onOpenPicker}
+          className="flex items-center gap-2 rounded-lg border border-violet-400/60 bg-black/70 py-1 pl-1 pr-3 text-xs font-bold text-white hover:bg-black/90"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={look.image} alt="" className="h-7 w-7 rounded object-cover" />
+          <span className="leading-tight">
+            {look.name}
+            <span className="block text-[9px] uppercase tracking-wider" style={{ color: TIER_COLOR[look.tier] }}>
+              {TIER_LABEL[look.tier]} · change
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onToggleRover}
+          disabled={!room}
+          className="rounded-lg border border-amber-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 hover:bg-black/90 disabled:opacity-40"
+        >
+          {mode === "walk" ? "🚙 Rover (F)" : "🚶 Walk (F)"}
+        </button>
+      </div>
+      <div className="pointer-events-none flex flex-col items-end gap-1">
+        {recentKills.map((k) => (
+          <div key={`${k.at}-${k.victim}`} className="rounded bg-black/65 px-2 py-0.5 text-xs text-white">
+            <span className="font-semibold text-amber-300">{k.killerName}</span> {k.headshot ? "🎯" : "✦"} <span className="font-semibold text-red-300">{k.victimName}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* health + ammo */}
+    {room && (
+      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">{myStats ? `${myStats.kills} kills · ${myStats.deaths} deaths` : ""}</div>
+        <div className="h-2.5 w-56 overflow-hidden rounded-full border border-white/20 bg-black/60">
+          <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${(snap.hp / MAX_HP) * 100}%` }} />
+        </div>
+      </div>
+    )}
+    {room && hud.armed && (
+      <div className="pointer-events-none absolute bottom-4 right-4 text-right text-white">
+        <div className="text-3xl font-black tabular-nums">
+          {hud.reloading ? "··" : hud.ammo}
+          <span className="text-base text-white/50"> / {MAG_SIZE}</span>
+        </div>
+        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: look.glow }}>
+          {hud.reloading ? "Reloading…" : hud.ammo === 0 ? "Press R to reload" : "Astral rifle"}
+        </div>
+      </div>
+    )}
+
+    {/* hurt vignette */}
+    {room && snap.hp < MAX_HP && snap.alive && (
+      <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
+    )}
+
+    {/* click-to-play (desktop) */}
+    {room && status === "online" && !touch && !hud.locked && !picking && snap.alive && (
+      <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex justify-center">
+        <div className="rounded-xl border border-violet-400/40 bg-black/70 px-4 py-2 text-center text-white backdrop-blur-sm">
+          <div className="text-sm font-bold">Click the world to play</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-6 text-left text-[11px] leading-5 text-white/70">
+            <span>WASD · move</span>
+            <span>Mouse · aim</span>
+            <span>Shift · sprint</span>
+            <span>Left click · fire</span>
+            <span>Space · jump</span>
+            <span>Right click · aim down sights</span>
+            <span>C · crouch</span>
+            <span>R · reload</span>
+            <span>F · rover</span>
+            <span>Tab · scoreboard</span>
+            <span>Enter · chat</span>
+            <span>Esc · free the mouse</span>
+          </div>
+          <div className="mt-1 text-[10px] text-emerald-300/80">Weapons are holstered inside the Core. Head out to a district to fight.</div>
+        </div>
+      </div>
+    )}
+
+    {/* scoreboard */}
+    {scores && (
+      <div className="pointer-events-none absolute left-1/2 top-16 w-80 -translate-x-1/2 rounded-xl border border-violet-400/40 bg-black/80 p-3 text-sm text-white">
+        <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/50">
+          <span>Chimp</span>
+          <span>K / D</span>
+        </div>
+        {[...snap.players]
+          .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)
+          .map((p) => (
+            <div key={p.id} className={`flex justify-between py-0.5 ${room && p.id === room.sessionId ? "text-amber-300" : ""}`}>
+              <span className="truncate">{p.name}</span>
+              <span className="tabular-nums">
+                {p.kills} / {p.deaths}
+              </span>
+            </div>
+          ))}
+      </div>
+    )}
+
+    {/* death */}
+    {room && !snap.alive && (
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-950/40">
+        <div className="text-center text-white">
+          <div className="text-3xl font-black uppercase tracking-widest text-red-400">Eliminated</div>
+          {killer && (
+            <div className="mt-1 text-sm">
+              by {killer.killerName}
+              {killer.headshot ? " · headshot" : ""}
+            </div>
+          )}
+          <div className="mt-2 text-xs text-white/60">Respawning in the Core… (test build: nothing was lost)</div>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
 /* ============================== the page ============================== */
 
 interface Snap {
@@ -910,31 +1296,23 @@ interface Snap {
 
 export function HubScene({ playerName, loggedIn }: { playerName?: string; loggedIn: boolean }) {
   const [skin, setSkin] = useState(loadSkin);
-  const { status, room, ids, error, chat, kills, hitAt, respawnSeq, getRespawn, retry, setJoinSkin } = useHubRoom(playerName, skin);
+  const { status, room, ids, error, chat, stores, respawnSeq, getRespawn, retry, setJoinSkin } = useHubRoom(playerName, skin);
   const [draft, setDraft] = useState("");
-  const [now, setNow] = useState(() => Date.now());
   const [touch] = useState(() => window.matchMedia("(pointer: coarse)").matches);
   const [picking, setPicking] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [props, setProps] = useState<WorldProperty[]>([]);
-  const [hud, setHud] = useState<LocalHud>({ ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE });
-  const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
   const [scores, setScores] = useState(false);
   const chatInput = useRef<HTMLInputElement>(null);
   const touchInput = useRef<TouchInput>({ move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, aim: false, jump: false });
   const lastLook = useRef<{ x: number; y: number } | null>(null);
 
-  const state = room?.state as HubState | undefined;
   const look = characterById(skin);
 
   // Mode is remembered per session, so a fresh join always starts on foot.
   const [modeFor, setModeFor] = useState<{ session: string; mode: HubMode } | null>(null);
   const myMode: HubMode = room && modeFor?.session === room.sessionId ? modeFor.mode : "walk";
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, []);
 
   // Artist models that have passed scripts/check-models.mjs.
   const [models, setModels] = useState<ModelIndex>({});
@@ -983,18 +1361,6 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     };
   }, [loggedIn]);
 
-  // HUD snapshot of server state, 10x a second.
-  useEffect(() => {
-    if (!room || !state) return;
-    const t = setInterval(() => {
-      const players: Snap["players"] = [];
-      state.players.forEach((p, id) => players.push({ id, name: p.name, x: p.x, z: p.z, ry: p.ry, kills: p.kills, deaths: p.deaths }));
-      const me = state.players.get(room.sessionId);
-      setSnap({ players, hp: me?.hp ?? MAX_HP, alive: me?.alive ?? true });
-    }, 100);
-    return () => clearInterval(t);
-  }, [room, state]);
-
   const places = useMemo(() => layoutProperties(props), [props]);
   const placeList = useMemo(() => [...places.values()], [places]);
   const colliders = useMemo<[number, number, number][]>(
@@ -1012,6 +1378,11 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     room.send("mode", { mode: next });
     setModeFor({ session: room.sessionId, mode: next });
   }, [room, myMode]);
+
+  const openPicker = useCallback(() => {
+    document.exitPointerLock?.();
+    setPicking(true);
+  }, []);
 
   const pickSkin = useCallback(
     (id: string) => {
@@ -1049,11 +1420,20 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     };
   }, []);
 
+  // Speech bubbles change only when a line arrives or expires - not on the HUD clock,
+  // so the 3D world isn't re-rendered several times a second for nothing.
+  const [bubbleClock, setBubbleClock] = useState(() => Date.now());
+  useEffect(() => {
+    const expiries = chat.map((l) => l.at + BUBBLE_MS).filter((t) => t > bubbleClock);
+    if (expiries.length === 0) return;
+    const t = setTimeout(() => setBubbleClock(Date.now()), Math.max(50, Math.min(...expiries) - Date.now()));
+    return () => clearTimeout(t);
+  }, [chat, bubbleClock]);
   const bubbles = useMemo(() => {
     const out = new Map<string, string>();
-    for (const line of chat) if (now - line.at < BUBBLE_MS) out.set(line.from, line.text);
+    for (const line of chat) if (bubbleClock - line.at < BUBBLE_MS) out.set(line.from, line.text);
     return out;
-  }, [chat, now]);
+  }, [chat, bubbleClock]);
 
   const sendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1084,152 +1464,43 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     lastLook.current = null;
   }, []);
 
-  const recentKills = kills.filter((k) => now - k.at < 6000);
-  const killer = !snap.alive ? [...kills].reverse().find((k) => room && k.victim === room.sessionId) : undefined;
-  const hitShown = now - hitAt < 300;
-  const safe = hud.zone === CORE_ZONE;
-  const myStats = snap.players.find((p) => room && p.id === room.sessionId);
-
   return (
     <div className="relative h-[calc(100dvh-140px)] min-h-[480px] w-full select-none overflow-hidden rounded-xl border border-violet-500/30 bg-[#07051a]">
-      <Canvas camera={{ fov: 70, near: 0.1, far: 1400, position: [0, 20, 40] }} dpr={[1, 1.6]}>
-        <color attach="background" args={["#07051a"]} />
-        <fog attach="fog" args={["#0c0820", 120, 520]} />
-        <ambientLight intensity={0.45} />
-        <hemisphereLight args={["#b9a6ff", "#1b1326", 0.7]} />
-        <directionalLight position={[60, 90, 40]} intensity={1.5} />
-        <ModelIndexContext.Provider value={models}>
-        <WorldScenery showroomRover={<RoverModel color="#a855f7" />} />
-        <PropertyField props={props} places={places} />
-        <Effects />
+      <World3D
+        room={room}
+        ids={ids}
+        look={look}
+        mode={myMode}
+        bubbles={bubbles}
+        colliders={colliders}
+        props={props}
+        places={places}
+        models={models}
+        getTouch={getTouch}
+        onHud={stores.hud.set}
+        onToggleRover={toggleMode}
+        respawnSeq={respawnSeq}
+        getRespawn={getRespawn}
+      />
 
-        {room &&
-          state &&
-          ids.map((id) => {
-            const p = state.players.get(id);
-            if (!p) return null;
-            if (id === room.sessionId) {
-              return (
-                <LocalPlayer
-                  key={id}
-                  room={room}
-                  me={p}
-                  look={look}
-                  mode={myMode}
-                  bubble={bubbles.get(id)}
-                  colliders={colliders}
-                  getTouch={getTouch}
-                  onHud={setHud}
-                  onToggleRover={toggleMode}
-                  respawnSeq={respawnSeq}
-                  getRespawn={getRespawn}
-                />
-              );
-            }
-            return <RemoteChimp key={id} player={p} bubble={bubbles.get(id)} />;
-          })}
-        </ModelIndexContext.Provider>
-      </Canvas>
-
-      {/* crosshair */}
-      {room && myMode === "walk" && snap.alive && (
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          {hud.armed ? (
-            <div className="relative" style={{ width: hud.aiming ? 18 : 34, height: hud.aiming ? 18 : 34, transition: "all 120ms" }}>
-              <span className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
-              <span className="absolute bottom-0 left-1/2 h-2 w-0.5 -translate-x-1/2 bg-white/90" />
-              <span className="absolute left-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
-              <span className="absolute right-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
-              <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-              {hitShown && <span className="absolute inset-[-6px] text-center text-2xl font-black leading-[46px] text-red-400">✕</span>}
-            </div>
-          ) : (
-            <span className="block h-1.5 w-1.5 rounded-full bg-white/70" />
-          )}
-        </div>
-      )}
-
-      {/* status + minimap */}
-      <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-2">
-        <div className="rounded-lg bg-black/60 px-3 py-2 text-xs text-white">
-          <div className={`font-bold uppercase tracking-wider ${safe ? "text-emerald-300" : "text-red-400"}`}>
-            {hud.zone} · {safe ? "Safe zone" : "Combat zone"}
-          </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-white/80">
-            <span className={`inline-block h-2 w-2 rounded-full ${status === "online" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400" : "bg-red-500"}`} />
-            {status === "online" ? `${ids.length} chimp${ids.length === 1 ? "" : "s"} online · ${props.length} properties` : status === "connecting" ? "Connecting…" : "Offline"}
-          </div>
-          <div className="mt-0.5 text-[10px] text-white/50">Test build · nothing here costs or pays anything</div>
-        </div>
-        {room && <Minimap players={snap.players} meId={room.sessionId} places={placeList} />}
-      </div>
-
-      {/* character + rover buttons, kill feed */}
-      <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              document.exitPointerLock?.();
-              setPicking(true);
-            }}
-            className="flex items-center gap-2 rounded-lg border border-violet-400/60 bg-black/70 py-1 pl-1 pr-3 text-xs font-bold text-white hover:bg-black/90"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={look.image} alt="" className="h-7 w-7 rounded object-cover" />
-            <span className="leading-tight">
-              {look.name}
-              <span className="block text-[9px] uppercase tracking-wider" style={{ color: TIER_COLOR[look.tier] }}>
-                {TIER_LABEL[look.tier]} · change
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={toggleMode}
-            disabled={!room}
-            className="rounded-lg border border-amber-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 hover:bg-black/90 disabled:opacity-40"
-          >
-            {myMode === "walk" ? "🚙 Rover (F)" : "🚶 Walk (F)"}
-          </button>
-        </div>
-        <div className="pointer-events-none flex flex-col items-end gap-1">
-          {recentKills.map((k) => (
-            <div key={`${k.at}-${k.victim}`} className="rounded bg-black/65 px-2 py-0.5 text-xs text-white">
-              <span className="font-semibold text-amber-300">{k.killerName}</span> {k.headshot ? "🎯" : "✦"} <span className="font-semibold text-red-300">{k.victimName}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* health + ammo */}
-      {room && (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">{myStats ? `${myStats.kills} kills · ${myStats.deaths} deaths` : ""}</div>
-          <div className="h-2.5 w-56 overflow-hidden rounded-full border border-white/20 bg-black/60">
-            <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${(snap.hp / MAX_HP) * 100}%` }} />
-          </div>
-        </div>
-      )}
-      {room && hud.armed && (
-        <div className="pointer-events-none absolute bottom-4 right-4 text-right text-white">
-          <div className="text-3xl font-black tabular-nums">
-            {hud.reloading ? "··" : hud.ammo}
-            <span className="text-base text-white/50"> / {MAG_SIZE}</span>
-          </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: look.glow }}>
-            {hud.reloading ? "Reloading…" : hud.ammo === 0 ? "Press R to reload" : "Astral rifle"}
-          </div>
-        </div>
-      )}
-
-      {/* hurt vignette */}
-      {room && snap.hp < MAX_HP && snap.alive && (
-        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
-      )}
+      <LiveHud
+        room={room}
+        status={status}
+        online={ids.length}
+        propertyCount={props.length}
+        placeList={placeList}
+        look={look}
+        mode={myMode}
+        touch={touch}
+        picking={picking}
+        scores={scores}
+        stores={stores}
+        onToggleRover={toggleMode}
+        onOpenPicker={openPicker}
+      />
 
       {/* chat */}
-      <div className="absolute bottom-3 left-3 flex w-[min(340px,calc(100%-180px))] flex-col gap-1.5">
+      <div className="absolute bottom-3 left-3 z-20 flex w-[min(340px,calc(100%-180px))] flex-col gap-1.5">
         <div className="pointer-events-none flex max-h-36 flex-col justify-end overflow-hidden text-xs">
           {chat.slice(-7).map((line) => (
             <div key={line.id} className="mb-0.5 w-fit max-w-full rounded bg-black/55 px-2 py-0.5 text-white">
@@ -1255,66 +1526,6 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
           />
         </form>
       </div>
-
-      {/* click-to-play (desktop) */}
-      {room && !touch && !hud.locked && !picking && snap.alive && (
-        <div className="pointer-events-none absolute inset-x-0 top-[34%] flex justify-center">
-          <div className="rounded-xl border border-violet-400/40 bg-black/75 px-5 py-3 text-center text-white">
-            <div className="text-sm font-bold">Click the world to play</div>
-            <div className="mt-1 grid grid-cols-2 gap-x-6 text-left text-[11px] leading-5 text-white/70">
-              <span>WASD · move</span>
-              <span>Mouse · aim</span>
-              <span>Shift · sprint</span>
-              <span>Left click · fire</span>
-              <span>Space · jump</span>
-              <span>Right click · aim down sights</span>
-              <span>C · crouch</span>
-              <span>R · reload</span>
-              <span>F · rover</span>
-              <span>Tab · scoreboard</span>
-              <span>Enter · chat</span>
-              <span>Esc · free the mouse</span>
-            </div>
-            <div className="mt-1 text-[10px] text-emerald-300/80">Weapons are holstered inside the Core. Head out to a district to fight.</div>
-          </div>
-        </div>
-      )}
-
-      {/* scoreboard */}
-      {scores && (
-        <div className="pointer-events-none absolute left-1/2 top-16 w-80 -translate-x-1/2 rounded-xl border border-violet-400/40 bg-black/80 p-3 text-sm text-white">
-          <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/50">
-            <span>Chimp</span>
-            <span>K / D</span>
-          </div>
-          {[...snap.players]
-            .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)
-            .map((p) => (
-              <div key={p.id} className={`flex justify-between py-0.5 ${room && p.id === room.sessionId ? "text-amber-300" : ""}`}>
-                <span className="truncate">{p.name}</span>
-                <span className="tabular-nums">
-                  {p.kills} / {p.deaths}
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* death */}
-      {room && !snap.alive && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-950/40">
-          <div className="text-center text-white">
-            <div className="text-3xl font-black uppercase tracking-widest text-red-400">Eliminated</div>
-            {killer && (
-              <div className="mt-1 text-sm">
-                by {killer.killerName}
-                {killer.headshot ? " · headshot" : ""}
-              </div>
-            )}
-            <div className="mt-2 text-xs text-white/60">Respawning in the Core… (test build: nothing was lost)</div>
-          </div>
-        </div>
-      )}
 
       {/* touch controls */}
       {touch && room && (
