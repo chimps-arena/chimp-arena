@@ -106,13 +106,24 @@ export function spawnPoint(): HubRespawnMessage {
   return { x: Math.sin(angle) * r, z: Math.cos(angle) * r, ry: angle };
 }
 
+/**
+ * Hard cap on simultaneous Astroworld instances on this server (x40 players
+ * each), so a flood of join requests can't spin up rooms until it falls over.
+ */
+export const MAX_HUB_ROOMS = Number(process.env.MAX_HUB_ROOMS ?? 25);
+let openRooms = 0;
+
 export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> {
   maxClients = HUB_MAX_PLAYERS;
+  private counted = false;
 
   private tracks = new WeakMap<HubPlayerT, Track>();
   private chatSeq = 0;
 
   onCreate(): void {
+    if (openRooms >= MAX_HUB_ROOMS) throw new Error("Astroworld is full right now - try again in a minute");
+    openRooms++;
+    this.counted = true;
     this.state = new HubRoomState();
 
     this.onMessage("move", (client, msg: HubMoveMessage) => {
@@ -261,5 +272,9 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
 
   onLeave(client: Client): void {
     this.state.players.delete(client.sessionId);
+  }
+
+  onDispose(): void {
+    if (this.counted) openRooms--;
   }
 }

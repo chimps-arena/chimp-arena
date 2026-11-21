@@ -1,0 +1,12 @@
+# Allow-list: the game server image only needs these. Everything else (the
+# Next.js site, art, .env files, node_modules) stays out of the build upload.
+*
+!package.json
+!package-lock.json
+!shared/package.json
+!shared/tsconfig.json
+!shared/src/**
+!server/package.json
+!server/tsconfig.json
+!server/src/**
+**/*.test.ts

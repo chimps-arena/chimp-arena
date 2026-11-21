@@ -1,0 +1,40 @@
+# Fly.io config for the game server (Astroworld + mining rooms).
+# Deploy: fly deploy   (builds the Dockerfile on Fly's builders)
+#
+# Exactly ONE machine, always on: rooms live in that process's memory, so a
+# second machine would split players into worlds that can't see each other,
+# and auto-stop would drop everyone mid-match. Scaling past one machine needs
+# Redis presence first.
+
+app = "astrochimpz-world"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  MAX_HUB_ROOMS = "25"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

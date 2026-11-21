@@ -4,5 +4,5 @@ import appConfig from "./app.config";
 const port = Number(process.env.PORT ?? 2567);
 
 listen(appConfig, port).then(() => {
-  console.log(`chimp-arena mining server listening on :${port}`);
+  console.log(`chimp-arena game server (mining + Astroworld) listening on :${port}`);
 });

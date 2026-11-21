@@ -14,4 +14,10 @@ export default config({
     gameServer.define("hub", HubRoom);
   },
   initializeTransport: () => new WebSocketTransport(),
+  initializeExpress: (app) => {
+    // Load balancer / uptime check (Fly.io hits this before routing players here).
+    app.get("/health", (_req, res) => {
+      res.json({ ok: true, uptime: Math.round(process.uptime()) });
+    });
+  },
 });
