@@ -15,7 +15,7 @@ import { ASTRO_CORP_WALLET, MINT_DELEGATE } from "@/lib/chain/mint-config";
 
 export { ASTRO_CORP_WALLET, MINT_DELEGATE };
 
-export const PROPERTY_COLLECTION_NAME = "Astrochimps Properties";
+export const PROPERTY_COLLECTION_NAME = "Astrochimpz Properties";
 export const PROPERTY_NFT_SYMBOL = "ACHMPLAND";
 
 /**

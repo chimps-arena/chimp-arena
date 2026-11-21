@@ -3,6 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { resolvePropertyImage } from "@/lib/chain/property-art";
 import { fastImage } from "@/lib/nft-image";
 import { PROPERTY_NFT_SYMBOL } from "@/lib/chain/property-mint-config";
+import irysImages from "@/lib/property-nft-images.json";
+
+/** Small WebP art on Irys per property (scripts/upload-property-thumbs.mjs). */
+const IRYS_IMAGES: Record<string, string> = irysImages;
 
 export const runtime = "nodejs";
 
@@ -14,8 +18,10 @@ export const runtime = "nodejs";
  * Properties used to point at Arweave JSON whose ~2.7 MB PNGs take ~11s
  * through the Irys gateway, and Phantom never showed them (dev log #13,
  * Nov 2026). This serves the same details with the art's small web copy
- * from our own CDN - how the Astrochimps that do show are set up. The
- * Arweave originals are untouched.
+ * from our own CDN. Phantom still hid them, so the image is now that same
+ * small copy stored on Irys - the host the Astrochimps that do show use -
+ * rather than a chimp-arena.vercel.app URL. The Arweave originals are
+ * untouched.
  */
 export async function GET(
   req: Request,
@@ -34,7 +40,9 @@ export async function GET(
     return NextResponse.json({ error: "unknown property" }, { status: 404 });
   }
 
-  const art = property.image_url ? fastImage(property.image_url) : resolvePropertyImage(property.type);
+  const art =
+    IRYS_IMAGES[propertyId] ??
+    (property.image_url ? fastImage(property.image_url) : resolvePropertyImage(property.type));
   const image = !art ? `${origin}/brand/chimp-logo.png` : art.startsWith("/") ? `${origin}${art}` : art;
   const type = image.endsWith(".webp") ? "image/webp" : image.endsWith(".jpg") ? "image/jpeg" : "image/png";
 
@@ -43,7 +51,7 @@ export async function GET(
       name: property.name,
       symbol: PROPERTY_NFT_SYMBOL,
       description:
-        property.blurb ?? `A property deed in ${property.zone}, CHIMP Arena.`,
+        property.blurb ?? `A property deed in ${property.zone}, Astroworld.`,
       image,
       external_url: "https://astrochimpz.com",
       attributes: [
