@@ -18,7 +18,9 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { Callbacks, Client, CloseCode, type Room } from "@colyseus/sdk";
 import {
-  BUILDING_RADIUS,
+  buildingCover,
+  type Cover,
+  shotBlockedAt,
   CHARACTERS,
   CHAT_MAX_LENGTH,
   characterById,
@@ -53,7 +55,8 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
-import { Npcs } from "./npcs";
+import { Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
+import { NpcHud, type NpcContext } from "./npc-dialog";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
 
@@ -288,7 +291,7 @@ interface LocalCtx {
   camera: THREE.Camera;
   el: HTMLElement;
   room: Room;
-  colliders: [number, number, number][];
+  colliders: Cover[];
   group: THREE.Group | null;
   pose: PoseInput;
   look: CharacterLook;
@@ -428,9 +431,13 @@ function stepLocal(c: LocalCtx, rawDt: number) {
         .add(new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw)).multiplyScalar(0.85));
       const shotDir = target.clone().sub(muzzle).normalize();
       room.send("shoot", { o: { x: muzzle.x, y: muzzle.y, z: muzzle.z }, d: { x: shotDir.x, y: shotDir.y, z: shotDir.z } });
-      const end = muzzle.clone().addScaledVector(shotDir, Math.min(muzzle.distanceTo(target), SHOT_RANGE));
+      // Buildings stop bullets (the server applies the same check).
+      const free = Math.min(muzzle.distanceTo(target), SHOT_RANGE);
+      const wall = shotBlockedAt(muzzle, shotDir, colliders, free);
+      const end = muzzle.clone().addScaledVector(shotDir, wall);
       fx.emit({ kind: "flash", at: muzzle });
       fx.emit({ kind: "tracer", from: muzzle, to: end, color: look.glow });
+      if (wall < free - 0.01) fx.emit({ kind: "impact", at: end });
       // Recoil: kick up, a little sideways.
       st.pitch = Math.min(1.2, st.pitch + (aiming ? 0.006 : 0.012));
       st.yaw += (Math.random() - 0.5) * 0.006;
@@ -521,7 +528,7 @@ function LocalPlayer({
   look: CharacterLook;
   mode: HubMode;
   bubble?: string;
-  colliders: [number, number, number][];
+  colliders: Cover[];
   getTouch: () => TouchInput;
   onHud: (h: LocalHud) => void;
   onToggleRover: () => void;
@@ -582,6 +589,7 @@ function LocalPlayer({
       if (k === "c" || k === "control") s.current.crouch = !s.current.crouch;
       if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) s.current.reloadUntil = performance.now() + RELOAD_MS;
       if (k === "f") onToggleRover();
+      if (k === "e" && !e.repeat) toggleTalk();
       if ([" ", "arrowup", "arrowdown", "tab"].includes(k)) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
@@ -628,12 +636,13 @@ function LocalPlayer({
     };
   }, [gl, onToggleRover]);
 
-  useFrame((_, rawDt) =>
+  useFrame((_, rawDt) => {
     stepLocal(
       { st: s.current, keys: keys.current, touch: getTouch(), me, mode, camera, el: gl.domElement, room, colliders, group: group.current, pose: pose.current, look, onHud },
       rawDt,
-    ),
-  );
+    );
+    trackPlayerForNpcs(s.current.x, s.current.z);
+  });
 
   const getPose = useCallback(() => pose.current, []);
   return (
@@ -966,7 +975,7 @@ interface World3DProps {
   look: CharacterLook;
   mode: HubMode;
   bubbles: Map<string, string>;
-  colliders: [number, number, number][];
+  colliders: Cover[];
   props: WorldProperty[];
   places: Map<string, Placement>;
   models: ModelIndex;
@@ -1147,6 +1156,8 @@ function LiveHud({
   const hitShown = now - hitAt < 300;
   const safe = hud.zone === CORE_ZONE;
   const myStats = snap.players.find((p) => room && p.id === room.sessionId);
+  const talking = useSyncExternalStore(npcTalkStore.subscribe, () => npcTalkStore.get().talking !== null, () => false);
+  const npcContext: NpcContext = { players: snap.players, online, propertyCount, magSize: MAG_SIZE };
 
   return (
     <>
@@ -1244,8 +1255,11 @@ function LiveHud({
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
 
+    {/* NPCs: talk prompt + conversation */}
+    {room && mode === "walk" && snap.alive && !picking && <NpcHud context={npcContext} touch={touch} />}
+
     {/* click-to-play (desktop) */}
-    {room && status === "online" && !touch && !hud.locked && !picking && snap.alive && (
+    {room && status === "online" && !touch && !hud.locked && !picking && snap.alive && !talking && (
       <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex justify-center">
         <div className="rounded-xl border border-violet-400/40 bg-black/70 px-4 py-2 text-center text-white backdrop-blur-sm">
           <div className="text-sm font-bold">Click the world to play</div>
@@ -1259,6 +1273,7 @@ function LiveHud({
             <span>C · crouch</span>
             <span>R · reload</span>
             <span>F · rover</span>
+            <span>E · talk to NPCs</span>
             <span>Tab · scoreboard</span>
             <span>Enter · chat</span>
             <span>Esc · free the mouse</span>
@@ -1384,14 +1399,18 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
 
   const places = useMemo(() => layoutProperties(props), [props]);
   const placeList = useMemo(() => [...places.values()], [places]);
-  const colliders = useMemo<[number, number, number][]>(
+  // Walking obstacles and bullet cover in one list (heights stop bullets; see shared buildingCover).
+  const colliders = useMemo<Cover[]>(
     () => [
       ...STATIC_COLLIDERS,
-      [SHOWROOM.x, SHOWROOM.z, 4.6],
+      [SHOWROOM.x, SHOWROOM.z, 4.6, 0.6],
       ...exchangeColliders(),
-      ...placeList.map((p): [number, number, number] => [p.x - Math.sin(p.ry) * 1.5, p.z - Math.cos(p.ry) * 1.5, BUILDING_RADIUS - 1.5]),
+      ...props.flatMap((p) => {
+        const at = places.get(p.id);
+        return at ? [buildingCover(at, p.type)] : [];
+      }),
     ],
-    [placeList],
+    [props, places],
   );
 
   const toggleMode = useCallback(() => {

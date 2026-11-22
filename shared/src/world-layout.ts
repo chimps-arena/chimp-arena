@@ -100,3 +100,70 @@ function slotAngle(i: number, n: number): number {
   const start = ROAD_ANGLES[arc % ROAD_ANGLES.length] + gap / 2;
   return start + ((k + 0.5) / perArc) * arcLen;
 }
+
+/* --------------------------------- cover --------------------------------- */
+
+/**
+ * A vertical cylinder that blocks walking and bullets: [x, z, radius, height].
+ * Height left out = infinitely tall (walking-only obstacles).
+ */
+export type Cover = [number, number, number, number?];
+
+/** Roughly how tall each kind of building is, for stopping bullets. */
+const COVER_HEIGHT: Record<string, number> = {
+  tower: 24,
+  beacon: 15,
+  observatory: 12,
+  mining_claim: 11,
+  dock: 11,
+  foundry: 11,
+  hangar: 8,
+  yard: 5,
+  quarry: 4,
+  array: 2.5,
+  field: 1.5,
+};
+export const DEFAULT_COVER_HEIGHT = 7;
+
+/** The cover a property's building gives: the same circle the client walks around. */
+export function buildingCover(place: Placement, type: string): Cover {
+  return [place.x - Math.sin(place.ry) * 1.5, place.z - Math.cos(place.ry) * 1.5, BUILDING_RADIUS - 1.5, COVER_HEIGHT[type] ?? DEFAULT_COVER_HEIGHT];
+}
+
+/** Every building's cover, laid out exactly as the client lays out the world. */
+export function buildingCovers(props: { id: string; zone: string; type: string }[]): Cover[] {
+  const places = layoutProperties(props);
+  const out: Cover[] = [];
+  for (const p of props) {
+    const at = places.get(p.id);
+    if (at) out.push(buildingCover(at, p.type));
+  }
+  return out;
+}
+
+/**
+ * How far a shot from `o` along unit direction `d` travels before hitting
+ * cover - or `maxT` if nothing is in the way. Cylinder walls only: a shot
+ * passing over a building's top flies on. Cover the shot starts inside is
+ * ignored, so standing against a wall never blocks your own shots.
+ */
+export function shotBlockedAt(o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }, covers: readonly Cover[], maxT: number): number {
+  let best = maxT;
+  const a = d.x * d.x + d.z * d.z;
+  if (a < 1e-9) return best;
+  for (const [cx, cz, r, h = Infinity] of covers) {
+    const ox = o.x - cx;
+    const oz = o.z - cz;
+    const c = ox * ox + oz * oz - r * r;
+    if (c <= 0) continue;
+    const b = 2 * (ox * d.x + oz * d.z);
+    if (b >= 0) continue; // moving away from it
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) continue;
+    const t = (-b - Math.sqrt(disc)) / (2 * a);
+    if (t < 0 || t >= best) continue;
+    const y = o.y + d.y * t;
+    if (y >= 0 && y <= h) best = t;
+  }
+  return best;
+}

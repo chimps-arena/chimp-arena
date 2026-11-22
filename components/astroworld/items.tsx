@@ -265,13 +265,13 @@ export function ResourceExchange() {
   );
 }
 
-/** Pedestal positions as colliders [x, z, radius] so players walk around them. */
-export function exchangeColliders(): [number, number, number][] {
-  const out: [number, number, number][] = EXCHANGE.map((_, i) => {
+/** Pedestal positions as colliders [x, z, radius, height] so players walk around them. */
+export function exchangeColliders(): [number, number, number, number][] {
+  const out: [number, number, number, number][] = EXCHANGE.map((_, i) => {
     const a = (i / EXCHANGE.length) * Math.PI * 2 + Math.PI / EXCHANGE.length;
-    return [Math.sin(a) * EXCHANGE_RADIUS, Math.cos(a) * EXCHANGE_RADIUS, 1.1];
+    return [Math.sin(a) * EXCHANGE_RADIUS, Math.cos(a) * EXCHANGE_RADIUS, 1.1, 2.2];
   });
-  out.push([0, 11, 1.1]);
+  out.push([0, 11, 1.1, 2.6]);
   return out;
 }
 

@@ -11,6 +11,7 @@ import {
   type HubShotBroadcast,
 } from "@chimp-arena/shared";
 import appConfig from "../app.config";
+import { setWorldCovers } from "../world-covers";
 import { HubRoomState } from "./HubRoom";
 
 type State = InstanceType<typeof HubRoomState>;
@@ -208,6 +209,26 @@ describe("HubRoom (Astroworld)", () => {
       shooter.send("shoot", { o: { x: 10, y: 1.2, z: 0 }, d: { x: 1, y: 0, z: 0 } });
       await settle();
       expect(t.hp).toBe(MAX_HP);
+    });
+
+    it("buildings stop bullets: no hits through a wall, and the tracer ends at it", async () => {
+      const { shooter, t, shots } = await duel();
+      setWorldCovers([[105, 0, 1.5, 6]]); // a building between them
+      try {
+        shooter.send("shoot", body);
+        await waitFor(() => shots.length === 1);
+        expect(t.hp).toBe(MAX_HP);
+        expect(shots[0].hit).toBeNull();
+        expect(shots[0].end.x).toBeCloseTo(103.5, 1);
+
+        await sleep(150);
+        // A lob over the top of a low building still lands.
+        setWorldCovers([[105, 0, 1.5, 1]]);
+        shooter.send("shoot", body);
+        await waitFor(() => t.hp === MAX_HP - SHOT_DAMAGE);
+      } finally {
+        setWorldCovers([]);
+      }
     });
   });
 });

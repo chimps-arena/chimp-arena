@@ -10,10 +10,14 @@
  * Foundry hand works a foundry, the Comms Operator runs a comms tower, and
  * the Bounty Hunter stalks the open ground between the Core and the districts.
  *
- * NPCs are scenery for now: they can't be shot and don't block movement.
+ * Walk up to one and press E (or tap Talk) to talk: it stops, turns to face
+ * you and opens its dialogue (npc-dialog.tsx). The talk state lives in this
+ * module so the 3D scene and the HUD share it without re-rendering the world.
+ *
+ * NPCs can't be shot and don't block movement.
  */
 
-import { memo, Suspense, useMemo, useRef } from "react";
+import { memo, Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { characterById, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
@@ -33,7 +37,7 @@ type Route =
   /** Stand at a spot facing a heading. */
   | { kind: "post"; at: XZ; face: number };
 
-interface NpcSpec {
+export interface NpcSpec {
   key: string;
   characterId: string;
   role: string;
@@ -103,9 +107,104 @@ export function npcSpecs(props: WorldProperty[], places: Map<string, Placement>)
   return out;
 }
 
-/** Where an NPC is at time t (seconds), and how it's moving. */
-function stepNpc(spec: NpcSpec, t: number, g: THREE.Group | null, pose: PoseInput) {
+/* ------------------------------ talking ------------------------------ */
+
+/** Within this many metres of an NPC you can talk to it. */
+export const TALK_RANGE = 4.5;
+
+export interface NpcTalkState {
+  /** NPC close enough to talk to (key), if any. */
+  near: string | null;
+  /** NPC being talked to (key), if any. */
+  talking: string | null;
+}
+
+interface NpcRuntime {
+  spec: NpcSpec;
+  x: number;
+  z: number;
+  /** Seconds the NPC's route clock has been held back (it pauses while talking). */
+  offset: number;
+}
+
+const live = new Map<string, NpcRuntime>();
+const player = { x: 0, z: 0 };
+let talk: NpcTalkState = { near: null, talking: null };
+const talkSubs = new Set<() => void>();
+
+function setTalk(next: NpcTalkState) {
+  if (next.near === talk.near && next.talking === talk.talking) return;
+  talk = next;
+  talkSubs.forEach((cb) => cb());
+}
+
+export const npcTalkStore = {
+  get: (): NpcTalkState => talk,
+  subscribe: (cb: () => void) => {
+    talkSubs.add(cb);
+    return () => void talkSubs.delete(cb);
+  },
+};
+
+export function npcSpec(key: string | null): NpcSpec | null {
+  return key ? (live.get(key)?.spec ?? null) : null;
+}
+
+/** Called every frame with the local player's position: finds who's in talking range. */
+export function trackPlayerForNpcs(x: number, z: number) {
+  // Dev QA only: window.__awNpcQa = "<npc key>" pretends the player stands next to that NPC.
+  const qa = process.env.NODE_ENV !== "production" ? (globalThis as { __awNpcQa?: string }).__awNpcQa : undefined;
+  const target = qa ? live.get(qa) : undefined;
+  if (target) {
+    x = target.x + 2;
+    z = target.z + 2;
+  }
+  player.x = x;
+  player.z = z;
+  let near: string | null = null;
+  let best = TALK_RANGE;
+  for (const [key, n] of live) {
+    const d = Math.hypot(n.x - x, n.z - z);
+    if (d < best) {
+      best = d;
+      near = key;
+    }
+  }
+  let talking = talk.talking;
+  // Walking away ends the conversation.
+  if (talking) {
+    const n = live.get(talking);
+    if (!n || Math.hypot(n.x - x, n.z - z) > TALK_RANGE + 3) talking = null;
+  }
+  setTalk({ near, talking });
+}
+
+/** E key / Talk button: start talking to the nearby NPC, or stop. Returns true if a talk started. */
+export function toggleTalk(): boolean {
+  if (talk.talking) {
+    setTalk({ ...talk, talking: null });
+    return false;
+  }
+  if (talk.near) {
+    setTalk({ ...talk, talking: talk.near });
+    return true;
+  }
+  return false;
+}
+
+export function endTalk() {
+  if (talk.talking) setTalk({ ...talk, talking: null });
+}
+
+/* ------------------------------ movement ------------------------------ */
+
+/** Move an NPC along its route; it pauses and faces the player while being talked to. */
+function stepNpc(rt: NpcRuntime, dt: number, g: THREE.Group | null, pose: PoseInput) {
   if (!g) return;
+  const spec = rt.spec;
+  const talking = talk.talking === spec.key;
+  if (talking) rt.offset -= dt; // hold the route clock still
+  const t = Date.now() / 1000 + spec.phase + rt.offset;
   const r = spec.route;
   let x = 0;
   let z = 0;
@@ -146,6 +245,12 @@ function stepNpc(spec: NpcSpec, t: number, g: THREE.Group | null, pose: PoseInpu
     x = r.a[0] + dx * f;
     z = r.a[1] + dz * f;
   }
+  if (talking) {
+    heading = Math.atan2(player.x - x, player.z - z);
+    moving = false;
+  }
+  rt.x = x;
+  rt.z = z;
   g.position.set(x, 0, z);
   // Ease the turn so pauses don't snap.
   const d = Math.atan2(Math.sin(heading - g.rotation.y), Math.cos(heading - g.rotation.y));
@@ -159,8 +264,13 @@ const Npc = memo(function Npc({ spec }: { spec: NpcSpec }) {
   const pose = useMemo<PoseInput>(() => idlePose(), []);
   const look = useMemo(() => characterById(spec.characterId), [spec.characterId]);
   const getPose = useMemo(() => () => pose, [pose]);
+  const rt = useMemo<NpcRuntime>(() => ({ spec, x: 0, z: 0, offset: 0 }), [spec]);
+  useEffect(() => {
+    live.set(spec.key, rt);
+    return () => void live.delete(spec.key);
+  }, [spec.key, rt]);
   // Wall-clock time keeps every player's view of the NPC in step.
-  useFrame(() => stepNpc(spec, Date.now() / 1000 + spec.phase, group.current, pose));
+  useFrame((_, dt) => stepNpc(rt, Math.min(dt, 0.1), group.current, pose));
   return (
     <group ref={group}>
       <Suspense fallback={null}>

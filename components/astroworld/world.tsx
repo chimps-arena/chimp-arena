@@ -5,6 +5,7 @@
  * roads out to the three districts, scattered asteroid rock, and the sky.
  */
 
+import type { Cover } from "@chimp-arena/shared";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Environment, Html, Lightformer, Stars } from "@react-three/drei";
@@ -15,7 +16,8 @@ import { preloadCoreItems, ResourceExchange } from "./items";
 preloadCoreItems();
 
 /** Solid things the local player can't walk through: [x, z, radius]. */
-export const STATIC_COLLIDERS: [number, number, number][] = [[0, 0, 6.5]];
+/** Astrocorp HQ: [x, z, radius, height] (see Cover in shared/world-layout). */
+export const STATIC_COLLIDERS: Cover[] = [[0, 0, 6.5, 60]];
 
 export const DISTRICT_HALF = LOT_SPACING * 3.6;
 

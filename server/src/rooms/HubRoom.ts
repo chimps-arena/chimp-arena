@@ -14,6 +14,7 @@
  * wallet's owned NFTs comes with real inventories.
  */
 import { Client, Room } from "@colyseus/core";
+import { worldCovers } from "../world-covers";
 import { schema, t } from "@colyseus/schema";
 import { englishDataset, englishRecommendedTransformers, RegExpMatcher, TextCensor } from "obscenity";
 import {
@@ -36,6 +37,7 @@ import {
   NAME_MAX_LENGTH,
   rayVsPlayer,
   RESPAWN_MS,
+  shotBlockedAt,
   SAFE_RADIUS,
   SHOT_DAMAGE,
   SHOT_RANGE,
@@ -211,16 +213,18 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     if (len < 1e-6) return;
     const d = { x: msg.d.x / len, y: msg.d.y / len, z: msg.d.z / len };
 
+    // Buildings stop bullets: nobody behind a wall can be hit through it.
+    const wall = shotBlockedAt(o, d, worldCovers(), SHOT_RANGE);
     let best: { id: string; t: number; head: boolean } | null = null;
     this.state.players.forEach((target, id) => {
       if (id === client.sessionId || !target.alive) return;
       const rover = target.mode === "rover";
       const hit = rayVsPlayer(o, d, { x: target.x, y: target.y, z: target.z }, rover ? 1.7 : 0.55, rover ? 2.2 : target.crouch ? 1.45 : 1.95);
-      if (hit && hit.t <= SHOT_RANGE && (!best || hit.t < best.t)) best = { id, t: hit.t, head: hit.head && !rover };
+      if (hit && hit.t <= wall && (!best || hit.t < best.t)) best = { id, t: hit.t, head: hit.head && !rover };
     });
 
     const hitInfo = best as { id: string; t: number; head: boolean } | null;
-    const reach = hitInfo ? hitInfo.t : SHOT_RANGE;
+    const reach = hitInfo ? hitInfo.t : wall;
     const shot: HubShotBroadcast = {
       from: client.sessionId,
       o,
