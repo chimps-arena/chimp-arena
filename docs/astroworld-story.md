@@ -43,7 +43,9 @@ Outside the wall, the rules stop. Three districts grew up along the roads:
 ## The hook
 
 Kill Boy Tommy has vanished from Sector 7 with something Astrocorp badly
-wants back. Astrocorp has put **500,000 $CHIMP** on his head (Astro-News, front
+wants back: **a map of the richest Void Crystal seam on Astroworld** (decided
+by the founders, 2026-11-22). Players don't learn what it is until Chapter 2;
+in Chapter 1 it's only "something that belongs to Astrocorp". Astrocorp has put **500,000 $CHIMP** on his head (Astro-News, front
 page). Every hunter in the sector is coming to Astroworld, the Dynasty is
 buying up property while everyone's distracted, and the rebels are moving
 crystal out through the Docks faster than ever.
@@ -57,15 +59,18 @@ You've just landed in the Core. Everyone wants something from you.
    district, and find the bounty hunter who's been asking about Tommy.
 2. **The Sector 7 Manhunt** (next). Follow Tommy's trail through the three
    districts: clues at the Belt's claims, a contact in the Rim's domes, a
-   smuggler at the Docks. Choose who to tell: Astrocorp, the hunters or the
-   rebels. The choice decides your faction.
+   smuggler at the Docks. The reveal: Tommy has the map of the richest
+   crystal seam on Astroworld, the one Astrocorp never declared. Whoever holds
+   it controls the boom. Choose who gets it: Astrocorp (order and the
+   official reward), the hunters (a bigger cut) or the rebels (the crystal
+   for the people who dig it). The choice decides your faction.
 3. **The Games** (later). The Gladiator Arena opens (Astro-News, "The games
    commence"): ranked fights for status and prizes.
 4. **The Grand Prix** (later). The rover racing circuit around the districts.
 
 ## Open questions for the founders
 
-- What did Tommy take? (A crystal map? Astrocorp's books? A 1-of-1?)
+- ~~What did Tommy take?~~ Decided: a map of the richest crystal seam.
 - Should factions be permanent choices, or reputation that rises and falls?
 - Who runs Astroburger and the Stellar Companions-type nightlife in-world?
   (Astroburger is an Astrocorp "Lifestyle Division" brand on the Yellow Pages.)
