@@ -20,7 +20,7 @@
 import { memo, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { ARENA, characterById, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
+import { ARENA, characterById, groundHeight, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
 import { CharacterBody } from "./character-body";
 import { idlePose, type PoseInput } from "./chimp-rig";
 import { NearLabel } from "./items";
@@ -337,7 +337,7 @@ function stepNpc(rt: NpcRuntime, dt: number, g: THREE.Group | null, pose: PoseIn
   }
   rt.x = x;
   rt.z = z;
-  g.position.set(x, 0, z);
+  g.position.set(x, groundHeight(x, z), z);
   // Ease the turn so pauses don't snap.
   const d = Math.atan2(Math.sin(heading - g.rotation.y), Math.cos(heading - g.rotation.y));
   g.rotation.y += d * 0.12;

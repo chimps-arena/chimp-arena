@@ -5,6 +5,7 @@ export * from "./messages";
 export * from "./generateChunk";
 export * from "./movement";
 export * from "./world-layout";
+export * from "./terrain";
 export * from "./hub";
 export * from "./character-looks";
 export * from "./model-clips";

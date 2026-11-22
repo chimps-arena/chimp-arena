@@ -45,6 +45,8 @@ import {
   STARPORTS,
   TRAVEL_COOLDOWN_MS,
   shotBlockedAt,
+  groundHeight,
+  terrainBlockedAt,
   SAFE_RADIUS,
   SHOT_DAMAGE,
   SHOT_RANGE,
@@ -279,18 +281,20 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
 
     // The shot must start at (roughly) the shooter, not wherever they claim.
     const { o } = msg;
-    if (Math.hypot(o.x - shooter.x, o.z - shooter.z) > MUZZLE_SLACK || o.y < -0.5 || o.y > MAX_Y + 3) return;
+    const shooterGround = groundHeight(shooter.x, shooter.z);
+    if (Math.hypot(o.x - shooter.x, o.z - shooter.z) > MUZZLE_SLACK || o.y < shooterGround - 0.5 || o.y > shooterGround + MAX_Y + 3) return;
     const len = Math.hypot(msg.d.x, msg.d.y, msg.d.z);
     if (len < 1e-6) return;
     const d = { x: msg.d.x / len, y: msg.d.y / len, z: msg.d.z / len };
 
     // Buildings stop bullets: nobody behind a wall can be hit through it.
-    const wall = shotBlockedAt(o, d, worldCovers(), SHOT_RANGE);
+    const wall = Math.min(shotBlockedAt(o, d, worldCovers(), SHOT_RANGE), terrainBlockedAt(o, d, SHOT_RANGE));
     let best: { id: string; t: number; head: boolean } | null = null;
     this.state.players.forEach((target, id) => {
       if (id === client.sessionId || !target.alive) return;
       const rover = target.mode === "rover";
-      const hit = rayVsPlayer(o, d, { x: target.x, y: target.y, z: target.z }, rover ? 1.7 : 0.55, rover ? 2.2 : target.crouch ? 1.45 : 1.95);
+      const ty = groundHeight(target.x, target.z) + target.y;
+      const hit = rayVsPlayer(o, d, { x: target.x, y: ty, z: target.z }, rover ? 1.7 : 0.55, rover ? 2.2 : target.crouch ? 1.45 : 1.95);
       if (hit && hit.t <= wall && (!best || hit.t < best.t)) best = { id, t: hit.t, head: hit.head && !rover };
     });
 

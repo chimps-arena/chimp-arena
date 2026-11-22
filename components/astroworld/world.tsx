@@ -11,7 +11,7 @@ import { useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, Stars } from "@react-three/drei";
 import { Html } from "./drei-html";
 import * as THREE from "three";
-import { DISTRICTS, ROAD_ANGLES, SAFE_RADIUS, WORLD_RADIUS, LOT_SPACING } from "@chimp-arena/shared";
+import { DISTRICTS, groundHeight, ROAD_ANGLES, SAFE_RADIUS, WORLD_RADIUS, LOT_SPACING } from "@chimp-arena/shared";
 import { preloadCoreItems, ResourceExchange } from "./items";
 
 preloadCoreItems();
@@ -22,13 +22,68 @@ export const STATIC_COLLIDERS: Cover[] = [[0, 0, 6.5, 60]];
 
 export const DISTRICT_HALF = LOT_SPACING * 3.6;
 
+/* ------------------------------ terrain ------------------------------ */
+
+const TERRAIN_SIZE = (WORLD_RADIUS + 160) * 2;
+const TERRAIN_SEGMENTS = 260;
+
+/** Ground colour by district: red rock (Belt), pale crater grey (Rim), sandy industrial (Helios). */
+const BIOMES = [new THREE.Color("#6b3a2c"), new THREE.Color("#5d5a6c"), new THREE.Color("#6b5634")];
+const CORE_GROUND = new THREE.Color("#3a3046");
+
+function terrainGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEGMENTS, TERRAIN_SEGMENTS);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const colors = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const h = groundHeight(x, z);
+    // Sit 2 cm under the flat pads so roads and plazas never flicker against it.
+    pos.setY(i, h - 0.02);
+    // Blend biomes by direction from the Core, fading to the Core's violet near the middle.
+    const a = Math.atan2(x, z);
+    let wsum = 0;
+    c.setRGB(0, 0, 0);
+    DISTRICTS.forEach((d, k) => {
+      const da = Math.atan2(Math.sin(a - Math.atan2(d.x, d.z)), Math.cos(a - Math.atan2(d.x, d.z)));
+      const w = Math.exp(-(da * da) / 0.5);
+      c.r += BIOMES[k].r * w;
+      c.g += BIOMES[k].g * w;
+      c.b += BIOMES[k].b * w;
+      wsum += w;
+    });
+    c.multiplyScalar(1 / wsum);
+    const out = Math.min(1, Math.max(0, (Math.hypot(x, z) - SAFE_RADIUS) / 120));
+    c.lerp(CORE_GROUND, 1 - out);
+    // Ridges catch the light, crater bowls sit in shadow, peaks frost over.
+    const shade = 0.85 + Math.max(-0.3, Math.min(0.45, h / 40));
+    c.multiplyScalar(shade);
+    if (h > 45) c.lerp(new THREE.Color("#c9c4d8"), Math.min(1, (h - 45) / 30));
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function Terrain() {
+  const geo = useMemo(() => terrainGeometry(), []);
+  return (
+    <mesh geometry={geo}>
+      <meshStandardMaterial vertexColors roughness={0.95} metalness={0.05} flatShading />
+    </mesh>
+  );
+}
+
 function Ground() {
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <circleGeometry args={[WORLD_RADIUS + 120, 96]} />
-        <meshStandardMaterial color="#3a3046" roughness={0.95} />
-      </mesh>
+      <Terrain />
       {/* Core plaza */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <circleGeometry args={[SAFE_RADIUS, 96]} />
@@ -193,7 +248,7 @@ function Rocks() {
       if (ROAD_ANGLES.some((ra) => Math.abs(Math.sin(a - ra) * r) < 10 && Math.cos(a - ra) > 0)) continue;
       const s = 0.6 + rnd() * 3.2;
       q.setFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3));
-      m.compose(new THREE.Vector3(x, s * 0.3, z), q, new THREE.Vector3(s, s * (0.5 + rnd() * 0.6), s));
+      m.compose(new THREE.Vector3(x, groundHeight(x, z) + s * 0.3, z), q, new THREE.Vector3(s, s * (0.5 + rnd() * 0.6), s));
       mesh.setMatrixAt(placed++, m);
     }
     mesh.count = placed;

@@ -20,6 +20,8 @@ import { Callbacks, Client, CloseCode, type Room } from "@colyseus/sdk";
 import {
   arenaCovers,
   buildingCover,
+  groundHeight,
+  terrainBlockedAt,
   inArena,
   type Cover,
   shotBlockedAt,
@@ -226,7 +228,7 @@ function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string })
       setView({ skin: player.skin, mode: player.mode, alive: player.alive, hp: player.hp, armed });
     }
     if (!placed.current) {
-      g.position.set(player.x, player.y, player.z);
+      g.position.set(player.x, groundHeight(player.x, player.z) + player.y, player.z);
       g.rotation.y = player.ry;
       placed.current = true;
     }
@@ -235,7 +237,8 @@ function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string })
     const pz = g.position.z;
     g.position.x += (player.x - px) * k;
     g.position.z += (player.z - pz) * k;
-    g.position.y += (player.y - g.position.y) * k;
+    const groundHere = groundHeight(g.position.x, g.position.z);
+    g.position.y += (groundHeight(player.x, player.z) + player.y - g.position.y) * k;
     let dr = player.ry - g.rotation.y;
     dr = Math.atan2(Math.sin(dr), Math.cos(dr));
     g.rotation.y += dr * k;
@@ -245,7 +248,7 @@ function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string })
     const p = pose.current;
     p.speed = Math.hypot(vx, vz);
     p.forward = vx * Math.sin(g.rotation.y) + vz * Math.cos(g.rotation.y);
-    p.y = g.position.y;
+    p.y = Math.max(0, g.position.y - groundHere);
     p.crouch = player.crouch;
     p.pitch = player.pitch;
     p.armed = armed && player.alive;
@@ -442,9 +445,10 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     st.z = me.z;
   }
 
+  const gy = groundHeight(st.x, st.z);
   const g = c.group;
   if (g) {
-    g.position.set(st.x, st.y, st.z);
+    g.position.set(st.x, gy + st.y, st.z);
     g.rotation.y = st.heading;
   }
 
@@ -477,23 +481,23 @@ function stepLocal(c: LocalCtx, rawDt: number) {
       const camPos = camera.position;
       // Arena trial drones (local practice targets).
       arenaShot(camPos, dir, SHOT_RANGE);
-      const camDist = camPos.distanceTo(new THREE.Vector3(st.x, st.y + 1.4, st.z));
+      const camDist = camPos.distanceTo(new THREE.Vector3(st.x, gy + st.y + 1.4, st.z));
       let reach = SHOT_RANGE + camDist;
       (room.state as HubState).players?.forEach((p, id) => {
         if (id === room.sessionId || !p.alive) return;
-        const hit = rayVsPlayer(camPos, dir, { x: p.x, y: p.y, z: p.z }, p.mode === "rover" ? 1.7 : 0.55, p.mode === "rover" ? 2.2 : 1.95);
+        const hit = rayVsPlayer(camPos, dir, { x: p.x, y: groundHeight(p.x, p.z) + p.y, z: p.z }, p.mode === "rover" ? 1.7 : 0.55, p.mode === "rover" ? 2.2 : 1.95);
         if (hit && hit.t > camDist && hit.t < reach) reach = hit.t;
       });
       const target = camPos.clone().addScaledVector(dir, reach);
       const right = new THREE.Vector3(-Math.cos(st.yaw), 0, Math.sin(st.yaw)).multiplyScalar(0.2);
-      const muzzle = new THREE.Vector3(st.x, st.y + (st.crouch ? 1.05 : 1.42), st.z)
+      const muzzle = new THREE.Vector3(st.x, gy + st.y + (st.crouch ? 1.05 : 1.42), st.z)
         .add(right)
         .add(new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw)).multiplyScalar(0.85));
       const shotDir = target.clone().sub(muzzle).normalize();
       room.send("shoot", { o: { x: muzzle.x, y: muzzle.y, z: muzzle.z }, d: { x: shotDir.x, y: shotDir.y, z: shotDir.z } });
       // Buildings stop bullets (the server applies the same check).
       const free = Math.min(muzzle.distanceTo(target), SHOT_RANGE);
-      const wall = shotBlockedAt(muzzle, shotDir, colliders, free);
+      const wall = Math.min(shotBlockedAt(muzzle, shotDir, colliders, free), terrainBlockedAt(muzzle, shotDir, free));
       const end = muzzle.clone().addScaledVector(shotDir, wall);
       fx.emit({ kind: "flash", at: muzzle });
       sfx.shot();
@@ -537,7 +541,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
   const pitch = rover ? Math.min(st.pitch, 0.3) - 0.15 : st.pitch;
   const f = new THREE.Vector3(Math.sin(st.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(st.yaw) * Math.cos(pitch));
   const rightV = new THREE.Vector3(-Math.cos(st.yaw), 0, Math.sin(st.yaw));
-  const pivot = new THREE.Vector3(st.x, st.y + eye, st.z);
+  const pivot = new THREE.Vector3(st.x, gy + st.y + eye, st.z);
   const view: CamView = rover ? "third" : st.view;
   const desired = pivot.clone().addScaledVector(f, -back).addScaledVector(rightV, shoulder);
   let lookAt = pivot.clone().addScaledVector(f, 30).addScaledVector(rightV, shoulder);
@@ -549,7 +553,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     // In front of you, orbiting with the mouse, looking at your face.
     const a = st.heading + st.orbit;
     const dist = 2.9;
-    const face = new THREE.Vector3(st.x, st.y + (st.crouch ? 1.1 : 1.55), st.z);
+    const face = new THREE.Vector3(st.x, gy + st.y + (st.crouch ? 1.1 : 1.55), st.z);
     desired.set(
       face.x + Math.sin(a) * Math.cos(st.orbitPitch) * dist,
       face.y + Math.sin(st.orbitPitch) * dist,
@@ -557,7 +561,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     );
     lookAt = face;
   }
-  desired.y = Math.max(0.4, desired.y);
+  desired.y = Math.max(groundHeight(desired.x, desired.z) + 0.5, desired.y);
   if (!st.camInit || view === "first") {
     camera.position.copy(desired);
     st.camInit = true;
