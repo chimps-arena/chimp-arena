@@ -29,7 +29,8 @@ export type ItemId =
   | "kit-fuel"
   | "kit-charge"
   | "kit-drink"
-  | "kit-food";
+  | "kit-food"
+  | "nutrition-cell";
 
 export const ITEMS: Record<ItemId, { name: string; kind: string; glow: string }> = {
   "ore-gold": { name: "Gold Ore", kind: "Raw ore", glow: "#f5b301" },
@@ -45,6 +46,7 @@ export const ITEMS: Record<ItemId, { name: string; kind: string; glow: string }>
   "kit-charge": { name: "Charge Kit", kind: "Consumable", glow: "#22d3ee" },
   "kit-drink": { name: "Moisture Kit", kind: "Consumable", glow: "#38bdf8" },
   "kit-food": { name: "Food Kit", kind: "Consumable", glow: "#22c55e" },
+  "nutrition-cell": { name: "Nutrition Suit Cell", kind: "Astrofoods · Consumable", glow: "#84cc16" },
 };
 
 const url = (id: ItemId) => `/models/items/${id}.glb`;
@@ -57,10 +59,11 @@ export const PRODUCT_BY_TYPE: Partial<Record<string, ItemId[]>> = {
   vault: ["bar-gold", "crystal-cut"],
   fuel_lot: ["kit-fuel"],
   array: ["kit-charge"],
-  greenhouse: ["kit-food", "kit-drink"],
-  field: ["kit-food"],
+  greenhouse: ["kit-food", "kit-drink", "nutrition-cell"],
+  dome: ["nutrition-cell"],
+  field: ["kit-food", "nutrition-cell"],
   cantina: ["kit-drink"],
-  stall: ["kit-food"],
+  stall: ["kit-food", "nutrition-cell"],
 };
 
 /** Pick one product deterministically per property, so it never flickers. */
@@ -196,7 +199,7 @@ const pedestalMat = new THREE.MeshStandardMaterial({ color: "#4a4466", metalness
 const pedestalGeo = new THREE.CylinderGeometry(0.9, 1.05, 0.9, 6);
 
 /** Label that shows only when the camera is close - toggled via the DOM, no re-render. */
-function NearLabel({ title, sub, color, y, within = 22 }: { title: string; sub: string; color: string; y: number; within?: number }) {
+export function NearLabel({ title, sub, color, y, within = 22 }: { title: string; sub: string; color: string; y: number; within?: number }) {
   const div = useRef<HTMLDivElement>(null);
   const anchor = useRef<THREE.Group>(null);
   const camera = useThree((s) => s.camera);

@@ -9,11 +9,12 @@
  * buildings cheap.
  */
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";
+import { EnvModel, type EnvId, type Fit } from "./env-models";
 
 export interface WorldProperty {
   id: string;
@@ -365,10 +366,77 @@ const ARCHES: Record<string, Arch> = {
   station,
 };
 
+/* ------------------------------ team models ------------------------------ */
+
+/**
+ * Property types drawn with the team's environment models instead of the
+ * code-built archetypes. Each entry is one or more variants; a property picks
+ * one by id (so it never changes), and a variant can be a small arrangement
+ * of models (a fuel lot is a few tanks). The code archetype shows while the
+ * model downloads and if it ever fails.
+ */
+type Piece = { id: EnvId; fit?: Fit; size: number; at?: [number, number]; ry?: number };
+const MODEL_ARCHES: Partial<Record<string, Piece[][]>> = {
+  hangar: [[{ id: "hangar", size: 13 }]],
+  armory: [[{ id: "armory", size: 12 }], [{ id: "rock-armory-front", size: 12 }]],
+  mining_claim: [[{ id: "automated-drilling", size: 12 }]],
+  bunker: [[{ id: "bunker", size: 11 }]],
+  outpost: [[{ id: "outpost", size: 11 }]],
+  greenhouse: [[{ id: "greenhouse", size: 12 }]],
+  dock: [[{ id: "ship-docking-stand", size: 13 }]],
+  stall: [[{ id: "chimp-stand", size: 9 }]],
+  tower: [[{ id: "tall-comms-tower", fit: "height", size: 24 }]],
+  beacon: [[{ id: "basic-comms-tower", fit: "height", size: 15 }]],
+  fuel_lot: [
+    [
+      { id: "fuel-tank-1", fit: "height", size: 7.5, at: [-3, -1] },
+      { id: "fuel-tank-2", fit: "height", size: 7, at: [3, -1.5] },
+      { id: "fuel-tank-4", size: 6, at: [0, 3.5], ry: 0.1 },
+    ],
+    [
+      { id: "fuel-tank-5", fit: "height", size: 8, at: [-2.5, -1] },
+      { id: "fuel-tank-3", fit: "height", size: 7.5, at: [3.5, 0] },
+    ],
+  ],
+  yard: [
+    [
+      { id: "cargo-box", size: 5, at: [-3, -2] },
+      { id: "cargo-box", size: 5, at: [2.5, -2.5], ry: 0.2 },
+      { id: "cargo-box", size: 5, at: [3, 2.5], ry: Math.PI / 2 },
+      { id: "fuel-tank-4", size: 5, at: [-3.5, 3], ry: -0.3 },
+    ],
+  ],
+};
+
+function pick<T>(list: T[], key: string): T {
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return list[Math.abs(h) % list.length];
+}
+
+/** Which team models (if any) draw this property. */
+export function modelPiecesFor(type: string, id: string): Piece[] | null {
+  const variants = MODEL_ARCHES[type];
+  return variants ? pick(variants, id) : null;
+}
+
+function ModelBody({ pieces }: { pieces: Piece[] }) {
+  return (
+    <>
+      {pieces.map((pc, i) => (
+        <group key={i} position={[pc.at?.[0] ?? 0, 0, pc.at?.[1] ?? 0]} rotation={[0, pc.ry ?? 0, 0]}>
+          <EnvModel id={pc.id} fit={pc.fit} size={pc.size} />
+        </group>
+      ))}
+    </>
+  );
+}
+
 /** Rough heights so signs float above each kind of building. */
 const SIGN_HEIGHT: Record<string, number> = {
-  tower: 25,
-  beacon: 18,
+  tower: 26,
+  beacon: 17,
+  hangar: 9,
   observatory: 12,
   mining_claim: 13,
   dock: 13,
@@ -460,7 +528,16 @@ export const Building = memo(function Building({
   labelMounted: boolean;
 }) {
   const arch = ARCHES[prop.type] ?? storefront(5, accent);
-  const body = useMemo(() => arch(accent), [arch, accent]);
+  const code = useMemo(() => arch(accent), [arch, accent]);
+  const pieces = modelPiecesFor(prop.type, prop.id);
+  // Team model when there is one; the code archetype stands in while it loads.
+  const body = pieces ? (
+    <Suspense fallback={code}>
+      <ModelBody pieces={pieces} />
+    </Suspense>
+  ) : (
+    code
+  );
   return (
     <group position={[place.x, 0, place.z]} rotation={[0, place.ry, 0]}>
       {/* lot */}

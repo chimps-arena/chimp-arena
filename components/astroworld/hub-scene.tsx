@@ -53,6 +53,7 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
+import { Npcs } from "./npcs";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
 
@@ -478,6 +479,13 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     camera.position.lerp(desired, 1 - Math.exp(-18 * dt));
   }
   camera.lookAt(pivot.clone().addScaledVector(f, 30).addScaledVector(rightV, shoulder));
+  // Dev QA only: window.__awCam = [x, y, z, lookX, lookY, lookZ] pins the camera
+  // anywhere, for screenshots of distant districts (scripts/astroworld-snapshot.mjs).
+  const pin = process.env.NODE_ENV !== "production" ? (globalThis as { __awCam?: number[] }).__awCam : undefined;
+  if (pin) {
+    camera.position.set(pin[0], pin[1], pin[2]);
+    camera.lookAt(pin[3], pin[4], pin[5]);
+  }
   const pc = camera as THREE.PerspectiveCamera;
   st.fov += ((aiming ? 48 : rover ? 72 : 70) - st.fov) * (1 - Math.exp(-12 * dt));
   if (Math.abs(pc.fov - st.fov) > 0.01) {
@@ -1003,6 +1011,7 @@ const World3D = memo(function World3D({
       <ModelIndexContext.Provider value={models}>
       <WorldScenery showroomRover={SHOWROOM_ROVER} />
       <PropertyField props={props} places={places} />
+      <Npcs props={props} places={places} />
       <Effects />
 
       {room &&

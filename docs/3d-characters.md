@@ -122,3 +122,25 @@ too heavy, wrong file name…). Only models that pass go into
 
 Once Deezy looks right in game, the same steps repeat for the other 46. With an
 API key for the 3D tool, steps 2–3 can be scripted for the whole roster.
+
+---
+
+## Team deliveries (already in the game)
+
+The team's own Mixamo-rigged characters (6 clips: Idle, Walking, Running,
+Regular_Jump, Heavy_Hammer_Swing, victory) go in with two commands:
+
+```
+node scripts/optimize-models.mjs --manifest scripts/character-models.manifest.json
+node scripts/check-models.mjs
+```
+
+The manifest maps roster ids to the delivered files; `rootInPlace` pins the
+hips so walk/run cycles play on the spot. Buildings
+(`environment-models.manifest.json`), pets and extra items
+(`extra-models.manifest.json`) use the same optimizer. Review everything at
+`/astroworld/items` (tabs: items, buildings, characters, pets).
+
+To make the rigged characters feel like a shooter, the next clips to ask for
+are: Rifle Aiming Idle, Walking With Rifle, Crouched Walking and Dying. Any
+clip whose name contains those words is picked up automatically.

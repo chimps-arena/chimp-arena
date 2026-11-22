@@ -120,8 +120,12 @@ function GlbCharacter({ url, look, pose }: { url: string; look: CharacterLook; p
 
   const model = useMemo(() => {
     const scene = cloneSkinned(gltf.scene);
-    // Normalise: TARGET_HEIGHT tall, feet on the ground, centred.
-    const box = new THREE.Box3().setFromObject(scene);
+    // Normalise: TARGET_HEIGHT tall, feet on the ground, centred. Bones must be
+    // posed first: skinned bounds follow the skeleton, and Mixamo exports keep
+    // the mesh at 1/100 scale under full-size bones - measured unposed, a
+    // 1.75 m character reads as 1.75 cm and gets blown up 100x.
+    scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(scene, true);
     const h = box.max.y - box.min.y || 1;
     const s = TARGET_HEIGHT / h;
     scene.scale.setScalar(s);

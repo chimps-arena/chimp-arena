@@ -4,7 +4,9 @@
 //   node scripts/optimize-models.mjs --manifest <manifest.json>
 //
 // Manifest: { "sourceDir": "...", "outDir": "public/models/items",
-//             "texture": 1024, "models": { "<id>": "<path under sourceDir>" } }
+//             "texture": 1024, "rootInPlace": false,
+//             "models": { "<id>": "<path under sourceDir>" } }
+// rootInPlace: true for rigged characters (walk cycles play on the spot).
 //
 // What it does: drops duplicate/unused data, resizes every texture to at most
 // --texture px and re-encodes it as WebP, then meshopt-compresses geometry
@@ -34,8 +36,36 @@ const io = new NodeIO()
   .registerExtensions(ALL_EXTENSIONS)
   .registerDependencies({ "meshopt.encoder": MeshoptEncoder, "meshopt.decoder": MeshoptDecoder });
 
-async function optimize(input, output, textureSize) {
+/**
+ * Characters: pin the hips' horizontal position in every clip, so walk/run
+ * cycles play on the spot. The game moves the character; root motion baked
+ * into a clip would make the body drift away from where the server says the
+ * player is. Vertical bob is kept.
+ */
+function rootInPlace() {
+  return (doc) => {
+    for (const anim of doc.getRoot().listAnimations()) {
+      for (const ch of anim.listChannels()) {
+        const node = ch.getTargetNode();
+        if (ch.getTargetPath() !== "translation" || !node || !/hips$/i.test(node.getName())) continue;
+        const out = ch.getSampler()?.getOutput();
+        const a = out?.getArray();
+        if (!a || a.length < 3) continue;
+        const [x0, , z0] = [a[0], a[1], a[2]];
+        const copy = a.slice();
+        for (let i = 0; i < copy.length; i += 3) {
+          copy[i] = x0;
+          copy[i + 2] = z0;
+        }
+        out.setArray(copy);
+      }
+    }
+  };
+}
+
+async function optimize(input, output, textureSize, { inPlace = false } = {}) {
   const doc = await io.read(input);
+  if (inPlace) await doc.transform(rootInPlace());
   await doc.transform(
     dedup(),
     prune(),
@@ -57,7 +87,7 @@ if (manifestPath) {
   const m = JSON.parse(readFileSync(manifestPath, "utf8"));
   for (const [id, rel] of Object.entries(m.models)) {
     try {
-      await optimize(join(m.sourceDir, rel), join(m.outDir, `${id}.glb`), m.texture ?? 1024);
+      await optimize(join(m.sourceDir, rel), join(m.outDir, `${id}.glb`), m.texture ?? 1024, { inPlace: !!m.rootInPlace });
     } catch (e) {
       console.log(`FAIL ${id}: ${e.message}`);
       process.exitCode = 1;
