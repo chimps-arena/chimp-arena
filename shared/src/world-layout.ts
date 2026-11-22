@@ -122,6 +122,7 @@ const COVER_HEIGHT: Record<string, number> = {
   hangar: 8,
   yard: 5,
   quarry: 10,
+  vault: 5.5,
   array: 2.5,
   field: 6,
 };

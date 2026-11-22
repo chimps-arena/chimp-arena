@@ -399,7 +399,7 @@ const MODEL_ARCHES: Partial<Record<string, Piece[][]>> = {
       { id: "fuel-tank-2", fit: "height", size: 4.5, at: [4, -3.5] },
     ],
   ],
-  vault: [[{ id: "bunker", size: 11 }]],
+  vault: [[{ id: "vault", size: 12 }]],
   box: [
     [
       { id: "cargo-box", size: 6, at: [-2.2, 0] },
