@@ -57,7 +57,9 @@ You've just landed in the Core. Everyone wants something from you.
 1. **Arrival** (in the game now). Get your bearings: meet Astromilitary,
    read the news, eat at Astroburger, visit a property, take a ship out to a
    district, and find the bounty hunter who's been asking about Tommy.
-2. **The Sector 7 Manhunt** (next). Follow Tommy's trail through the three
+2. **The Sector 7 Manhunt** (in the game now). Bad Mike at a Belt claim,
+   Senex at a Rim dome, Lady Winter at a Helios dock, then Tommy at his
+   hideout in the open ground between the Belt and the Rim. Follow Tommy's trail through the three
    districts: clues at the Belt's claims, a contact in the Rim's domes, a
    smuggler at the Docks. The reveal: Tommy has the map of the richest
    crystal seam on Astroworld, the one Astrocorp never declared. Whoever holds
@@ -71,6 +73,8 @@ You've just landed in the Core. Everyone wants something from you.
 ## Open questions for the founders
 
 - ~~What did Tommy take?~~ Decided: a map of the richest crystal seam.
-- Should factions be permanent choices, or reputation that rises and falls?
+- ~~Permanent factions or reputation?~~ Decided: reputation. Every faction
+  tracks how much it likes you (-100 to +100). Giving Tommy's map to one is
+  +40 for them and -20 for the other two; later missions move it back.
 - Who runs Astroburger and the Stellar Companions-type nightlife in-world?
   (Astroburger is an Astrocorp "Lifestyle Division" brand on the Yellow Pages.)

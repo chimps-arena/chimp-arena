@@ -135,11 +135,14 @@ export function WorldMap({
   npcs,
   meId,
   onClose,
+  hideout,
 }: {
   props: WorldProperty[];
   places: Map<string, Placement>;
   players: MapPlayer[];
-  npcs: { name: string; x: number; z: number }[];
+  npcs: { name: string; x: number; z: number; story?: boolean }[];
+  /** Tommy's hideout, once the story has revealed it. */
+  hideout?: { x: number; z: number } | null;
   meId: string | null;
   onClose: () => void;
 }) {
@@ -175,6 +178,9 @@ export function WorldMap({
             <span className="text-amber-400">●</span> NPCs
           </span>
           <span>
+            <span className="text-fuchsia-400">●</span> Story
+          </span>
+          <span>
             <span className="text-emerald-400">■</span> For sale
           </span>
           <span>
@@ -196,11 +202,34 @@ export function WorldMap({
             }}
           >
             <Base props={props} places={places} />
-            {npcs.map((n, i) => (
-              <circle key={i} cx={X(n.x)} cy={Z(n.z)} r={4} fill="#fbbf24" stroke="#000" strokeWidth={1}>
-                <title>{n.name}</title>
-              </circle>
-            ))}
+            {npcs.map((n, i) =>
+              n.story ? (
+                <g key={i} transform={`translate(${X(n.x)} ${Z(n.z)})`}>
+                  <circle r={11} fill="rgba(232,121,249,0.25)" />
+                  <circle r={6} fill="#e879f9" stroke="#fff" strokeWidth={1.5}>
+                    <title>{n.name} (story)</title>
+                  </circle>
+                  <text y={-14} textAnchor="middle" fill="#f0abfc" fontSize={13} fontWeight={700}>
+                    {n.name}
+                  </text>
+                </g>
+              ) : (
+                <circle key={i} cx={X(n.x)} cy={Z(n.z)} r={4} fill="#fbbf24" stroke="#000" strokeWidth={1}>
+                  <title>{n.name}</title>
+                </circle>
+              ),
+            )}
+            {hideout && (
+              <g transform={`translate(${X(hideout.x)} ${Z(hideout.z)})`}>
+                <circle r={16} fill="none" stroke="#e879f9" strokeWidth={2} strokeDasharray="4 3" />
+                <text y={5} textAnchor="middle" fontSize={15}>
+                  ✖
+                </text>
+                <text y={30} textAnchor="middle" fill="#f0abfc" fontSize={13} fontWeight={700}>
+                  The hideout
+                </text>
+              </g>
+            )}
             {players
               .filter((p) => p.id !== meId)
               .map((p) => (

@@ -17,15 +17,16 @@
  * NPCs can't be shot and don't block movement.
  */
 
-import { memo, Suspense, useEffect, useMemo, useRef } from "react";
+import { memo, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { characterById, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
 import { CharacterBody } from "./character-body";
 import { idlePose, type PoseInput } from "./chimp-rig";
 import { NearLabel } from "./items";
-import { Pet, type PetId } from "./env-models";
+import { EnvModel, Pet, type PetId } from "./env-models";
 import type { WorldProperty } from "./buildings";
+import { chapter1Done, HIDEOUT, isDone, storyStore, type StoryState } from "./story-state";
 
 type XZ = [number, number];
 
@@ -58,6 +59,8 @@ export interface NpcSpec {
   portId?: string;
   /** Shown in the prompt instead of the character's name. */
   title?: string;
+  /** Part of the current story chapter (highlighted on the map). */
+  story?: boolean;
 }
 
 /** A point `local` metres in front of/beside a building lot, in world space. */
@@ -67,8 +70,8 @@ export function atLot(place: Placement, local: XZ): XZ {
   return [place.x + local[0] * c + local[1] * s, place.z - local[0] * s + local[1] * c];
 }
 
-function firstOfType(props: WorldProperty[], places: Map<string, Placement>, type: string): Placement | null {
-  const p = props.filter((x) => x.type === type).sort((a, b) => a.id.localeCompare(b.id))[0];
+function firstOfType(props: WorldProperty[], places: Map<string, Placement>, type: string, zone?: string): Placement | null {
+  const p = props.filter((x) => x.type === type && (!zone || x.zone === zone)).sort((a, b) => a.id.localeCompare(b.id))[0];
   return p ? (places.get(p.id) ?? null) : null;
 }
 
@@ -181,11 +184,11 @@ export function registerInteractable(spec: NpcSpec, x: number, z: number): () =>
 }
 
 /** Where every character NPC is right now (for the world map). */
-export function npcPositions(): { name: string; x: number; z: number }[] {
-  const out: { name: string; x: number; z: number }[] = [];
+export function npcPositions(): { name: string; x: number; z: number; story: boolean }[] {
+  const out: { name: string; x: number; z: number; story: boolean }[] = [];
   for (const n of live.values()) {
     if (n.spec.kind && n.spec.kind !== "npc") continue;
-    out.push({ name: characterById(n.spec.characterId).name, x: n.x, z: n.z });
+    out.push({ name: characterById(n.spec.characterId).name, x: n.x, z: n.z, story: !!n.spec.story });
   }
   return out;
 }
@@ -206,12 +209,15 @@ export function trackPlayerForNpcs(x: number, z: number) {
   player.x = x;
   player.z = z;
   let near: string | null = null;
-  // Nearest thing in its own range (a property's frontage is wider than an NPC).
+  // Nearest thing in its own range (a property's frontage is wider than an
+  // NPC). People win ties with places: someone standing in front of a lot
+  // should be the one you talk to, not the lot.
   let best = Infinity;
   for (const [key, n] of live) {
     const d = Math.hypot(n.x - x, n.z - z);
-    if (d < (n.spec.range ?? TALK_RANGE) && d < best) {
-      best = d;
+    const score = !n.spec.kind || n.spec.kind === "npc" ? d - 4 : d;
+    if (d < (n.spec.range ?? TALK_RANGE) && score < best) {
+      best = score;
       near = key;
     }
   }
@@ -332,13 +338,65 @@ const PETS: { id: PetId; at: XZ; size: number; label: string }[] = [
   { id: "astrokitty", at: [19, 27], size: 0.6, label: "Astrokitty" },
 ];
 
+/**
+ * Chapter 2 characters, placed in the districts as the manhunt unfolds:
+ * Bad Mike at a Belt claim, Senex at a Rim dome, Lady Winter at a Helios
+ * dock, and Kill Boy Tommy at his hideout once you've followed the trail.
+ */
+export function storyNpcSpecs(props: WorldProperty[], places: Map<string, Placement>, s: StoryState): NpcSpec[] {
+  if (!chapter1Done(s)) return [];
+  const out: NpcSpec[] = [];
+  const at = (type: string, zone: string, key: string, characterId: string, role: string) => {
+    const place = firstOfType(props, places, type, zone);
+    if (!place) return;
+    out.push({
+      key,
+      characterId,
+      role,
+      story: true,
+      route: { kind: "line", a: atLot(place, [-3, 12]), b: atLot(place, [3, 12]), pause: 6 },
+      speed: 0.9,
+      phase: 0,
+    });
+  };
+  at("mining_claim", "The Belt", "story-belt", "rare-bad-mike", "Prison Dock 7 crew · Belt claims");
+  at("dome", "Lunar Rim", "story-rim", "rare-senex", "The watcher · Lunar Rim");
+  at("dock", "Helios Docks", "story-docks", "rare-lady-winter", "Smuggler · Helios Docks");
+  // Tommy waits at the hideout from the moment you learn where it is; he stays
+  // there afterwards only if you kept the map with the rebels.
+  if (isDone(s, "ch2-docks") && (!s.mapTo || s.mapTo === "rebels")) {
+    out.push({
+      key: "story-tommy",
+      characterId: "chimp-1of1-kill-boy-tommy",
+      role: "Wanted · 500,000 $CHIMP",
+      story: true,
+      armed: true,
+      route: { kind: "line", a: [HIDEOUT.x - 3, HIDEOUT.z + 6], b: [HIDEOUT.x + 3, HIDEOUT.z + 6], pause: 5 },
+      speed: 0.8,
+      phase: 0,
+    });
+  }
+  return out;
+}
+
 export const Npcs = memo(function Npcs({ props, places }: { props: WorldProperty[]; places: Map<string, Placement> }) {
-  const specs = useMemo(() => npcSpecs(props, places), [props, places]);
+  const story = useSyncExternalStore(storyStore.subscribe, storyStore.get, storyStore.get);
+  const specs = useMemo(() => [...npcSpecs(props, places), ...storyNpcSpecs(props, places, story)], [props, places, story]);
+  const hideoutKnown = isDone(story, "ch2-docks");
   return (
     <group>
       {specs.map((s) => (
         <Npc key={s.key} spec={s} />
       ))}
+      {/* Tommy's hideout: a bunker in the open ground between the Belt and the Rim */}
+      {hideoutKnown && (
+        <group position={[HIDEOUT.x, 0, HIDEOUT.z]}>
+          <Suspense fallback={null}>
+            <EnvModel id="bunker" size={10} />
+          </Suspense>
+          <NearLabel title="The hideout" sub="Kill Boy Tommy was here" color="#f59e0b" y={7} within={30} />
+        </group>
+      )}
       {PETS.map((p) => (
         <group key={p.id} position={[p.at[0], 0, p.at[1]]}>
           <Suspense fallback={null}>

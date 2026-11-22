@@ -2,55 +2,14 @@
 
 /**
  * The story in the game: an opening briefing the first time you play, then
- * Chapter 1 ("Arrival") as a mission tracker that ticks off as you do
- * things in the world. Progress is kept in this browser (localStorage).
- * The full story draft lives in docs/astroworld-story.md.
+ * the chapter tracker (Chapter 1 "Arrival", Chapter 2 "The Sector 7
+ * Manhunt") with faction reputation once you've chosen who gets Tommy's map.
+ * State lives in story-state.ts; the full story is docs/astroworld-story.md.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { npcTalkStore } from "./npcs";
-
-const KEY = "astroworld:story:v1";
-
-interface Step {
-  id: string;
-  title: string;
-  hint: string;
-  /** Does using this interactable (npc/kiosk/property/port key) complete the step? */
-  done: (key: string) => boolean;
-}
-
-const CHAPTER_1: Step[] = [
-  { id: "castro", title: "Report to Astromilitary", hint: "Castro patrols the Core plaza. Walk up and press E.", done: (k) => k === "military" },
-  { id: "news", title: "Read the news", hint: "Any Astro-News stand (📰 on the map).", done: (k) => k.startsWith("news-") },
-  { id: "burger", title: "Eat at Astroburger", hint: "South of Astrocorp HQ. Talk to Drink Mixer or use the door.", done: (k) => k === "astroburger-staff" || k === "landmark-astroburger" },
-  { id: "property", title: "Visit a property", hint: "Press E at the front of any lot.", done: (k) => k.startsWith("prop:") },
-  { id: "fly", title: "Fly out to a district", hint: "Board the ship at a starport (🚀 on the map) or a docked ship.", done: (k) => k === "arrived" },
-  { id: "death", title: "Find the bounty hunter", hint: "Death stalks the open ground outside the Core wall.", done: (k) => k === "bounty" },
-];
-
-interface Progress {
-  intro: boolean;
-  done: string[];
-}
-
-function load(): Progress {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as Progress;
-  } catch {
-    /* private mode */
-  }
-  return { intro: false, done: [] };
-}
-
-function save(p: Progress) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(p));
-  } catch {
-    /* private mode */
-  }
-}
+import { CHAPTER_1, CHAPTER_2, chapter1Done, completeStep, FACTIONS, finishIntro, isDone, storyStore, type Faction, type StoryState } from "./story-state";
 
 const INTRO: { title: string; text: string }[] = [
   {
@@ -71,54 +30,72 @@ const INTRO: { title: string; text: string }[] = [
   },
 ];
 
-/** Progress after using `k` (unchanged object if nothing new was completed). */
-function completeFor(prev: Progress, k: string): Progress {
-  const add = CHAPTER_1.filter((s) => !prev.done.includes(s.id) && s.done(k)).map((s) => s.id);
-  if (add.length === 0) return prev;
-  const next = { ...prev, done: [...prev.done, ...add] };
-  save(next);
-  return next;
+const ENDINGS: Record<Faction, string> = {
+  astrocorp: "You handed Tommy's map to Astrocorp. The seam goes on the books, Castro owes you, and the hunters and rebels won't forget it.",
+  hunters: "You sold Tommy's map to the hunters. Death paid well, and Astrocorp and the rebels both have your name now.",
+  rebels: "You kept Tommy's map with the rebels. The crystal stays with the people who dig it, and Astrocorp and the hunters want to know where it went.",
+};
+
+function Reputation({ s }: { s: StoryState }) {
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="text-[10px] uppercase tracking-wider text-white/50">Reputation</div>
+      {(Object.keys(FACTIONS) as Faction[]).map((f) => {
+        const v = s.rep[f];
+        return (
+          <div key={f} className="flex items-center gap-2 text-[11px]">
+            <span className="w-20 shrink-0" style={{ color: FACTIONS[f].color }}>
+              {FACTIONS[f].name}
+            </span>
+            <span className="relative h-1.5 flex-1 rounded bg-white/10">
+              <span className="absolute top-0 h-1.5 w-px bg-white/40" style={{ left: "50%" }} />
+              <span
+                className="absolute top-0 h-1.5 rounded"
+                style={{ background: FACTIONS[f].color, left: v >= 0 ? "50%" : `${50 + v / 2}%`, width: `${Math.abs(v) / 2}%` }}
+              />
+            </span>
+            <span className="w-7 text-right tabular-nums text-white/70">{v > 0 ? `+${v}` : v}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
-/** Opening briefing (first visit) + Chapter 1 tracker. */
+/** Opening briefing (first visit) + chapter tracker. */
 export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }) {
-  // Client-only component (the whole scene loads with ssr: false), so browser storage is safe here.
-  const [p, setP] = useState<Progress>(load);
+  const s = useSyncExternalStore(storyStore.subscribe, storyStore.get, storyStore.get);
   const [slide, setSlide] = useState(0);
   const [open, setOpen] = useState(true);
 
-  // Tick off steps from what the player uses, and from arriving by ship.
+  // Chapter 1 steps tick off from what the player uses, and from arriving by ship.
   useEffect(
     () =>
       npcTalkStore.subscribe(() => {
         const k = npcTalkStore.get().talking;
-        if (k) setP((prev) => completeFor(prev, k));
+        if (!k) return;
+        for (const st of CHAPTER_1) if (st.byUse?.(k)) completeStep(st.id);
       }),
     [],
   );
-  useEffect(() => onArrive(() => setP((prev) => completeFor(prev, "arrived"))), [onArrive]);
+  useEffect(() => onArrive(() => completeStep("fly")), [onArrive]);
 
-  if (!p.intro) {
-    const s = INTRO[slide];
+  if (!s.intro) {
+    const card = INTRO[slide];
     const last = slide === INTRO.length - 1;
-    const finish = () => {
-      const next = { ...p, intro: true };
-      save(next);
-      setP(next);
-    };
     return (
       <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur">
         <div className="w-full max-w-lg text-center text-white">
           <div className="text-[11px] uppercase tracking-[0.4em] text-fuchsia-300">Astroworld · Chapter 1 · Arrival</div>
-          <div className="mt-4 text-3xl font-black">{s.title}</div>
-          <p className="mt-3 text-base leading-relaxed text-white/80">{s.text}</p>
+          <div className="mt-4 text-3xl font-black">{card.title}</div>
+          <p className="mt-3 text-base leading-relaxed text-white/80">{card.text}</p>
           <div className="mt-6 flex items-center justify-center gap-3">
-            <button type="button" onClick={finish} className="rounded px-3 py-1.5 text-sm text-white/50 hover:text-white">
+            <button type="button" onClick={finishIntro} className="rounded px-3 py-1.5 text-sm text-white/50 hover:text-white">
               Skip
             </button>
             <button
               type="button"
-              onClick={() => (last ? finish() : setSlide(slide + 1))}
+              onClick={() => (last ? finishIntro() : setSlide(slide + 1))}
               className="rounded-lg bg-amber-400 px-5 py-2 text-sm font-bold text-black hover:bg-amber-300"
             >
               {last ? "Start" : "Next"}
@@ -134,40 +111,50 @@ export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }
     );
   }
 
-  const doneCount = CHAPTER_1.filter((s) => p.done.includes(s.id)).length;
-  const finished = doneCount === CHAPTER_1.length;
-  const nextStep = CHAPTER_1.find((s) => !p.done.includes(s.id));
+  const inCh2 = chapter1Done(s);
+  const steps = inCh2 ? CHAPTER_2 : CHAPTER_1;
+  const title = inCh2 ? "Chapter 2 · The Sector 7 Manhunt" : "Chapter 1 · Arrival";
+  const doneCount = steps.filter((st) => isDone(s, st.id)).length;
+  const finished = doneCount === steps.length;
+  const nextStep = steps.find((st) => !isDone(s, st.id));
   return (
-    <div className="pointer-events-auto absolute right-3 top-28 z-20 w-64 rounded-lg border border-fuchsia-400/40 bg-black/70 text-white backdrop-blur-sm">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-3 py-2 text-left">
-        <span>
-          <span className="block text-[10px] uppercase tracking-wider text-fuchsia-300">Chapter 1 · Arrival</span>
-          <span className="text-xs font-bold">{finished ? "Chapter complete" : nextStep?.title}</span>
+    <div className="pointer-events-auto absolute right-3 top-28 z-20 w-72 rounded-lg border border-fuchsia-400/40 bg-black/70 text-white backdrop-blur-sm">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
+        <span className="min-w-0">
+          <span className="block text-[10px] uppercase tracking-wider text-fuchsia-300">{title}</span>
+          <span className="block truncate text-xs font-bold">{finished ? "Chapter complete" : nextStep?.title}</span>
         </span>
-        <span className="text-[11px] text-white/60">
-          {doneCount}/{CHAPTER_1.length} {open ? "▾" : "▸"}
+        <span className="shrink-0 text-[11px] text-white/60">
+          {doneCount}/{steps.length} {open ? "▾" : "▸"}
         </span>
       </button>
       {open && (
         <div className="border-t border-white/10 px-3 py-2">
-          {finished ? (
-            <p className="text-xs leading-relaxed text-white/80">
-              Death told you what the hunters know: Tommy&apos;s trail starts at the Belt claims. <b className="text-fuchsia-300">Chapter 2: The Sector 7 Manhunt</b> is coming soon.
-            </p>
+          {finished && inCh2 && s.mapTo ? (
+            <>
+              <p className="text-xs leading-relaxed text-white/80">{ENDINGS[s.mapTo]}</p>
+              <p className="mt-1.5 text-[11px] text-white/50">
+                Reputation rises and falls: you can win factions back. <b className="text-fuchsia-300">Chapter 3: The Games</b> is coming.
+              </p>
+            </>
           ) : (
             <ul className="space-y-1.5">
-              {CHAPTER_1.map((s) => {
-                const done = p.done.includes(s.id);
+              {steps.map((st) => {
+                const done = isDone(s, st.id);
                 return (
-                  <li key={s.id} className="text-xs">
+                  <li key={st.id} className="text-xs">
                     <span className={done ? "text-emerald-400" : "text-white/40"}>{done ? "✓" : "○"}</span>{" "}
-                    <span className={done ? "text-white/50 line-through" : "font-semibold"}>{s.title}</span>
-                    {!done && s.id === nextStep?.id && <div className="ml-4 text-[11px] text-white/60">{s.hint}</div>}
+                    <span className={done ? "text-white/50 line-through" : "font-semibold"}>{st.title}</span>
+                    {!done && st.id === nextStep?.id && <div className="ml-4 text-[11px] text-white/60">{st.hint}</div>}
                   </li>
                 );
               })}
             </ul>
           )}
+          {inCh2 && !s.mapTo && doneCount === 0 && (
+            <p className="mt-2 text-[11px] leading-relaxed text-white/60">Death says Tommy came through the Belt claims. Start there.</p>
+          )}
+          {s.mapTo && <Reputation s={s} />}
         </div>
       )}
     </div>

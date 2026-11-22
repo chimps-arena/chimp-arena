@@ -10,12 +10,16 @@
  * only - no fee splits or tokenomics.
  */
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { characterById, HEADSHOT_DAMAGE, RESPAWN_MS, SHOT_DAMAGE, SHOT_RANGE } from "@chimp-arena/shared";
 import { endTalk, npcSpec, npcTalkStore, toggleTalk } from "./npcs";
 import { NewsReader, type NewsIndex } from "./news";
 import { PropertyPanel } from "./property-panel";
 import { TravelPanel } from "./starports";
+import { chapter1Done, completeStep, giveMapTo, isDone, storyStore, type StoryState } from "./story-state";
+
+const ch2 = (step: string) => (s: StoryState) => chapter1Done(s) && isDone(s, step);
+const ch2Open = (prev: string | null, step: string) => (s: StoryState) => chapter1Done(s) && (!prev || isDone(s, prev)) && !isDone(s, step);
 
 export interface NpcContext {
   players: { name: string; kills: number; deaths: number }[];
@@ -29,6 +33,10 @@ export interface NpcContext {
 interface Topic {
   q: string;
   a: (c: NpcContext) => ReactNode;
+  /** Only offered when this is true for the player's story progress. */
+  when?: (s: StoryState) => boolean;
+  /** Runs when the player asks it (story steps, the Chapter 2 choice). */
+  onAsk?: () => void;
 }
 
 interface Script {
@@ -95,6 +103,16 @@ const SCRIPTS: Record<string, Script> = {
     intro: "Castro, Astromilitary. I keep this plaza in order. Make it quick.",
     topics: [
       {
+        q: "About Tommy's map…",
+        when: (s) => s.mapTo === "astrocorp",
+        a: () => "The seam is on Astrocorp's books now, where it belongs. You did the right thing. Astrocorp remembers its friends.",
+      },
+      {
+        q: "About Tommy's map…",
+        when: (s) => s.mapTo === "hunters" || s.mapTo === "rebels",
+        a: () => "Don't. I know where that map went, and so does Astrocorp. Walk carefully in my Core.",
+      },
+      {
         q: "What's going on out there?",
         a: () =>
           "Kill Boy Tommy walked out of Sector 7 with something that belongs to Astrocorp. Now every bounty hunter in the galaxy is landing on my world. Keep your weapon holstered in the Core, and if you hear anything about Tommy, you tell Astromilitary first.",
@@ -117,6 +135,16 @@ const SCRIPTS: Record<string, Script> = {
   "std-death": {
     intro: "You found me. Most don't, until it's too late.",
     topics: [
+      {
+        q: "About Tommy's map…",
+        when: (s) => s.mapTo === "hunters",
+        a: () => "Paid in full, as promised. The hunters remember who brings them work. Come back when you want more.",
+      },
+      {
+        q: "About Tommy's map…",
+        when: (s) => s.mapTo === "astrocorp" || s.mapTo === "rebels",
+        a: () => "I told you to come to me first. You didn't. I don't forget names.",
+      },
       {
         q: "Where's Kill Boy Tommy?",
         a: () =>
@@ -217,6 +245,94 @@ const SCRIPTS: Record<string, Script> = {
   },
 };
 
+/* ------------------------- Chapter 2: The Sector 7 Manhunt ------------------------- */
+
+Object.assign(SCRIPTS, {
+  "rare-bad-mike": {
+    intro: "Prison Dock 7 crew. We dig, Astrocorp pays us in scrip, and nobody asks how we're doing. What do you want?",
+    topics: [
+      {
+        q: "Have you seen Kill Boy Tommy?",
+        when: ch2Open(null, "ch2-belt"),
+        onAsk: () => completeStep("ch2-belt"),
+        a: () =>
+          "Seen him? He paid my whole crew in raw Void Crystal. Raw! Nobody pays in raw. He wanted to know who watches the deep ground on the cold side. I told him: the Rim has eyes that see underground. Ask for Senex.",
+      },
+      {
+        q: "What's it like working the claims?",
+        a: () => "Hot, loud and dangerous, and Astrocorp takes the best of it. But the crystal's real, and some days it's beautiful down there.",
+      },
+    ],
+  },
+  "rare-senex": {
+    intro: "Quietly. The Rim hears everything, and it doesn't like shouting.",
+    topics: [
+      {
+        q: "Bad Mike sent me. Tommy came here?",
+        when: ch2Open("ch2-belt", "ch2-rim"),
+        onAsk: () => completeStep("ch2-rim"),
+        a: () => (
+          <>
+            He did. He wanted me to check a survey against our deep scans. Old Astrocorp ink on it, Sector 7 stamps.
+            <br />
+            <br />
+            It&apos;s a map, friend. A Void Crystal seam bigger than anything on the Exchange, and Astrocorp never declared it. Whoever holds that map holds the boom. He left for the Docks to get it off-world.
+          </>
+        ),
+      },
+      { q: "What do you watch out here?", a: () => "The sky, the ground, and who's walking between them. Lately: hunters. Too many hunters." },
+    ],
+  },
+  "rare-lady-winter": {
+    intro: "If you're buying, I'm selling. If you're asking, it costs extra.",
+    topics: [
+      {
+        q: "Senex says Tommy came to the Docks.",
+        when: ch2Open("ch2-rim", "ch2-docks"),
+        onAsk: () => completeStep("ch2-docks"),
+        a: () =>
+          "He was meant to fly out with me. Then the hunters landed and every dock had eyes on it. He's lying low in an old bunker out in the open ground between the Belt and the Rim. I've marked it on your map. Tell him Winter's ship is still waiting, if he lives that long.",
+      },
+      { q: "What do you smuggle?", a: () => "Whatever Astrocorp says I can't. Crystal mostly. Smuggle, rebel, repeat." },
+    ],
+  },
+  "chimp-1of1-kill-boy-tommy": {
+    intro: "Easy. If you were a hunter, I'd already be dead. So who are you?",
+    topics: [
+      {
+        q: "What did you take from Sector 7?",
+        when: ch2("ch2-docks"),
+        onAsk: () => completeStep("ch2-tommy"),
+        a: () =>
+          "The truth. Astrocorp found the richest Void Crystal seam on Astroworld and kept it off the books, so they'd never have to share it. I took their survey map. Now everyone wants it: Astrocorp wants it buried, the hunters want to sell it, and my people want the crystal for the ones who dig it. I can't run forever. You decide where it goes.",
+      },
+      {
+        q: "Give the map to Astrocorp.",
+        when: (s) => isDone(s, "ch2-tommy") && !s.mapTo,
+        onAsk: () => giveMapTo("astrocorp"),
+        a: () => "So that's it. Order and a reward. Take it to Castro, then. Just remember who dug the crystal you'll never see.",
+      },
+      {
+        q: "Sell it to the hunters.",
+        when: (s) => isDone(s, "ch2-tommy") && !s.mapTo,
+        onAsk: () => giveMapTo("hunters"),
+        a: () => "Death pays well and asks no questions. I hope the money's worth it. I'll be gone before they come for me.",
+      },
+      {
+        q: "Keep it with the rebels.",
+        when: (s) => isDone(s, "ch2-tommy") && !s.mapTo,
+        onAsk: () => giveMapTo("rebels"),
+        a: () => "Then the seam belongs to the people who dig it. Smuggle, rebel, repeat. You've got friends on the Rim and the Docks now, and enemies everywhere else.",
+      },
+      {
+        q: "What now?",
+        when: (s) => s.mapTo === "rebels",
+        a: () => "Now we keep moving. Winter's ship is waiting. Come find me when Astroworld needs another truth told.",
+      },
+    ],
+  },
+} satisfies Record<string, Script>);
+
 const FALLBACK: Script = { intro: "…", topics: [] };
 
 /** "Press E to talk" when an NPC is in range; the conversation panel when talking. */
@@ -253,7 +369,21 @@ function Conversation({ npcKey, context }: { npcKey: string; context: NpcContext
   const spec = npcSpec(npcKey);
   const look = characterById(spec?.characterId);
   const script = (spec && SCRIPTS[spec.characterId]) || FALLBACK;
-  const [topic, setTopic] = useState<number | null>(null);
+  const story = useSyncExternalStore(storyStore.subscribe, storyStore.get, storyStore.get);
+  // Only the topics this player can ask right now (story lines come and go).
+  const topics = script.topics.filter((t) => !t.when || t.when(story));
+  const [askedQ, setAskedQ] = useState<string | null>(null);
+  const ask = (t: Topic) => {
+    setAskedQ(t.q);
+    t.onAsk?.();
+  };
+  // Number keys pick a topic: the key handler reads the latest list through refs.
+  const topicsRef = useRef(topics);
+  const askRef = useRef(ask);
+  useEffect(() => {
+    topicsRef.current = topics;
+    askRef.current = ask;
+  });
 
   // Free the mouse so the topics can be clicked; Esc closes.
   useEffect(() => {
@@ -261,13 +391,14 @@ function Conversation({ npcKey, context }: { npcKey: string; context: NpcContext
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") endTalk();
       const n = Number(e.key);
-      if (n >= 1 && n <= script.topics.length) setTopic(n - 1);
+      if (n >= 1 && n <= topicsRef.current.length) askRef.current(topicsRef.current[n - 1]);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [script.topics.length]);
+  }, []);
 
-  const asked = topic !== null ? script.topics[topic] : null;
+  // The answer stays on screen even if asking it removed the question (a choice).
+  const asked = askedQ ? (script.topics.find((t) => t.q === askedQ) ?? null) : null;
   return (
     <div className="absolute inset-x-0 bottom-20 z-30 flex justify-center px-3">
       <div className="w-full max-w-xl rounded-xl border border-amber-400/50 bg-black/85 p-4 text-white shadow-2xl backdrop-blur">
@@ -293,12 +424,12 @@ function Conversation({ npcKey, context }: { npcKey: string; context: NpcContext
           )}
         </div>
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-          {script.topics.map((t, i) => (
+          {topics.map((t, i) => (
             <button
               key={t.q}
               type="button"
-              onClick={() => setTopic(i)}
-              className={`rounded-lg border px-3 py-1.5 text-left text-sm ${topic === i ? "border-amber-400 bg-amber-400/15" : "border-white/15 hover:bg-white/10"}`}
+              onClick={() => ask(t)}
+              className={`rounded-lg border px-3 py-1.5 text-left text-sm ${askedQ === t.q ? "border-amber-400 bg-amber-400/15" : "border-white/15 hover:bg-white/10"}`}
             >
               <span className="mr-1.5 text-white/40">{i + 1}.</span>
               {t.q}

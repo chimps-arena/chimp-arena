@@ -64,6 +64,7 @@ import { FlightOverlay, Starports, STARPORT_COVERS } from "./starports";
 import { Roadside, ROADSIDE_COVERS } from "./roadside";
 import { WorldMap } from "./world-map";
 import { Story } from "./story";
+import { HIDEOUT, isDone, storyStore } from "./story-state";
 import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
@@ -1428,7 +1429,15 @@ function LiveHud({
 
     {/* full world map */}
     {mapOpen && room && (
-      <WorldMap props={props} places={places} players={snap.players} npcs={npcPositions()} meId={room.sessionId} onClose={closeMap} />
+      <WorldMap
+        props={props}
+        places={places}
+        players={snap.players}
+        npcs={npcPositions()}
+        meId={room.sessionId}
+        onClose={closeMap}
+        hideout={isDone(storyStore.get(), "ch2-docks") ? HIDEOUT : null}
+      />
     )}
 
     {/* flight cut-scene after boarding a ship */}
