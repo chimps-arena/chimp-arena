@@ -401,6 +401,22 @@ const MODEL_ARCHES: Partial<Record<string, Piece[][]>> = {
       { id: "fuel-tank-3", fit: "height", size: 7.5, at: [3.5, 0] },
     ],
   ],
+  // Solar farms: rows of the team's panels.
+  array: [
+    [
+      { id: "solar-panel-1", size: 5, at: [-3.2, -3] },
+      { id: "solar-panel-1", size: 5, at: [3.2, -3] },
+      { id: "solar-panel-1", size: 5, at: [-3.2, 3] },
+      { id: "solar-panel-1", size: 5, at: [3.2, 3] },
+    ],
+    [
+      { id: "solar-panel-2", fit: "height", size: 4.5, at: [-4, -2.5] },
+      { id: "solar-panel-2", fit: "height", size: 4.5, at: [0, -2.5] },
+      { id: "solar-panel-2", fit: "height", size: 4.5, at: [4, -2.5] },
+      { id: "solar-panel-1", size: 5, at: [-2.6, 3.5] },
+      { id: "solar-panel-1", size: 5, at: [2.6, 3.5] },
+    ],
+  ],
   yard: [
     [
       { id: "cargo-box", size: 5, at: [-3, -2] },

@@ -32,7 +32,9 @@ export type EnvId =
   | "outpost"
   | "rock-armory-front"
   | "ship-docking-stand"
-  | "tall-comms-tower";
+  | "tall-comms-tower"
+  | "solar-panel-1"
+  | "solar-panel-2";
 
 export const ENV_IDS: EnvId[] = [
   "armory",
@@ -52,6 +54,8 @@ export const ENV_IDS: EnvId[] = [
   "fuel-tank-3",
   "fuel-tank-4",
   "fuel-tank-5",
+  "solar-panel-1",
+  "solar-panel-2",
 ];
 
 export type PetId = "astrodog" | "astrokitty";

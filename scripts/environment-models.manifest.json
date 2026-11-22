@@ -20,5 +20,6 @@
     "rock-armory-front": "Rock Armory Front.glb",
     "ship-docking-stand": "Ship Docking Stand.glb",
     "tall-comms-tower": "Tall Comms Tower.glb"
-  }
+  },
+  "notes": "Solar Panel 1/2 were delivered loose in MATERIALS (not in Environment Assets.zip); optimized from ../astro-resources/solar/"
 }
