@@ -1537,6 +1537,8 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [props, setProps] = useState<WorldProperty[]>([]);
   const [scores, setScores] = useState(false);
+  // Phones: the chat box opens from a button (the joystick needs that corner).
+  const [chatOpen, setChatOpen] = useState(false);
   const chatInput = useRef<HTMLInputElement>(null);
   const touchInput = useRef<TouchInput>({ move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, aim: false, jump: false });
   const lastLook = useRef<{ x: number; y: number } | null>(null);
@@ -1700,6 +1702,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     if (room && text) room.send("chat", { text });
     setDraft("");
     chatInput.current?.blur();
+    setChatOpen(false);
   };
 
   const getTouch = useCallback(() => touchInput.current, []);
@@ -1774,7 +1777,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
             </div>
           ))}
         </div>
-        <form onSubmit={sendChat} className={touch ? "hidden" : undefined}>
+        <form onSubmit={sendChat} className={touch && !chatOpen ? "hidden" : undefined}>
           <input
             ref={chatInput}
             value={draft}
@@ -1782,10 +1785,11 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
             onKeyDown={(e) => {
               if (e.key === "Escape") e.currentTarget.blur();
             }}
+            onBlur={() => setChatOpen(false)}
             maxLength={CHAT_MAX_LENGTH}
             disabled={!room}
-            placeholder={room ? "Chat (Enter or T)" : "Chat offline"}
-            className="w-full rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-violet-400 focus:outline-none"
+            placeholder={!room ? "Chat offline" : touch ? "Say something…" : "Chat (Enter or T)"}
+            className={`w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-violet-400 focus:outline-none ${touch ? "bg-black/95" : "bg-black/60"}`}
           />
         </form>
       </div>
@@ -1793,6 +1797,17 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
       {/* touch controls */}
       {touch && room && (
         <>
+          <button
+            type="button"
+            onClick={() => {
+              setChatOpen(true);
+              setTimeout(() => chatInput.current?.focus(), 0);
+            }}
+            className="absolute left-2 top-[11.5rem] z-20 rounded-full border border-white/20 bg-black/70 px-3 py-1.5 text-sm text-white"
+            aria-label="Chat"
+          >
+            💬
+          </button>
           <div className="absolute inset-y-0 right-0 w-1/2 touch-none" onPointerDown={lookStart} onPointerMove={lookMove} onPointerUp={lookEnd} onPointerCancel={lookEnd} />
           <div className="absolute bottom-20 left-4">
             <Joystick onMove={setMove} />
