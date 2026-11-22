@@ -13,6 +13,7 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { characterById, HEADSHOT_DAMAGE, RESPAWN_MS, SHOT_DAMAGE, SHOT_RANGE } from "@chimp-arena/shared";
 import { endTalk, npcSpec, npcTalkStore, toggleTalk } from "./npcs";
+import { NewsReader, type NewsIndex } from "./news";
 
 export interface NpcContext {
   players: { name: string; kills: number; deaths: number }[];
@@ -194,22 +195,26 @@ const SCRIPTS: Record<string, Script> = {
 const FALLBACK: Script = { intro: "…", topics: [] };
 
 /** "Press E to talk" when an NPC is in range; the conversation panel when talking. */
-export function NpcHud({ context, touch }: { context: NpcContext; touch: boolean }) {
+export function NpcHud({ context, touch, news }: { context: NpcContext; touch: boolean; news: NewsIndex | null }) {
   const st = useSyncExternalStore(npcTalkStore.subscribe, npcTalkStore.get, npcTalkStore.get);
-  if (st.talking) return <Conversation key={st.talking} npcKey={st.talking} context={context} />;
+  if (st.talking) {
+    if (npcSpec(st.talking)?.kind === "news") return news ? <NewsReader news={news} /> : null;
+    return <Conversation key={st.talking} npcKey={st.talking} context={context} />;
+  }
   const near = npcSpec(st.near);
   if (!near) return null;
-  const look = characterById(near.characterId);
+  const name = near.title ?? characterById(near.characterId).name;
+  const verb = near.kind === "news" ? "Read" : "Talk to";
   return (
     <div className="absolute inset-x-0 top-[36%] z-30 flex justify-center">
       {touch ? (
         <button type="button" onClick={() => toggleTalk()} className="rounded-full border border-amber-400/70 bg-black/75 px-4 py-2 text-sm font-bold text-amber-300">
-          Talk to {look.name}
+          {verb} {name}
         </button>
       ) : (
         <div className="pointer-events-none rounded-full border border-amber-400/60 bg-black/70 px-4 py-1.5 text-sm text-white">
           <kbd className="mr-2 rounded bg-amber-400 px-1.5 py-0.5 text-xs font-black text-black">E</kbd>
-          Talk to <b className="text-amber-300">{look.name}</b>
+          {verb} <b className="text-amber-300">{name}</b>
         </div>
       )}
     </div>

@@ -15,6 +15,8 @@ import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
+import { NearLabel } from "./items";
+import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
 
 export interface WorldProperty {
   id: string;
@@ -554,6 +556,19 @@ export const Building = memo(function Building({
       {near && productFor(prop.type, prop.id) && (
         <group position={[-2.6, 0, 5.4]}>
           <ItemPedestal id={productFor(prop.type, prop.id)!} size={1} />
+        </group>
+      )}
+      {/* armories show their weapon rack; mining lots show a mining tool */}
+      {near && prop.type === "armory" && (
+        <group position={[-2.4, 0, 5]}>
+          <WeaponRack />
+          <NearLabel title="Weapon rack" sub="Standard → Power 5 · coming as NFT items" color="#f59e0b" y={3.8} within={16} />
+        </group>
+      )}
+      {near && (prop.type === "mining_claim" || prop.type === "quarry") && (
+        <group position={[0.6, 0, 5.2]}>
+          <ToolStand id={toolFor(prop.id)} />
+          <NearLabel title={TOOLS[toolFor(prop.id)].name} sub={TOOLS[toolFor(prop.id)].tier} color={TOOLS[toolFor(prop.id)].glow} y={3.1} within={14} />
         </group>
       )}
       {prop.forSale && (

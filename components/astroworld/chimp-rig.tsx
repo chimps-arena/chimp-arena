@@ -15,9 +15,10 @@
  * (see docs/3d-characters.md). The pose inputs below stay the same.
  */
 
-import { useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { GearModel } from "./gear";
 import type { CharacterLook } from "@chimp-arena/shared";
 
 /** What the animation driver needs each frame. Written by the owner, read here. */
@@ -297,7 +298,21 @@ export function HeldRifle({ glow }: { glow: string }) {
     }),
     [glow],
   );
-  return <Rifle m={m} />;
+  return <TeamRifle m={m} />;
+}
+
+/**
+ * The team's Standard Rifle model, laid along the code rifle's axis (barrel
+ * toward +z, grip at the origin). The code-built rifle shows while it loads.
+ */
+function TeamRifle({ m }: { m: RifleMats }) {
+  return (
+    <Suspense fallback={<Rifle m={m} />}>
+      <group position={[0, 0.02, 0.24]} rotation={[0, Math.PI / 2, 0]}>
+        <GearModel id="rifle-standard" length={1.05} />
+      </group>
+    </Suspense>
+  );
 }
 
 function Rifle({ m }: { m: RifleMats }) {
@@ -528,12 +543,12 @@ export function ChimpRig({ look, pose }: { look: CharacterLook; pose: () => Pose
             <RigArm look={look} m={m} side={1} sh={shL} el={elL} />
             <RigArm look={look} m={m} side={-1} sh={shR} el={elR} gear={gearHand} />
             <group ref={rifleHands} position={[-0.12, 0.34, 0.38]}>
-              <Rifle m={m} />
+              <TeamRifle m={m} />
             </group>
           </group>
           <group ref={rifleBack} position={[0, 0.35, -0.3]} rotation={[0, 0, 0.8]}>
             <group rotation={[0, Math.PI / 2, 0]}>
-              <Rifle m={m} />
+              <TeamRifle m={m} />
             </group>
           </group>
         </group>

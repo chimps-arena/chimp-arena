@@ -57,6 +57,7 @@ import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
 import { Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
+import { fetchNews, KIOSK, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
 
@@ -979,6 +980,7 @@ interface World3DProps {
   props: WorldProperty[];
   places: Map<string, Placement>;
   models: ModelIndex;
+  news: NewsIndex | null;
   getTouch: () => TouchInput;
   onHud: (h: LocalHud) => void;
   onToggleRover: () => void;
@@ -996,6 +998,7 @@ const World3D = memo(function World3D({
   props,
   places,
   models,
+  news,
   getTouch,
   onHud,
   onToggleRover,
@@ -1021,6 +1024,7 @@ const World3D = memo(function World3D({
       <WorldScenery showroomRover={SHOWROOM_ROVER} />
       <PropertyField props={props} places={places} />
       <Npcs props={props} places={places} />
+      {news && <NewsKiosk news={news} />}
       <Effects />
 
       {room &&
@@ -1112,6 +1116,7 @@ function LiveHud({
   stores,
   onToggleRover,
   onOpenPicker,
+  news,
 }: {
   room: Room | null;
   status: Status;
@@ -1126,6 +1131,7 @@ function LiveHud({
   stores: HudStores;
   onToggleRover: () => void;
   onOpenPicker: () => void;
+  news: NewsIndex | null;
 }) {
   const hud = useStore(stores.hud);
   const kills = useStore(stores.kills);
@@ -1256,7 +1262,7 @@ function LiveHud({
     )}
 
     {/* NPCs: talk prompt + conversation */}
-    {room && mode === "walk" && snap.alive && !picking && <NpcHud context={npcContext} touch={touch} />}
+    {room && mode === "walk" && snap.alive && !picking && <NpcHud context={npcContext} touch={touch} news={news} />}
 
     {/* click-to-play (desktop) */}
     {room && status === "online" && !touch && !hud.locked && !picking && snap.alive && !talking && (
@@ -1362,6 +1368,18 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     };
   }, []);
 
+  // Astro-News issue for the kiosk (none published = no kiosk).
+  const [news, setNews] = useState<NewsIndex | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchNews().then((n) => {
+      if (live) setNews(n);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   // Properties from the market.
   useEffect(() => {
     let live = true;
@@ -1404,6 +1422,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     () => [
       ...STATIC_COLLIDERS,
       [SHOWROOM.x, SHOWROOM.z, 4.6, 0.6],
+      [KIOSK.x, KIOSK.z, 3.2, 5.5],
       ...exchangeColliders(),
       ...props.flatMap((p) => {
         const at = places.get(p.id);
@@ -1517,6 +1536,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
         props={props}
         places={places}
         models={models}
+        news={news}
         getTouch={getTouch}
         onHud={stores.hud.set}
         onToggleRover={toggleMode}
@@ -1538,6 +1558,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
         stores={stores}
         onToggleRover={toggleMode}
         onOpenPicker={openPicker}
+        news={news}
       />
 
       {/* chat */}

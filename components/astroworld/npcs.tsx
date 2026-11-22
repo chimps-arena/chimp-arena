@@ -46,6 +46,12 @@ export interface NpcSpec {
   speed: number;
   /** Seconds offset so copies of one route don't move in step. */
   phase: number;
+  /** Carries a rifle (security, military, bounty hunter). */
+  armed?: boolean;
+  /** Not a character: something to use (e.g. the Astro-News kiosk). */
+  kind?: "npc" | "news";
+  /** Shown in the prompt instead of the character's name. */
+  title?: string;
 }
 
 /** A point `local` metres in front of/beside a building lot, in world space. */
@@ -77,14 +83,15 @@ export function npcSpecs(props: WorldProperty[], places: Map<string, Placement>)
       route: { kind: "line", a: [cx - px, cz - pz], b: [cx + px, cz + pz], pause: 3 },
       speed: 1.6,
       phase: i * 4.3,
+      armed: true,
     });
   });
 
   // Military: patrols the plaza between the Exchange and the property ring.
-  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 38, dir: 1 }, speed: 1.7, phase: 0 });
+  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 38, dir: 1 }, speed: 1.7, phase: 0, armed: true });
 
   // Bounty Hunter: stalks the open ground outside the safe zone.
-  out.push({ key: "bounty", characterId: "std-death", role: "Bounty Hunter", route: { kind: "circle", c: [0, 0], r: 120, dir: -1 }, speed: 2.4, phase: 0 });
+  out.push({ key: "bounty", characterId: "std-death", role: "Bounty Hunter", route: { kind: "circle", c: [0, 0], r: 120, dir: -1 }, speed: 2.4, phase: 0, armed: true });
 
   // Workers at their buildings: pacing the front of the lot.
   const workers: [string, string, string][] = [
@@ -145,6 +152,15 @@ export const npcTalkStore = {
     return () => void talkSubs.delete(cb);
   },
 };
+
+/**
+ * Something fixed in the world you can use with E, like an NPC you talk to
+ * (the news kiosk). Returns the unregister function.
+ */
+export function registerInteractable(spec: NpcSpec, x: number, z: number): () => void {
+  live.set(spec.key, { spec, x, z, offset: 0 });
+  return () => void live.delete(spec.key);
+}
 
 export function npcSpec(key: string | null): NpcSpec | null {
   return key ? (live.get(key)?.spec ?? null) : null;
@@ -256,6 +272,7 @@ function stepNpc(rt: NpcRuntime, dt: number, g: THREE.Group | null, pose: PoseIn
   const d = Math.atan2(Math.sin(heading - g.rotation.y), Math.cos(heading - g.rotation.y));
   g.rotation.y += d * 0.12;
   pose.speed = moving ? spec.speed : 0;
+  pose.armed = !!spec.armed;
   pose.forward = pose.speed;
 }
 

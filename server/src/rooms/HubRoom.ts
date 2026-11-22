@@ -116,6 +116,14 @@ export const MAX_HUB_ROOMS = Number(process.env.MAX_HUB_ROOMS ?? 25);
 /** How long a dropped player's spot is held for them to reconnect. */
 export const RECONNECT_SECONDS = 20;
 let openRooms = 0;
+const liveRooms = new Set<HubRoom>();
+
+/** Open Astroworld instances and players across them (for /health and load tests). */
+export function hubStats(): { rooms: number; players: number } {
+  let players = 0;
+  for (const r of liveRooms) players += r.clients.length;
+  return { rooms: liveRooms.size, players };
+}
 
 export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> {
   maxClients = HUB_MAX_PLAYERS;
@@ -135,6 +143,7 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     if (openRooms >= MAX_HUB_ROOMS) throw new Error("Astroworld is full right now - try again in a minute");
     openRooms++;
     this.counted = true;
+    liveRooms.add(this);
     this.state = new HubRoomState();
 
     this.onMessage("move", (client, msg: HubMoveMessage) => {
@@ -308,6 +317,7 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
   }
 
   onDispose(): void {
+    liveRooms.delete(this);
     if (this.counted) openRooms--;
   }
 }

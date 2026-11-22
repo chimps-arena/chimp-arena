@@ -1,0 +1,21 @@
+{
+  "sourceDir": "../astro-resources/materials2",
+  "outDir": "public/models",
+  "texture": 1024,
+  "models": {
+    "weapons/rifle-standard": "Weapon Kits/Standard/Standard Rifle - Mesh - Low Poly - 5k.glb",
+    "weapons/rifle-power-1": "Weapon Kits/Power 1/Power 1 Rifle - Mesh - Low Poly - 5k.glb",
+    "weapons/rifle-power-2": "Weapon Kits/Power 2/Power 2 Rifle - Mesh - Low Poly - 5k.glb",
+    "weapons/rifle-power-3": "Weapon Kits/Power 3/Power 3 Rifle - Mesh - Low Poly - 5k.glb",
+    "weapons/rifle-power-4": "Weapon Kits/Power 4/Power 4 Rifle - Mesh - Low Poly - 5K.glb",
+    "weapons/rifle-power-5": "Weapon Kits/Power 5/Power 5 Rifle - Mesh - Low Poly - 5K.glb",
+    "tools/pickaxe-t1": "Mining Kits/Tier 1 - Charged Pickaxe/Tier 1 - Charged Pickaxe - Mesh - Low Poly - 2K.glb",
+    "tools/jackhammer-t2": "Mining Kits/Tier 2 - Jackhammer Drill/Tier 2 - Jackhammer Drill - Mesh - Low Poly - 2K.glb",
+    "tools/plasma-cutter-t3": "Mining Kits/Tier 3 - Plasma Cutter/Tier 3 - Plasma Cutter - Mesh - Low Poly - 2K.glb",
+    "items/meal": "Consumables Kits/Meal/Meal - Mesh - Low Poly - 500.glb",
+    "items/power-bar": "Consumables Kits/Power Bar - Snack Bar/Power Bar - Low Poly - 100.glb",
+    "items/drink": "Consumables Kits/Drink/Drink - Mesh - Low Poly - 600.glb",
+    "items/drink-canister": "Consumables Kits/Suit Cell - Drink Canister /Suit Cell - Drink Canister - Mesh - Low Poly - 600.glb",
+    "items/crystal-charged-v2": "Consumables Kits/Charged Crystals/Charged Crystal - Mesh - Low Poly - 300.glb"
+  }
+}

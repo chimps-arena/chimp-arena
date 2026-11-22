@@ -14,6 +14,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { characterById } from "@chimp-arena/shared";
 import { ChargedCrystal, ItemModel, ITEMS, type ItemId } from "./items";
 import { ENV_IDS, EnvModel, Pet } from "./env-models";
+import { GearModel, TOOL_IDS, TOOLS, WEAPON_IDS, WEAPONS } from "./gear";
 import { WorldLighting } from "./world";
 
 const ITEM_ORDER: ItemId[] = [
@@ -30,11 +31,16 @@ const ITEM_ORDER: ItemId[] = [
   "kit-drink",
   "kit-food",
   "nutrition-cell",
+  "meal",
+  "power-bar",
+  "drink",
+  "drink-canister",
+  "crystal-charged-v2",
   "crystal-charged",
 ];
 
-type Tab = "items" | "buildings" | "characters" | "pets";
-const TABS: Tab[] = ["items", "buildings", "characters", "pets"];
+type Tab = "items" | "weapons" | "tools" | "buildings" | "characters" | "pets";
+const TABS: Tab[] = ["items", "weapons", "tools", "buildings", "characters", "pets"];
 
 type Entry = { key: string; title: string; sub: string; color: string; node: React.ReactNode };
 
@@ -128,7 +134,30 @@ export function ItemGallery() {
       color: "#22d3ee",
       node: <Pet id={id} size={id === "astrodog" ? 0.9 : 0.8} radius={0.6} />,
     }));
-    return { items, buildings, characters, pets };
+    // Weapons and tools float at chest height, slowly turning on the shelf.
+    const weapons: Entry[] = WEAPON_IDS.map((id) => ({
+      key: id,
+      title: WEAPONS[id].name,
+      sub: WEAPONS[id].tier,
+      color: WEAPONS[id].glow,
+      node: (
+        <group position={[0, 1, 0]}>
+          <GearModel id={id} length={2.2} />
+        </group>
+      ),
+    }));
+    const tools: Entry[] = TOOL_IDS.map((id) => ({
+      key: id,
+      title: TOOLS[id].name,
+      sub: TOOLS[id].tier,
+      color: TOOLS[id].glow,
+      node: (
+        <group position={[0, 1, 0]}>
+          <GearModel id={id} length={1.8} />
+        </group>
+      ),
+    }));
+    return { items, weapons, tools, buildings, characters, pets };
   }, [index, clip]);
 
   return (
@@ -146,7 +175,7 @@ export function ItemGallery() {
         </mesh>
         {TABS.map((t) => (
           <group key={t} visible={t === tab}>
-            <Shelf entries={byTab[t]} cols={t === "characters" ? 6 : t === "buildings" ? 6 : 5} gap={t === "characters" ? 2.2 : t === "buildings" ? 3.4 : 3} hidden={t !== tab} />
+            <Shelf entries={byTab[t]} cols={t === "characters" || t === "buildings" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" ? 2.2 : t === "buildings" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
           </group>
         ))}
         <OrbitControls target={[0, 0.6, 0]} maxPolarAngle={Math.PI / 2.1} />

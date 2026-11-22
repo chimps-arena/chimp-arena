@@ -30,7 +30,12 @@ export type ItemId =
   | "kit-charge"
   | "kit-drink"
   | "kit-food"
-  | "nutrition-cell";
+  | "nutrition-cell"
+  | "meal"
+  | "power-bar"
+  | "drink"
+  | "drink-canister"
+  | "crystal-charged-v2";
 
 export const ITEMS: Record<ItemId, { name: string; kind: string; glow: string }> = {
   "ore-gold": { name: "Gold Ore", kind: "Raw ore", glow: "#f5b301" },
@@ -47,6 +52,11 @@ export const ITEMS: Record<ItemId, { name: string; kind: string; glow: string }>
   "kit-drink": { name: "Moisture Kit", kind: "Consumable", glow: "#38bdf8" },
   "kit-food": { name: "Food Kit", kind: "Consumable", glow: "#22c55e" },
   "nutrition-cell": { name: "Nutrition Suit Cell", kind: "Astrofoods · Consumable", glow: "#84cc16" },
+  meal: { name: "Meal", kind: "Astrofoods · Consumable", glow: "#22c55e" },
+  "power-bar": { name: "Power Bar", kind: "Astrofoods · Snack", glow: "#eab308" },
+  drink: { name: "Drink", kind: "Astrofoods · Consumable", glow: "#38bdf8" },
+  "drink-canister": { name: "Suit Cell Drink Canister", kind: "Astrofoods · Consumable", glow: "#06b6d4" },
+  "crystal-charged-v2": { name: "Charged Crystal (new mesh)", kind: "Review", glow: "#c084fc" },
 };
 
 const url = (id: ItemId) => `/models/items/${id}.glb`;
@@ -60,10 +70,11 @@ export const PRODUCT_BY_TYPE: Partial<Record<string, ItemId[]>> = {
   fuel_lot: ["kit-fuel"],
   array: ["kit-charge"],
   greenhouse: ["kit-food", "kit-drink", "nutrition-cell"],
-  dome: ["nutrition-cell"],
+  dome: ["nutrition-cell", "drink-canister"],
   field: ["kit-food", "nutrition-cell"],
-  cantina: ["kit-drink"],
-  stall: ["kit-food", "nutrition-cell"],
+  cantina: ["drink", "drink-canister", "kit-drink"],
+  stall: ["meal", "power-bar", "nutrition-cell"],
+  club: ["drink", "meal"],
 };
 
 /** Pick one product deterministically per property, so it never flickers. */
