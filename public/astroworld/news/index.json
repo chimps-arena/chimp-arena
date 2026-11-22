@@ -1,20 +1,67 @@
 {
   "issue": "#2187",
   "date": "Nov 2, 2175",
-  "breaking": { "video": "breaking-kill-boy-tommy.mp4", "poster": "breaking-poster.jpg", "headline": "Sector 7 manhunt: Kill Boy Tommy" },
+  "breaking": {
+    "video": "breaking-kill-boy-tommy.mp4",
+    "poster": "breaking-poster.jpg",
+    "headline": "Sector 7 manhunt: Kill Boy Tommy"
+  },
   "pages": [
-    { "file": "issue1-00.webp", "title": "Front cover" },
-    { "file": "issue1-01.webp", "title": "Page 1" },
-    { "file": "issue1-02.webp", "title": "Page 2" },
-    { "file": "issue1-03.webp", "title": "Page 3" },
-    { "file": "issue1-04.webp", "title": "Page 4" },
-    { "file": "issue1-05.webp", "title": "Page 5" },
-    { "file": "issue1-06.webp", "title": "Page 6" },
-    { "file": "issue1-07.webp", "title": "Page 7" },
-    { "file": "issue1-08.webp", "title": "Page 8" },
-    { "file": "issue1-09.webp", "title": "Page 9" },
-    { "file": "issue1-10.webp", "title": "Page 10" },
-    { "file": "issue1-11.webp", "title": "Page 11" },
-    { "file": "issue1-12.webp", "title": "Back cover" }
+    {
+      "file": "issue1-00.webp",
+      "title": "Front cover"
+    },
+    {
+      "file": "issue1-01.webp",
+      "title": "Page 1"
+    },
+    {
+      "file": "issue1-02.webp",
+      "title": "Page 2"
+    },
+    {
+      "file": "issue1-03.webp",
+      "title": "Page 3"
+    },
+    {
+      "file": "issue1-04.webp",
+      "title": "Page 4"
+    },
+    {
+      "file": "issue1-05.webp",
+      "title": "Page 5"
+    },
+    {
+      "file": "issue1-06.webp",
+      "title": "Page 6"
+    },
+    {
+      "file": "issue1-07.webp",
+      "title": "Page 7"
+    },
+    {
+      "file": "issue1-08.webp",
+      "title": "Page 8"
+    },
+    {
+      "file": "issue1-09.webp",
+      "title": "Page 9"
+    },
+    {
+      "file": "issue1-10.webp",
+      "title": "Page 10"
+    },
+    {
+      "file": "issue1-11.webp",
+      "title": "Page 11"
+    },
+    {
+      "file": "issue1-12.webp",
+      "title": "Back cover"
+    },
+    {
+      "file": "astrophone-yellow-pages.webp",
+      "title": "Astrophone Yellow Pages"
+    }
   ]
 }
