@@ -74,7 +74,8 @@ function useMaterials(look: CharacterLook) {
       dark: std("#16141c", 0.6, 0.4),
       boot: std("#1d1b22", 0.4, 0.6),
       fur: std(look.fur, 0, 0.9),
-      face: std(look.species === "chimp" ? "#c99a6e" : shade(look.fur, 1.15), 0, 0.85),
+      // Chimps with the default fur get a tan face; custom skin (e.g. teal) tints the face too.
+      face: std(look.species === "chimp" && look.fur === "#4a2f1d" ? "#c99a6e" : shade(look.fur, look.species === "chimp" ? 1.3 : 1.15), 0, 0.85),
       hair: std(look.hair ?? "#1a1a1a", 0.1, 0.7),
       gold: std("#d4a93a", 0.9, 0.25),
       white: std("#e8e8ee", 0.2, 0.5),

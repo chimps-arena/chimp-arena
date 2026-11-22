@@ -11,7 +11,7 @@ import { Canvas } from "@react-three/fiber";
 import { Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { characterById } from "@chimp-arena/shared";
+import { CHARACTERS, characterById } from "@chimp-arena/shared";
 import { ChargedCrystal, ItemModel, ITEMS, type ItemId } from "./items";
 import { ENV_IDS, EnvModel, Pet } from "./env-models";
 import { GearModel, TOOL_IDS, TOOLS, WEAPON_IDS, WEAPONS } from "./gear";
@@ -46,8 +46,8 @@ const ITEM_ORDER: ItemId[] = [
   "crystal-charged",
 ];
 
-type Tab = "items" | "weapons" | "tools" | "vehicles" | "buildings" | "characters" | "armed" | "pets";
-const TABS: Tab[] = ["items", "weapons", "tools", "vehicles", "buildings", "characters", "armed", "pets"];
+type Tab = "items" | "weapons" | "tools" | "vehicles" | "buildings" | "characters" | "armed" | "roster" | "pets";
+const TABS: Tab[] = ["items", "weapons", "tools", "vehicles", "buildings", "characters", "armed", "roster", "pets"];
 
 type Entry = { key: string; title: string; sub: string; color: string; node: React.ReactNode };
 
@@ -188,7 +188,15 @@ export function ItemGallery() {
         </group>
       ),
     }));
-    return { items, weapons, tools, vehicles, buildings, characters, armed, pets };
+    // Every roster character as players see them (real model if switched on, else the stand-in).
+    const roster: Entry[] = CHARACTERS.map((c) => ({
+      key: c.id,
+      title: c.name,
+      sub: index[c.id] ? "3D model" : "Stand-in",
+      color: index[c.id] ? "#22c55e" : "#64748b",
+      node: <CharacterBody look={c} pose={idlePose} />,
+    }));
+    return { items, weapons, tools, vehicles, buildings, characters, armed, roster, pets };
   }, [index, clip]);
 
   return (
@@ -207,7 +215,7 @@ export function ItemGallery() {
         </mesh>
         {TABS.map((t) => (
           <group key={t} visible={t === tab}>
-            <Shelf entries={byTab[t]} cols={t === "characters" || t === "armed" || t === "buildings" || t === "vehicles" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" || t === "armed" ? 2.2 : t === "buildings" || t === "vehicles" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
+            <Shelf entries={byTab[t]} cols={t === "roster" ? 10 : t === "characters" || t === "armed" || t === "buildings" || t === "vehicles" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" || t === "armed" || t === "roster" ? 2.2 : t === "buildings" || t === "vehicles" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
           </group>
         ))}
         </ModelIndexContext.Provider>
