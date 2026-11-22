@@ -8,6 +8,7 @@
 //     plan   comma list of steps: "wait:8000", "key:w:2500" (hold W 2.5s),
 //            "shot:name", "eval:<js>", "evalenv:VAR", "fps:3000"
 //            default "wait:9000,shot:spawn"
+//   ASTRO_SNAP_PHONE=1 emulates a phone (390x844, touch).
 //
 // Exit code 1 if the page logged errors.
 import { spawn } from "node:child_process";
@@ -80,6 +81,14 @@ const send = (method, params = {}) =>
 
 await send("Runtime.enable");
 await send("Page.enable");
+// ASTRO_SNAP_PHONE=1: a phone screen (390x844, touch, mobile user agent).
+if (process.env.ASTRO_SNAP_PHONE) {
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  await send("Emulation.setUserAgentOverride", {
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  });
+}
 await send("Page.navigate", { url: URL_ });
 
 const KEYS = { w: "KeyW", a: "KeyA", s: "KeyS", d: "KeyD", f: "KeyF", " ": "Space", shift: "ShiftLeft" };

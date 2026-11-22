@@ -66,7 +66,8 @@ function Reputation({ s }: { s: StoryState }) {
 export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }) {
   const s = useSyncExternalStore(storyStore.subscribe, storyStore.get, storyStore.get);
   const [slide, setSlide] = useState(0);
-  const [open, setOpen] = useState(true);
+  // Collapsed by default on phones (it covers too much of the view).
+  const [open, setOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 640);
 
   // Chapter 1 steps tick off from what the player uses, and from arriving by ship.
   useEffect(
@@ -118,7 +119,7 @@ export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }
   const finished = doneCount === steps.length;
   const nextStep = steps.find((st) => !isDone(s, st.id));
   return (
-    <div className="pointer-events-auto absolute right-3 top-28 z-20 w-72 rounded-lg border border-fuchsia-400/40 bg-black/70 text-white backdrop-blur-sm">
+    <div className="pointer-events-auto absolute right-2 top-14 z-20 w-[48vw] rounded-lg sm:right-3 sm:top-28 sm:w-72 border border-fuchsia-400/40 bg-black/70 text-white backdrop-blur-sm">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
         <span className="min-w-0">
           <span className="block text-[10px] uppercase tracking-wider text-fuchsia-300">{title}</span>

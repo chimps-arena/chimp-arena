@@ -1009,7 +1009,7 @@ function Minimap({ players, meId, places }: { players: { id: string; x: number; 
   const tx = mapX;
   const tz = mapZ;
   return (
-    <svg width={S} height={S} className="rounded-full border border-violet-400/40 bg-black/85">
+    <svg viewBox={`0 0 ${S} ${S}`} className="h-24 w-24 rounded-full border border-violet-400/40 bg-black/85 sm:h-[150px] sm:w-[150px]">
       <MinimapBase places={places} />
       {players.map((p) =>
         p.id === meId ? (
@@ -1345,8 +1345,8 @@ function LiveHud({
     )}
 
     {/* status + minimap */}
-    <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col gap-2">
-      <div className="rounded-lg bg-black/60 px-3 py-2 text-xs text-white">
+    <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-col gap-2 sm:left-3 sm:top-3">
+      <div className="max-w-[46vw] rounded-lg bg-black/60 px-2 py-1.5 text-[11px] text-white sm:max-w-none sm:px-3 sm:py-2 sm:text-xs">
         <div className={`font-bold uppercase tracking-wider ${safe ? "text-emerald-300" : "text-red-400"}`}>
           {hud.zone} · {safe ? "Safe zone" : "Combat zone"}
         </div>
@@ -1354,22 +1354,23 @@ function LiveHud({
           <span className={`inline-block h-2 w-2 rounded-full ${status === "online" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400" : "bg-red-500"}`} />
           {status === "online" ? `${online} chimp${online === 1 ? "" : "s"} online · ${propertyCount} properties` : status === "connecting" ? "Connecting…" : "Offline"}
         </div>
-        <div className="mt-0.5 text-[10px] text-white/50">Test build · nothing here costs or pays anything</div>
+        <div className="mt-0.5 hidden text-[10px] text-white/50 sm:block">Test build · nothing here costs or pays anything</div>
       </div>
       {room && <Minimap players={snap.players} meId={room.sessionId} places={placeList} />}
     </div>
 
     {/* character + rover buttons, kill feed */}
-    <div className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
-      <div className="flex gap-2">
+    <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-2 sm:right-3 sm:top-3">
+      <div className="flex gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={onOpenPicker}
-          className="flex items-center gap-2 rounded-lg border border-violet-400/60 bg-black/70 py-1 pl-1 pr-3 text-xs font-bold text-white hover:bg-black/90"
+          className="flex items-center gap-2 rounded-lg border border-violet-400/60 bg-black/70 p-1 text-xs font-bold text-white hover:bg-black/90 sm:pr-3"
+          aria-label={`Character: ${look.name}. Change`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={look.image} alt="" className="h-7 w-7 rounded object-cover" />
-          <span className="leading-tight">
+          <span className="hidden leading-tight sm:block">
             {look.name}
             <span className="block text-[9px] uppercase tracking-wider" style={{ color: TIER_COLOR[look.tier] }}>
               {TIER_LABEL[look.tier]} · change
@@ -1380,17 +1381,20 @@ function LiveHud({
           type="button"
           onClick={onToggleRover}
           disabled={!room}
-          className="rounded-lg border border-amber-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 hover:bg-black/90 disabled:opacity-40"
+          className="rounded-lg border border-amber-400/60 bg-black/70 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 hover:bg-black/90 disabled:opacity-40 sm:px-3"
+          aria-label={mode === "walk" ? "Rover" : "Walk"}
         >
-          {mode === "walk" ? "🚙 Rover (F)" : "🚶 Walk (F)"}
+          {mode === "walk" ? "🚙" : "🚶"}
+          <span className="hidden sm:inline">{mode === "walk" ? " Rover (F)" : " Walk (F)"}</span>
         </button>
         <button
           type="button"
           onClick={() => setMapOpen(true)}
           disabled={!room}
-          className="rounded-lg border border-cyan-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300 hover:bg-black/90 disabled:opacity-40"
+          className="rounded-lg border border-cyan-400/60 bg-black/70 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300 hover:bg-black/90 disabled:opacity-40 sm:px-3"
+          aria-label="Map"
         >
-          🗺 Map (M)
+          🗺<span className="hidden sm:inline"> Map (M)</span>
         </button>
       </div>
       <div className="pointer-events-none flex flex-col items-end gap-1">
@@ -1404,7 +1408,7 @@ function LiveHud({
 
     {/* health + ammo */}
     {room && (
-      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
+      <div className={`pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 bottom-3`}>
         <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">{myStats ? `${myStats.kills} kills · ${myStats.deaths} deaths` : ""}</div>
         <div className="h-2.5 w-56 overflow-hidden rounded-full border border-white/20 bg-black/60">
           <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${(snap.hp / MAX_HP) * 100}%` }} />
@@ -1759,7 +1763,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
       />
 
       {/* chat */}
-      <div className="absolute bottom-3 left-3 z-20 flex w-[min(340px,calc(100%-180px))] flex-col gap-1.5">
+      <div className={`absolute z-20 flex flex-col gap-1.5 ${touch ? "inset-x-14 top-24" : "bottom-3 left-3 w-[min(340px,calc(100%-180px))]"}`}>
         <div className="pointer-events-none flex max-h-36 flex-col justify-end overflow-hidden text-xs">
           {chat.slice(-7).map((line) => (
             <div key={line.id} className="mb-0.5 w-fit max-w-full rounded bg-black/55 px-2 py-0.5 text-white">
@@ -1770,7 +1774,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
             </div>
           ))}
         </div>
-        <form onSubmit={sendChat}>
+        <form onSubmit={sendChat} className={touch ? "hidden" : undefined}>
           <input
             ref={chatInput}
             value={draft}
