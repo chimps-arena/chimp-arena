@@ -135,6 +135,8 @@ interface NpcRuntime {
 }
 
 const live = new Map<string, NpcRuntime>();
+// Dev QA only: scripts/astroworld-snapshot.mjs reads NPC positions from here.
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") Object.assign(window, { __awNpcs: live });
 const player = { x: 0, z: 0 };
 let talk: NpcTalkState = { near: null, talking: null };
 const talkSubs = new Set<() => void>();

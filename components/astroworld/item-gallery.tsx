@@ -16,6 +16,12 @@ import { ChargedCrystal, ItemModel, ITEMS, type ItemId } from "./items";
 import { ENV_IDS, EnvModel, Pet } from "./env-models";
 import { GearModel, TOOL_IDS, TOOLS, WEAPON_IDS, WEAPONS } from "./gear";
 import { WorldLighting } from "./world";
+import { CharacterBody, ModelIndexContext, type ModelIndex } from "./character-body";
+import { idlePose, type PoseInput } from "./chimp-rig";
+
+/** Standing with the rifle up, exactly as players see armed characters in-game. */
+const ARMED: PoseInput = { ...idlePose(), armed: true };
+const armedPose = () => ARMED;
 
 const ITEM_ORDER: ItemId[] = [
   "ore-gold",
@@ -39,8 +45,8 @@ const ITEM_ORDER: ItemId[] = [
   "crystal-charged",
 ];
 
-type Tab = "items" | "weapons" | "tools" | "buildings" | "characters" | "pets";
-const TABS: Tab[] = ["items", "weapons", "tools", "buildings", "characters", "pets"];
+type Tab = "items" | "weapons" | "tools" | "buildings" | "characters" | "armed" | "pets";
+const TABS: Tab[] = ["items", "weapons", "tools", "buildings", "characters", "armed", "pets"];
 
 type Entry = { key: string; title: string; sub: string; color: string; node: React.ReactNode };
 
@@ -127,6 +133,14 @@ export function ItemGallery() {
         color: "#a855f7",
         node: <AnimatedCharacter file={e.file} clip={clip} />,
       }));
+    // The same characters through the game's own renderer, rifle up.
+    const armed: Entry[] = Object.keys(index).map((id) => ({
+      key: id,
+      title: characterById(id)?.name ?? id,
+      sub: "Armed (in-game)",
+      color: "#ef4444",
+      node: <CharacterBody look={characterById(id)} pose={armedPose} />,
+    }));
     const pets: Entry[] = (["astrodog", "astrokitty"] as const).map((id) => ({
       key: id,
       title: id === "astrodog" ? "Astrodog" : "Astrokitty",
@@ -157,7 +171,7 @@ export function ItemGallery() {
         </group>
       ),
     }));
-    return { items, weapons, tools, buildings, characters, pets };
+    return { items, weapons, tools, buildings, characters, armed, pets };
   }, [index, clip]);
 
   return (
@@ -169,15 +183,17 @@ export function ItemGallery() {
       >
         <color attach="background" args={["#1a1238"]} />
         <WorldLighting />
+        <ModelIndexContext.Provider value={index as ModelIndex}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
           <circleGeometry args={[30, 64]} />
           <meshStandardMaterial color="#3b3552" metalness={0.3} roughness={0.5} />
         </mesh>
         {TABS.map((t) => (
           <group key={t} visible={t === tab}>
-            <Shelf entries={byTab[t]} cols={t === "characters" || t === "buildings" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" ? 2.2 : t === "buildings" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
+            <Shelf entries={byTab[t]} cols={t === "characters" || t === "armed" || t === "buildings" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" || t === "armed" ? 2.2 : t === "buildings" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
           </group>
         ))}
+        </ModelIndexContext.Provider>
         <OrbitControls target={[0, 0.6, 0]} maxPolarAngle={Math.PI / 2.1} />
       </Canvas>
 
