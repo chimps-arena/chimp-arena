@@ -5,6 +5,8 @@
  * (localStorage) until players have accounts in the game.
  */
 
+import { sfx } from "./audio";
+
 export type Faction = "astrocorp" | "hunters" | "rebels";
 
 export const FACTIONS: Record<Faction, { name: string; color: string }> = {
@@ -64,7 +66,9 @@ export function finishIntro() {
 
 export function completeStep(step: string) {
   const s = storyStore.get();
-  if (!s.done.includes(step)) set({ ...s, done: [...s.done, step] });
+  if (s.done.includes(step)) return;
+  set({ ...s, done: [...s.done, step] });
+  sfx.objective();
 }
 
 /** Chapter 2 finale: the map goes to one faction. Big boost for them, a drop for the others. */
@@ -74,6 +78,7 @@ export function giveMapTo(f: Faction) {
   const rep = { ...s.rep };
   for (const k of Object.keys(rep) as Faction[]) rep[k] = clamp(rep[k] + (k === f ? 40 : -20));
   set({ ...s, rep, mapTo: f, done: s.done.includes("ch2-choice") ? s.done : [...s.done, "ch2-choice"] });
+  sfx.objective();
 }
 
 /** Small reputation changes from later missions (how players win factions back). */

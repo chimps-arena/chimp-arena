@@ -26,6 +26,7 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { NearLabel } from "./items";
 import { EnvModel, Pet, type PetId } from "./env-models";
 import type { WorldProperty } from "./buildings";
+import { sfx } from "./audio";
 import { chapter1Done, HIDEOUT, isDone, storyStore, type StoryState } from "./story-state";
 
 type XZ = [number, number];
@@ -193,6 +194,32 @@ export function npcPositions(): { name: string; x: number; z: number; story: boo
   return out;
 }
 
+/** The local player's position, as last tracked (for objective markers). */
+export function playerPosition(): { x: number; z: number } {
+  return player;
+}
+
+/** Where an NPC or fixed interactable is right now (for objective markers). */
+export function npcPosition(key: string): { x: number; z: number } | null {
+  const n = live.get(key);
+  return n ? { x: n.x, z: n.z } : null;
+}
+
+/** Nearest registered interactable whose key starts with `prefix`. */
+export function nearestWithPrefix(prefix: string, x: number, z: number): { x: number; z: number } | null {
+  let best: { x: number; z: number } | null = null;
+  let bd = Infinity;
+  for (const [key, n] of live) {
+    if (!key.startsWith(prefix)) continue;
+    const d = Math.hypot(n.x - x, n.z - z);
+    if (d < bd) {
+      bd = d;
+      best = { x: n.x, z: n.z };
+    }
+  }
+  return best;
+}
+
 export function npcSpec(key: string | null): NpcSpec | null {
   return key ? (live.get(key)?.spec ?? null) : null;
 }
@@ -238,6 +265,7 @@ export function toggleTalk(): boolean {
   }
   if (talk.near) {
     setTalk({ ...talk, talking: talk.near });
+    sfx.ui();
     return true;
   }
   return false;

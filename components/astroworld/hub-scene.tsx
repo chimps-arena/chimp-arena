@@ -58,14 +58,16 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
-import { endTalk, npcPositions, Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
+import { endTalk, npcPositions, Npcs, playerPosition, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
 import { registerProperties } from "./property-panel";
 import { Astroburger, ASTROBURGER_COVERS } from "./astroburger";
 import { FlightOverlay, Starports, STARPORT_COVERS } from "./starports";
 import { Roadside, ROADSIDE_COVERS } from "./roadside";
 import { WorldMap } from "./world-map";
+import { audioStore, setMuted, sfx, startAudio } from "./audio";
 import { Story } from "./story";
+import { ObjectiveMarker, ObjectiveTracker } from "./objective";
 import { HIDEOUT, isDone, storyStore } from "./story-state";
 import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
@@ -292,6 +294,8 @@ interface LocalState {
   firing: boolean;
   aiming: boolean;
   camInit: boolean;
+  /** Metres walked since the last footstep sound. */
+  stepDist: number;
   view: CamView;
   /** Face view: camera angle around the player (0 = straight in front) and its height angle. */
   orbit: number;
@@ -390,11 +394,20 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     speedNow = Math.hypot(vx, vz);
     forwardNow = mz * pace;
     st.heading = st.yaw;
+    if (st.y <= 0.001 && speedNow > 0.5) {
+      st.stepDist += speedNow * dt;
+      const stride = st.crouch ? 1.4 : 2.1;
+      if (st.stepDist >= stride) {
+        st.stepDist = 0;
+        sfx.step(speedNow > 7);
+      }
+    }
 
     // Jump + gravity.
     if ((k.has(" ") || touch.jump) && st.y <= 0.001 && alive) {
       st.vy = JUMP_VELOCITY;
       st.crouch = false;
+      sfx.jump();
     }
     touch.jump = false;
     st.vy -= GRAVITY * dt;
@@ -446,6 +459,8 @@ function stepLocal(c: LocalCtx, rawDt: number) {
     if (st.ammo <= 0) {
       st.reloadUntil = now + RELOAD_MS;
       room.send("reload");
+      sfx.dry();
+      sfx.reload();
     } else {
       st.lastShot = now;
       st.ammo--;
@@ -476,6 +491,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
       const wall = shotBlockedAt(muzzle, shotDir, colliders, free);
       const end = muzzle.clone().addScaledVector(shotDir, wall);
       fx.emit({ kind: "flash", at: muzzle });
+      sfx.shot();
       fx.emit({ kind: "tracer", from: muzzle, to: end, color: look.glow });
       if (wall < free - 0.01) fx.emit({ kind: "impact", at: end });
       // Recoil: kick up, a little sideways.
@@ -617,6 +633,7 @@ function LocalPlayer({
     firing: false,
     aiming: false,
     camInit: false,
+    stepDist: 0,
     view: "third",
     orbit: 0,
     orbitPitch: 0.1,
@@ -649,13 +666,16 @@ function LocalPlayer({
     };
     const down = (e: KeyboardEvent) => {
       if (typing()) return;
+      startAudio();
       const k = e.key.toLowerCase();
+      if (k === "n" && !e.repeat) setMuted(!audioStore.get());
       if (e.repeat && (k === "c" || k === "control" || k === "f")) return;
       keys.current.add(k);
       if (k === "c" || k === "control") s.current.crouch = !s.current.crouch;
       if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) {
         s.current.reloadUntil = performance.now() + RELOAD_MS;
         room.send("reload");
+        sfx.reload();
       }
       if (k === "f") onToggleRover();
       if (k === "e" && !e.repeat) toggleTalk();
@@ -686,6 +706,7 @@ function LocalPlayer({
       st.pitch = THREE.MathUtils.clamp(st.pitch - e.movementY * sens, -1.2, 1.2);
     };
     const mdown = (e: MouseEvent) => {
+      startAudio();
       if (document.pointerLockElement !== el) {
         if (e.target === el) void el.requestPointerLock();
         return;
@@ -874,16 +895,37 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
           refresh();
         });
         joined.onMessage("chat", (line: HubChatBroadcast) => setChat((prev) => [...prev.slice(-49), line]));
-        joined.onMessage("kill", (k: HubKillBroadcast) => stores.kills.set([...stores.kills.get().slice(-5), { ...k, at: Date.now() }]));
+        joined.onMessage("kill", (k: HubKillBroadcast) => {
+          stores.kills.set([...stores.kills.get().slice(-5), { ...k, at: Date.now() }]);
+          if (k.killer === joined.sessionId) {
+            sfx.kill();
+            stores.killAt.set(Date.now());
+          }
+          if (k.victim === joined.sessionId) sfx.death();
+        });
         joined.onMessage("shot", (shot: HubShotBroadcast) => {
           if (shot.from === joined.sessionId) {
             if (shot.hit) {
               stores.hit.set(Date.now());
               fx.emit({ kind: "impact", at: shot.end });
+              sfx.hit();
             }
             return;
           }
           const shooter = (joined.state as HubState).players.get(shot.from);
+          const me = (joined.state as HubState).players.get(joined.sessionId);
+          if (me) {
+            const dx = shot.o.x - me.x;
+            const dz = shot.o.z - me.z;
+            const d = Math.hypot(dx, dz) || 1;
+            // +1 = to my right (right = (-cos ry, sin ry), as the camera uses).
+            const side = (dx * -Math.cos(me.ry) + dz * Math.sin(me.ry)) / d;
+            sfx.remoteShot(d, side);
+            if (shot.hit === joined.sessionId) {
+              sfx.hurt();
+              stores.hurt.set({ from: Math.atan2(dx, dz), at: Date.now() });
+            }
+          }
           fx.emit({ kind: "flash", at: shot.o });
           fx.emit({ kind: "tracer", from: shot.o, to: shot.end, color: characterById(shooter?.skin).glow });
           if (shot.hit) fx.emit({ kind: "impact", at: shot.end });
@@ -894,6 +936,7 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
         });
         joined.onMessage("travel", (t: HubTravelBroadcast) => {
           endTalk();
+          sfx.flight();
           stores.travel.set({ to: t.name, at: Date.now() });
           respawn.current = { x: t.x, z: t.z, ry: t.ry };
           setRespawnSeq((n) => n + 1);
@@ -1148,6 +1191,7 @@ const World3D = memo(function World3D({
       <Npcs props={props} places={places} />
       {news && NEWS_SPOTS.map((spot) => <NewsKiosk key={spot.key} news={news} spot={spot} />)}
       <SkyTraffic />
+      <ObjectiveTracker getMe={playerPosition} />
       <Astroburger />
       <Starports />
       <Roadside />
@@ -1215,6 +1259,10 @@ interface HudStores {
   kills: Store<Kill[]>;
   /** Last flight: where to and when (drives the flight cut-scene). */
   travel: Store<{ to: string; at: number }>;
+  /** Last time I was hit, and the world direction the shot came from (atan2(dx, dz) from me). */
+  hurt: Store<{ from: number; at: number }>;
+  /** Last time I got a kill (kill hit marker). */
+  killAt: Store<number>;
   hit: Store<number>;
 }
 function createHudStores(): HudStores {
@@ -1222,6 +1270,8 @@ function createHudStores(): HudStores {
     hud: createStore<LocalHud>({ view: "third", ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE }),
     kills: createStore<Kill[]>([]),
     travel: createStore({ to: "", at: 0 }),
+    hurt: createStore({ from: 0, at: 0 }),
+    killAt: createStore(0),
     hit: createStore(0),
   };
 }
@@ -1282,6 +1332,9 @@ function LiveHud({
     return () => window.removeEventListener("keydown", key);
   }, []);
   const travel = useStore(stores.travel);
+  const hurt = useStore(stores.hurt);
+  const killAt = useStore(stores.killAt);
+  const muted = useSyncExternalStore(audioStore.subscribe, audioStore.get, audioStore.get);
   const [now, setNow] = useState(() => Date.now());
   const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
 
@@ -1306,6 +1359,11 @@ function LiveHud({
   const recentKills = kills.filter((k) => now - k.at < 6000);
   const killer = !snap.alive ? [...kills].reverse().find((k) => room && k.victim === room.sessionId) : undefined;
   const hitShown = now - hitAt < 300;
+  const killShown = now - killAt < 700;
+  // Damage direction: screen angle (clockwise from straight ahead) of whoever just hit me.
+  const meSnap = room ? snap.players.find((p) => p.id === room.sessionId) : undefined;
+  const hurtAge = now - hurt.at;
+  const hurtAngle = meSnap ? meSnap.ry - hurt.from : 0;
   const safe = hud.zone === CORE_ZONE;
   const myStats = snap.players.find((p) => room && p.id === room.sessionId);
   const talking = useSyncExternalStore(npcTalkStore.subscribe, () => npcTalkStore.get().talking !== null, () => false);
@@ -1336,7 +1394,11 @@ function LiveHud({
             <span className="absolute left-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
             <span className="absolute right-0 top-1/2 h-0.5 w-2 -translate-y-1/2 bg-white/90" />
             <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-            {hitShown && <span className="absolute inset-[-6px] text-center text-2xl font-black leading-[46px] text-red-400">✕</span>}
+            {killShown ? (
+              <span className="absolute inset-[-14px] text-center text-4xl font-black leading-[62px] text-red-500 drop-shadow-[0_0_6px_rgba(239,68,68,0.9)]">✕</span>
+            ) : (
+              hitShown && <span className="absolute inset-[-6px] text-center text-2xl font-black leading-[46px] text-white">✕</span>
+            )}
           </div>
         ) : (
           <span className="block h-1.5 w-1.5 rounded-full bg-white/70" />
@@ -1396,6 +1458,18 @@ function LiveHud({
         >
           🗺<span className="hidden sm:inline"> Map (M)</span>
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            startAudio();
+            setMuted(!muted);
+          }}
+          className="rounded-lg border border-white/30 bg-black/70 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/90"
+          aria-label={muted ? "Sound off" : "Sound on"}
+          title={muted ? "Sound off (N)" : "Sound on (N)"}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
       <div className="pointer-events-none flex flex-col items-end gap-1">
         {recentKills.map((k) => (
@@ -1410,8 +1484,15 @@ function LiveHud({
     {room && (
       <div className={`pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 bottom-3`}>
         <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">{myStats ? `${myStats.kills} kills · ${myStats.deaths} deaths` : ""}</div>
-        <div className="h-2.5 w-56 overflow-hidden rounded-full border border-white/20 bg-black/60">
-          <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${(snap.hp / MAX_HP) * 100}%` }} />
+        <div className="flex w-56 gap-1">
+          {Array.from({ length: 5 }, (_, i) => {
+            const fill = Math.max(0, Math.min(1, snap.hp / (MAX_HP / 5) - i));
+            return (
+              <div key={i} className="h-2.5 flex-1 overflow-hidden rounded-sm border border-white/20 bg-black/60">
+                <div className={`h-full transition-all ${snap.hp > 40 ? "bg-emerald-400" : "bg-red-500"}`} style={{ width: `${fill * 100}%` }} />
+              </div>
+            );
+          })}
         </div>
       </div>
     )}
@@ -1427,12 +1508,24 @@ function LiveHud({
       </div>
     )}
 
+    {/* damage direction: a red arc on the side the shot came from */}
+    {room && snap.alive && hurt.at > 0 && hurtAge < 1200 && (
+      <svg
+        className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2"
+        viewBox="-100 -100 200 200"
+        style={{ opacity: 1 - hurtAge / 1200, transform: `translate(-50%, -50%) rotate(${(hurtAngle * 180) / Math.PI}deg)` }}
+      >
+        <path d="M -38 -88 A 96 96 0 0 1 38 -88" fill="none" stroke="#ef4444" strokeWidth={9} strokeLinecap="round" />
+      </svg>
+    )}
+
     {/* hurt vignette */}
     {room && snap.hp < MAX_HP && snap.alive && (
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
 
-    {/* story: first-visit briefing + chapter tracker */}
+    {/* story: objective marker + first-visit briefing + chapter tracker */}
+    {room && status === "online" && <ObjectiveMarker />}
     {room && status === "online" && !picking && <Story onArrive={stores.travel.subscribe} />}
 
     {/* full world map */}
@@ -1472,6 +1565,7 @@ function LiveHud({
             <span>E · talk / use</span>
             <span>V · camera (1st person, face)</span>
             <span>M · world map</span>
+            <span>N · sound on/off</span>
             <span>Tab · scoreboard</span>
             <span>Enter · chat</span>
             <span>Esc · free the mouse</span>
@@ -1713,6 +1807,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     touchInput.current[flag] = on;
   }, []);
   const lookStart = useCallback((e: React.PointerEvent) => {
+    startAudio();
     lastLook.current = { x: e.clientX, y: e.clientY };
   }, []);
   const lookMove = useCallback((e: React.PointerEvent) => {
