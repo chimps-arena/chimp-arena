@@ -1,6 +1,358 @@
 {
+  "chimp-1of1-cleopatra": {
+    "file": "chimp-1of1-cleopatra.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "chimp-1of1-dex": {
+    "file": "chimp-1of1-dex.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "chimp-1of1-kill-boy-tommy": {
+    "file": "chimp-1of1-kill-boy-tommy.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "chimp-1of1-lex": {
+    "file": "chimp-1of1-lex.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "chimp-1of1-napoleon": {
+    "file": "chimp-1of1-napoleon.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-apex-rex": {
+    "file": "rare-apex-rex.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-aria": {
+    "file": "rare-aria.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-ash-cold": {
+    "file": "rare-ash-cold.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-atisha-the-b": {
+    "file": "rare-atisha-the-b.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-bad-mike": {
+    "file": "rare-bad-mike.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-bertha-brick-hit": {
+    "file": "rare-bertha-brick-hit.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-caesar": {
+    "file": "rare-caesar.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-deezy-chimp": {
+    "file": "rare-deezy-chimp.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-ella": {
+    "file": "rare-ella.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-eva": {
+    "file": "rare-eva.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-foxtrot": {
+    "file": "rare-foxtrot.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-isabella": {
+    "file": "rare-isabella.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-kanuchi": {
+    "file": "rare-kanuchi.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-lady-winter": {
+    "file": "rare-lady-winter.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-lord-julian": {
+    "file": "rare-lord-julian.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-lucian": {
+    "file": "rare-lucian.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-major-mike": {
+    "file": "rare-major-mike.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-rambo": {
+    "file": "rare-rambo.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-senex": {
+    "file": "rare-senex.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-soloman": {
+    "file": "rare-soloman.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "rare-victoria": {
+    "file": "rare-victoria.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-alena-the-wrench": {
+    "file": "std-alena-the-wrench.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-alisa": {
+    "file": "std-alisa.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-asher": {
+    "file": "std-asher.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
   "std-astrogaurd-safu-security": {
     "file": "std-astrogaurd-safu-security.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-big-time-danny": {
+    "file": "std-big-time-danny.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-big-trader-joe": {
+    "file": "std-big-trader-joe.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-billy-the-chimp": {
+    "file": "std-billy-the-chimp.glb",
     "clips": [
       "Running",
       "Walking",
@@ -21,8 +373,85 @@
       "victory"
     ]
   },
+  "std-dan-the-bolt": {
+    "file": "std-dan-the-bolt.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-dave-from-dock-7": {
+    "file": "std-dave-from-dock-7.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
   "std-death": {
     "file": "std-death.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-drink-mixer": {
+    "file": "std-drink-mixer.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-lan-the-racecar-driver": {
+    "file": "std-lan-the-racecar-driver.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-missy-wif-you": {
+    "file": "std-missy-wif-you.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-pompus-the-first": {
+    "file": "std-pompus-the-first.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-sneako": {
+    "file": "std-sneako.glb",
     "clips": [
       "Running",
       "Walking",
