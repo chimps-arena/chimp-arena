@@ -48,14 +48,20 @@ export interface NpcSpec {
   phase: number;
   /** Carries a rifle (security, military, bounty hunter). */
   armed?: boolean;
-  /** Not a character: something to use (e.g. the Astro-News kiosk). */
-  kind?: "npc" | "news";
+  /** Not a character: something to use (news kiosk, a property, a ship to board). */
+  kind?: "npc" | "news" | "property" | "port";
+  /** How close you must be to use it, metres (default TALK_RANGE). */
+  range?: number;
+  /** For kind "property": the property it opens. */
+  property?: WorldProperty;
+  /** For kind "port": where this ship/pad sits (its starport or dock id). */
+  portId?: string;
   /** Shown in the prompt instead of the character's name. */
   title?: string;
 }
 
 /** A point `local` metres in front of/beside a building lot, in world space. */
-function atLot(place: Placement, local: XZ): XZ {
+export function atLot(place: Placement, local: XZ): XZ {
   const c = Math.cos(place.ry);
   const s = Math.sin(place.ry);
   return [place.x + local[0] * c + local[1] * s, place.z - local[0] * s + local[1] * c];
@@ -88,7 +94,17 @@ export function npcSpecs(props: WorldProperty[], places: Map<string, Placement>)
   });
 
   // Military: patrols the plaza between the Exchange and the property ring.
-  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 55, dir: 1 }, speed: 1.7, phase: 0, armed: true });
+  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 72, dir: 1 }, speed: 1.7, phase: 0, armed: true });
+
+  // Astroburger: Drink Mixer works the terrace in front of the diner (see astroburger.tsx).
+  out.push({
+    key: "astroburger-staff",
+    characterId: "std-drink-mixer",
+    role: "Astroburger · front of house",
+    route: { kind: "line", a: [-7, -49], b: [7, -49], pause: 4 },
+    speed: 1.2,
+    phase: 0,
+  });
 
   // Bounty Hunter: stalks the open ground outside the safe zone.
   out.push({ key: "bounty", characterId: "std-death", role: "Bounty Hunter", route: { kind: "circle", c: [0, 0], r: 230, dir: -1 }, speed: 2.4, phase: 0, armed: true });
@@ -180,10 +196,11 @@ export function trackPlayerForNpcs(x: number, z: number) {
   player.x = x;
   player.z = z;
   let near: string | null = null;
-  let best = TALK_RANGE;
+  // Nearest thing in its own range (a property's frontage is wider than an NPC).
+  let best = Infinity;
   for (const [key, n] of live) {
     const d = Math.hypot(n.x - x, n.z - z);
-    if (d < best) {
+    if (d < (n.spec.range ?? TALK_RANGE) && d < best) {
       best = d;
       near = key;
     }
@@ -192,7 +209,7 @@ export function trackPlayerForNpcs(x: number, z: number) {
   // Walking away ends the conversation.
   if (talking) {
     const n = live.get(talking);
-    if (!n || Math.hypot(n.x - x, n.z - z) > TALK_RANGE + 3) talking = null;
+    if (!n || Math.hypot(n.x - x, n.z - z) > (n.spec.range ?? TALK_RANGE) + 3) talking = null;
   }
   setTalk({ near, talking });
 }

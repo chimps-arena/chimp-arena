@@ -5,13 +5,15 @@ import {
   inSafeZone,
   MAX_HP,
   SHOT_DAMAGE,
+  STARPORTS,
+  type HubTravelBroadcast,
   type HubChatBroadcast,
   type HubKillBroadcast,
   type HubRespawnMessage,
   type HubShotBroadcast,
 } from "@chimp-arena/shared";
 import appConfig from "../app.config";
-import { setWorldCovers } from "../world-covers";
+import { setWorldCovers, setWorldDocks } from "../world-covers";
 import { HubRoomState } from "./HubRoom";
 
 type State = InstanceType<typeof HubRoomState>;
@@ -228,6 +230,66 @@ describe("HubRoom (Astroworld)", () => {
         await waitFor(() => t.hp === MAX_HP - SHOT_DAMAGE);
       } finally {
         setWorldCovers([]);
+      }
+    });
+  });
+
+  describe("starports", () => {
+    it("flies a player from a starport to another, server-side, with a cooldown", async () => {
+      const room = await colyseus.createRoom("hub");
+      const c = await colyseus.connectTo(room, { name: "Flyer" });
+      const server = colyseus.getRoomById<State>(room.roomId);
+      const p = server.state.players.get(c.sessionId)!;
+      const arrivals: HubTravelBroadcast[] = [];
+      c.onMessage("travel", (m: HubTravelBroadcast) => arrivals.push(m));
+
+      const [core, belt, rim] = STARPORTS;
+      // Far from any ship: refused.
+      p.x = 0;
+      p.z = 0;
+      c.send("travel", { to: belt.id });
+      await settle();
+      expect(arrivals).toHaveLength(0);
+
+      // At the Core starport: flies to the Belt and lands next to its pad.
+      p.x = core.x;
+      p.z = core.z;
+      c.send("travel", { to: belt.id });
+      await waitFor(() => arrivals.length === 1);
+      expect(arrivals[0].to).toBe(belt.id);
+      expect(Math.hypot(p.x - belt.x, p.z - belt.z)).toBeLessThan(25);
+
+      // Straight back again: too soon.
+      p.x = belt.x;
+      p.z = belt.z;
+      c.send("travel", { to: rim.id });
+      await settle();
+      expect(arrivals).toHaveLength(1);
+    });
+
+    it("lets you board a docked ship, but not fly to where you already are", async () => {
+      setWorldDocks([{ id: "dock-1", x: 300, z: 300 }]);
+      try {
+        const room = await colyseus.createRoom("hub");
+        const c = await colyseus.connectTo(room, { name: "Docker" });
+        const server = colyseus.getRoomById<State>(room.roomId);
+        const p = server.state.players.get(c.sessionId)!;
+        const arrivals: HubTravelBroadcast[] = [];
+        c.onMessage("travel", (m: HubTravelBroadcast) => arrivals.push(m));
+
+        p.x = STARPORTS[0].x;
+        p.z = STARPORTS[0].z;
+        c.send("travel", { to: STARPORTS[0].id });
+        await settle();
+        expect(arrivals).toHaveLength(0);
+
+        p.x = 305;
+        p.z = 300;
+        c.send("travel", { to: STARPORTS[0].id });
+        await waitFor(() => arrivals.length === 1);
+        expect(arrivals[0].to).toBe(STARPORTS[0].id);
+      } finally {
+        setWorldDocks([]);
       }
     });
   });

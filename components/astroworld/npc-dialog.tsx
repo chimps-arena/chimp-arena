@@ -14,12 +14,16 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import { characterById, HEADSHOT_DAMAGE, RESPAWN_MS, SHOT_DAMAGE, SHOT_RANGE } from "@chimp-arena/shared";
 import { endTalk, npcSpec, npcTalkStore, toggleTalk } from "./npcs";
 import { NewsReader, type NewsIndex } from "./news";
+import { PropertyPanel } from "./property-panel";
+import { TravelPanel } from "./starports";
 
 export interface NpcContext {
   players: { name: string; kills: number; deaths: number }[];
   online: number;
   propertyCount: number;
   magSize: number;
+  /** Ask the server to fly me to a starport. */
+  travel: (to: string) => void;
 }
 
 interface Topic {
@@ -172,6 +176,17 @@ const SCRIPTS: Record<string, Script> = {
       { q: "What's a Charged Crystal?", a: () => "One Void Crystal plus one Charge Kit. There's one glowing in front of HQ if you want a look." },
     ],
   },
+  "std-drink-mixer": {
+    intro: "Welcome to Astroburger! Best burgers this side of the Belt, and the only shakes that stay put in zero-G.",
+    topics: [
+      { q: "What's good today?", a: () => "The Astro Burger, always. Neon Fries if you need the energy, and a Zero-G Banana Shake to wash it down. The Power Bar is for people in a hurry." },
+      {
+        q: "Can I order?",
+        a: () => "Not yet. The kitchen opens with the item shop: food and drink as items you own, made from real Astrofoods kits. For now, take a look at the menu out front.",
+      },
+      { q: "Heard any news?", a: () => "Read Astro-News at the stand by the Rover Showroom. Sector 7 is crawling with Astrocorp security, and nobody's seen Kill Boy Tommy in days." },
+    ],
+  },
   "std-techno-left-the-building": {
     intro: "Techno, comms. Every signal in Astroworld bounces off a tower like this one.",
     topics: [
@@ -198,13 +213,16 @@ const FALLBACK: Script = { intro: "…", topics: [] };
 export function NpcHud({ context, touch, news }: { context: NpcContext; touch: boolean; news: NewsIndex | null }) {
   const st = useSyncExternalStore(npcTalkStore.subscribe, npcTalkStore.get, npcTalkStore.get);
   if (st.talking) {
-    if (npcSpec(st.talking)?.kind === "news") return news ? <NewsReader news={news} /> : null;
+    const using = npcSpec(st.talking);
+    if (using?.kind === "news") return news ? <NewsReader news={news} /> : null;
+    if (using?.kind === "property" && using.property) return <PropertyPanel key={st.talking} property={using.property} />;
+    if (using?.kind === "port") return <TravelPanel key={st.talking} portKey={st.talking} onTravel={context.travel} />;
     return <Conversation key={st.talking} npcKey={st.talking} context={context} />;
   }
   const near = npcSpec(st.near);
   if (!near) return null;
   const name = near.title ?? characterById(near.characterId).name;
-  const verb = near.kind === "news" ? "Read" : "Talk to";
+  const verb = near.kind === "news" ? "Read" : near.kind === "property" ? "Visit" : near.kind === "port" ? "Board" : "Talk to";
   return (
     <div className="absolute inset-x-0 top-[36%] z-30 flex justify-center">
       {touch ? (

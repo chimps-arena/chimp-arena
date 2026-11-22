@@ -163,6 +163,23 @@ export interface HubRespawnMessage {
   ry: number;
 }
 
+/** Client -> server: fly from the starport/dock I'm at to another starport. */
+export interface HubTravelMessage {
+  to: string;
+}
+
+/** Server -> one client: you flew to this starport and stepped off here. */
+export interface HubTravelBroadcast {
+  to: string;
+  name: string;
+  x: number;
+  z: number;
+  ry: number;
+}
+
+/** Seconds between flights per player (stops ping-ponging around the map). */
+export const TRAVEL_COOLDOWN_MS = 8000;
+
 /** Server -> every client: one chat line. */
 export interface HubChatBroadcast {
   id: string;

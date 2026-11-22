@@ -48,6 +48,7 @@ import {
   type HubKillBroadcast,
   type HubMode,
   type HubRespawnMessage,
+  type HubTravelBroadcast,
   type HubShotBroadcast,
   type Placement,
 } from "@chimp-arena/shared";
@@ -55,9 +56,12 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
-import { Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
+import { endTalk, Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
-import { fetchNews, KIOSK, NewsKiosk, type NewsIndex } from "./news";
+import { registerProperties } from "./property-panel";
+import { Astroburger, ASTROBURGER_COVERS } from "./astroburger";
+import { FlightOverlay, Starports, STARPORT_COVERS } from "./starports";
+import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
 import { GearModel } from "./gear";
@@ -753,6 +757,8 @@ function LocalPlayer({
 
 function PropertyField({ props, places }: { props: WorldProperty[]; places: Map<string, Placement> }) {
   const camera = useThree((st) => st.camera);
+  // E at the front of any lot opens its property panel.
+  useEffect(() => registerProperties(props, places), [props, places]);
   // `near` = within sign range now; `seen` = ever been near (its label stays
   // mounted after that and is only hidden, see NameTag).
   const [view, setView] = useState<{ near: Set<string>; seen: Set<string> }>({ near: new Set(), seen: new Set() });
@@ -868,6 +874,12 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
         });
         joined.onMessage("respawn", (spot: HubRespawnMessage) => {
           respawn.current = spot;
+          setRespawnSeq((n) => n + 1);
+        });
+        joined.onMessage("travel", (t: HubTravelBroadcast) => {
+          endTalk();
+          stores.travel.set({ to: t.name, at: Date.now() });
+          respawn.current = { x: t.x, z: t.z, ry: t.ry };
           setRespawnSeq((n) => n + 1);
         });
         joined.onLeave((code) => {
@@ -1116,8 +1128,10 @@ const World3D = memo(function World3D({
       <WorldScenery showroomRover={SHOWROOM_ROVER} showroomLot={SHOWROOM_LOT} />
       <PropertyField props={props} places={places} />
       <Npcs props={props} places={places} />
-      {news && <NewsKiosk news={news} />}
+      {news && NEWS_SPOTS.map((spot) => <NewsKiosk key={spot.key} news={news} spot={spot} />)}
       <SkyTraffic />
+      <Astroburger />
+      <Starports />
       <Effects />
 
       {room &&
@@ -1180,12 +1194,15 @@ function useStore<T>(store: Store<T>): T {
 interface HudStores {
   hud: Store<LocalHud>;
   kills: Store<Kill[]>;
+  /** Last flight: where to and when (drives the flight cut-scene). */
+  travel: Store<{ to: string; at: number }>;
   hit: Store<number>;
 }
 function createHudStores(): HudStores {
   return {
     hud: createStore<LocalHud>({ view: "third", ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE }),
     kills: createStore<Kill[]>([]),
+    travel: createStore({ to: "", at: 0 }),
     hit: createStore(0),
   };
 }
@@ -1229,6 +1246,7 @@ function LiveHud({
   const hud = useStore(stores.hud);
   const kills = useStore(stores.kills);
   const hitAt = useStore(stores.hit);
+  const travel = useStore(stores.travel);
   const [now, setNow] = useState(() => Date.now());
   const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
 
@@ -1256,7 +1274,13 @@ function LiveHud({
   const safe = hud.zone === CORE_ZONE;
   const myStats = snap.players.find((p) => room && p.id === room.sessionId);
   const talking = useSyncExternalStore(npcTalkStore.subscribe, () => npcTalkStore.get().talking !== null, () => false);
-  const npcContext: NpcContext = { players: snap.players, online, propertyCount, magSize: MAG_SIZE };
+  const npcContext: NpcContext = {
+    players: snap.players,
+    online,
+    propertyCount,
+    magSize: MAG_SIZE,
+    travel: (to: string) => room?.send("travel", { to }),
+  };
 
   return (
     <>
@@ -1360,6 +1384,9 @@ function LiveHud({
     {room && snap.hp < MAX_HP && snap.alive && (
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
+
+    {/* flight cut-scene after boarding a ship */}
+    {travel.at > 0 && now - travel.at < 2600 && <FlightOverlay to={travel.to} since={now - travel.at} />}
 
     {/* NPCs: talk prompt + conversation */}
     {room && mode === "walk" && snap.alive && !picking && <NpcHud context={npcContext} touch={touch} news={news} />}
@@ -1527,7 +1554,9 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
       [SHOWROOM.x - 7.5, SHOWROOM.z + 2, 2.4, 2.4],
       [SHOWROOM.x + 7.5, SHOWROOM.z + 2, 2.4, 2.4],
       [SHOWROOM.x, SHOWROOM.z - 7.5, 2.4, 2.4],
-      [KIOSK.x, KIOSK.z, 3.2, 5.5],
+      ...NEWS_SPOTS.map((k): Cover => [k.x, k.z, 3.2, 5.5]),
+      ...ASTROBURGER_COVERS,
+      ...STARPORT_COVERS,
       ...exchangeColliders(),
       ...props.flatMap((p) => {
         const at = places.get(p.id);

@@ -169,3 +169,50 @@ export function shotBlockedAt(o: { x: number; y: number; z: number }, d: { x: nu
   }
   return best;
 }
+
+/* -------------------------------- starports -------------------------------- */
+
+/**
+ * Starports: landing pads with a ship you can board to fly to another one.
+ * One in the Core and one at the edge of each district (on the left of the
+ * road in, the newsstand is on the right). Fast travel for a big map.
+ */
+export interface Starport {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  /** Facing of the pad's ship (radians). */
+  ry: number;
+}
+
+const STARPORT_DISTRICT_INSET = LOT_SPACING * 3.6 + 30;
+
+export const STARPORTS: Starport[] = [
+  { id: "core", name: "Astroworld Core", x: 54, z: 34, ry: Math.atan2(-54, -34) },
+  ...DISTRICTS.map((d) => {
+    const len = Math.hypot(d.x, d.z);
+    const ux = d.x / len;
+    const uz = d.z / len;
+    const back = len - STARPORT_DISTRICT_INSET;
+    return {
+      id: d.zone.toLowerCase().replace(/[^a-z]+/g, "-"),
+      name: d.zone,
+      x: ux * back - uz * 22,
+      z: uz * back + ux * 22,
+      ry: Math.atan2(-ux, -uz),
+    };
+  }),
+];
+
+/** You can board a ship within this many metres of its pad or dock. */
+export const BOARD_RANGE = 14;
+
+/** Where you step off at a starport: in front of the pad, spread out a little. */
+export function arrivalSpot(port: Starport, rnd: () => number = Math.random): { x: number; z: number; ry: number } {
+  const ahead = 13 + rnd() * 4;
+  const side = (rnd() - 0.5) * 8;
+  const fx = Math.sin(port.ry);
+  const fz = Math.cos(port.ry);
+  return { x: port.x + fx * ahead + fz * side, z: port.z + fz * ahead - fx * side, ry: port.ry };
+}

@@ -72,7 +72,7 @@ export const PRODUCT_BY_TYPE: Partial<Record<string, ItemId[]>> = {
   greenhouse: ["kit-food", "kit-drink", "nutrition-cell"],
   dome: ["nutrition-cell", "drink-canister"],
   field: ["kit-food", "nutrition-cell"],
-  cantina: ["drink", "drink-canister", "kit-drink"],
+  cantina: ["drink", "drink-canister", "kit-drink", "meal", "power-bar"],
   stall: ["meal", "power-bar", "nutrition-cell"],
   club: ["drink", "meal"],
 };

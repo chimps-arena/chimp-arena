@@ -14,7 +14,7 @@
  * wallet's owned NFTs comes with real inventories.
  */
 import { Client, Room } from "@colyseus/core";
-import { worldCovers } from "../world-covers";
+import { worldCovers, worldDocks } from "../world-covers";
 import { schema, t } from "@colyseus/schema";
 import { englishDataset, englishRecommendedTransformers, RegExpMatcher, TextCensor } from "obscenity";
 import {
@@ -35,8 +35,12 @@ import {
   MAX_Y,
   MUZZLE_SLACK,
   NAME_MAX_LENGTH,
+  arrivalSpot,
+  BOARD_RANGE,
   rayVsPlayer,
   RESPAWN_MS,
+  STARPORTS,
+  TRAVEL_COOLDOWN_MS,
   shotBlockedAt,
   SAFE_RADIUS,
   SHOT_DAMAGE,
@@ -51,6 +55,8 @@ import type {
   HubModeMessage,
   HubMoveMessage,
   HubRespawnMessage,
+  HubTravelBroadcast,
+  HubTravelMessage,
   HubShootMessage,
   HubShotBroadcast,
   HubSkinMessage,
@@ -97,6 +103,7 @@ const vec = (v: unknown): v is Vec3 => !!v && finite((v as Vec3).x, (v as Vec3).
 
 interface Track {
   lastMoveAt: number;
+  lastTravelAt: number;
   lastShotAt: number;
   chatTimes: number[];
 }
@@ -167,6 +174,8 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
       track.lastMoveAt = now;
     });
 
+    this.onMessage("travel", (client, msg: HubTravelMessage) => this.travel(client, msg));
+
     this.onMessage("mode", (client, msg: HubModeMessage) => {
       const player = this.state.players.get(client.sessionId);
       if (!player || !player.alive) return;
@@ -202,6 +211,35 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
       };
       this.broadcast("chat", line);
     });
+  }
+
+  /**
+   * Fly a player between starports. Only from a ship: within BOARD_RANGE of a
+   * starport pad or a dock lot, alive, on foot, not too soon after the last
+   * flight. The server moves them, so nobody can teleport by faking moves.
+   */
+  private travel(client: Client, msg: HubTravelMessage): void {
+    const player = this.state.players.get(client.sessionId);
+    const track = player && this.tracks.get(player);
+    if (!player || !track || !player.alive || player.mode !== "walk") return;
+    const dest = STARPORTS.find((s) => s.id === msg?.to);
+    if (!dest) return;
+    const now = Date.now();
+    if (now - track.lastTravelAt < TRAVEL_COOLDOWN_MS) return;
+    const near = (x: number, z: number) => Math.hypot(player.x - x, player.z - z) <= BOARD_RANGE;
+    const from = STARPORTS.find((s) => near(s.x, s.z));
+    if (!from && !worldDocks().some((d) => near(d.x, d.z))) return;
+    if (from?.id === dest.id) return;
+
+    const spot = arrivalSpot(dest);
+    player.x = spot.x;
+    player.z = spot.z;
+    player.y = 0;
+    player.ry = spot.ry;
+    track.lastTravelAt = now;
+    track.lastMoveAt = now;
+    const arrived: HubTravelBroadcast = { to: dest.id, name: dest.name, ...spot };
+    client.send("travel", arrived);
   }
 
   private shoot(client: Client, msg: HubShootMessage): void {
@@ -289,7 +327,7 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     player.ry = spot.ry;
 
     this.state.players.set(client.sessionId, player);
-    this.tracks.set(player, { lastMoveAt: Date.now(), lastShotAt: 0, chatTimes: [] });
+    this.tracks.set(player, { lastMoveAt: Date.now(), lastTravelAt: 0, lastShotAt: 0, chatTimes: [] });
   }
 
   /**

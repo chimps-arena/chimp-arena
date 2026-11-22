@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { DISTRICTS, LOT_SPACING } from "@chimp-arena/shared";
 import { endTalk, registerInteractable, type NpcSpec } from "./npcs";
 
 const NEWS_DIR = "/astroworld/news/";
@@ -35,45 +36,105 @@ export async function fetchNews(): Promise<NewsIndex | null> {
   }
 }
 
-/** Kiosk spot in the Core: mirrors the Rover Showroom across the plaza. */
-export const KIOSK = { x: -26, z: -14 };
-const KIOSK_SPEC: NpcSpec = {
-  key: "news-kiosk",
+export interface NewsSpot {
+  key: string;
+  x: number;
+  z: number;
+  /** Facing of the screen (radians, Y axis). */
+  ry: number;
+}
+
+/**
+ * Newsstands: two in the Core (by the Rover Showroom, and on the way to
+ * Astroburger), and one at the entrance of each district, beside the road,
+ * facing travellers arriving from the Core.
+ */
+const DISTRICT_HALF = LOT_SPACING * 3.6;
+export const NEWS_SPOTS: NewsSpot[] = [
+  { key: "news-core", x: -26, z: -14, ry: Math.PI / 8 },
+  { key: "news-core-south", x: 22, z: -46, ry: -0.4 },
+  ...DISTRICTS.map((d) => {
+    const len = Math.hypot(d.x, d.z);
+    const ux = d.x / len;
+    const uz = d.z / len;
+    const back = len - DISTRICT_HALF - 14;
+    return { key: `news-${d.zone}`, x: ux * back + uz * 14, z: uz * back - ux * 14, ry: Math.atan2(-ux, -uz) };
+  }),
+];
+
+
+const kioskSpec = (spot: NewsSpot): NpcSpec => ({
+  key: spot.key,
   characterId: "",
   role: "Astro-News · the official galactic news network",
   title: "Astro-News",
   kind: "news",
-  route: { kind: "post", at: [KIOSK.x, KIOSK.z + 3.2], face: 0 },
+  range: 6,
+  route: { kind: "post", at: [spot.x, spot.z], face: spot.ry },
   speed: 0,
   phase: 0,
-};
+});
 
 const frameMat = new THREE.MeshStandardMaterial({ color: "#2a2638", metalness: 0.7, roughness: 0.3 });
 const box = new THREE.BoxGeometry(1, 1, 1);
 
-function useVideoTexture(src: string | undefined) {
-  const [tex, setTex] = useState<THREE.VideoTexture | null>(null);
-  useEffect(() => {
-    if (!src) return;
+/**
+ * One shared video per clip, however many newsstands show it: a single
+ * decoder, every screen in sync. Released when the last screen unmounts.
+ */
+const sharedVideos = new Map<string, { tex: THREE.VideoTexture; video: HTMLVideoElement; ready: Promise<void>; users: number }>();
+
+function acquireVideo(src: string) {
+  let entry = sharedVideos.get(src);
+  if (!entry) {
     const v = document.createElement("video");
     v.src = src;
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
     v.crossOrigin = "anonymous";
-    const t = new THREE.VideoTexture(v);
-    t.colorSpace = THREE.SRGBColorSpace;
-    const start = () => {
-      void v.play().catch(() => {});
-      setTex(t);
-    };
-    v.addEventListener("loadeddata", start, { once: true });
+    const tex = new THREE.VideoTexture(v);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const ready = new Promise<void>((resolve) => {
+      v.addEventListener(
+        "loadeddata",
+        () => {
+          void v.play().catch(() => {});
+          resolve();
+        },
+        { once: true },
+      );
+    });
     v.load();
+    entry = { tex, video: v, ready, users: 0 };
+    sharedVideos.set(src, entry);
+  }
+  entry.users++;
+  return entry;
+}
+
+function releaseVideo(src: string) {
+  const entry = sharedVideos.get(src);
+  if (!entry || --entry.users > 0) return;
+  entry.video.pause();
+  entry.video.removeAttribute("src");
+  entry.video.load();
+  entry.tex.dispose();
+  sharedVideos.delete(src);
+}
+
+function useVideoTexture(src: string | undefined) {
+  const [tex, setTex] = useState<THREE.VideoTexture | null>(null);
+  useEffect(() => {
+    if (!src) return;
+    let live = true;
+    const entry = acquireVideo(src);
+    void entry.ready.then(() => {
+      if (live) setTex(entry.tex);
+    });
     return () => {
-      v.pause();
-      v.removeAttribute("src");
-      v.load();
-      t.dispose();
+      live = false;
+      releaseVideo(src);
     };
   }, [src]);
   return tex;
@@ -101,13 +162,18 @@ function useImageTexture(src: string | undefined) {
   return tex;
 }
 
-/** The kiosk in the world. Registers itself so E opens the reader. */
-export function NewsKiosk({ news }: { news: NewsIndex }) {
-  useEffect(() => registerInteractable(KIOSK_SPEC, KIOSK.x, KIOSK.z + 3.2), []);
+/** A newsstand in the world. Registers itself so E opens the reader. */
+export function NewsKiosk({ news, spot }: { news: NewsIndex; spot: NewsSpot }) {
+  useEffect(() => {
+    // The reading spot is just in front of the screen.
+    const fx = spot.x + Math.sin(spot.ry) * 3.2;
+    const fz = spot.z + Math.cos(spot.ry) * 3.2;
+    return registerInteractable(kioskSpec(spot), fx, fz);
+  }, [spot]);
   const video = useVideoTexture(news.breaking ? NEWS_DIR + news.breaking.video : undefined);
   const cover = useImageTexture(NEWS_DIR + news.pages[0].file);
   return (
-    <group position={[KIOSK.x, 0, KIOSK.z]} rotation={[0, Math.PI / 8, 0]}>
+    <group position={[spot.x, 0, spot.z]} rotation={[0, spot.ry, 0]}>
       {/* base + posts */}
       <mesh geometry={box} material={frameMat} position={[0, 0.15, 0]} scale={[7.5, 0.3, 3]} />
       <mesh geometry={box} material={frameMat} position={[-1.6, 2.4, -0.6]} scale={[0.25, 4.5, 0.25]} />
