@@ -180,6 +180,16 @@ export function registerInteractable(spec: NpcSpec, x: number, z: number): () =>
   return () => void live.delete(spec.key);
 }
 
+/** Where every character NPC is right now (for the world map). */
+export function npcPositions(): { name: string; x: number; z: number }[] {
+  const out: { name: string; x: number; z: number }[] = [];
+  for (const n of live.values()) {
+    if (n.spec.kind && n.spec.kind !== "npc") continue;
+    out.push({ name: characterById(n.spec.characterId).name, x: n.x, z: n.z });
+  }
+  return out;
+}
+
 export function npcSpec(key: string | null): NpcSpec | null {
   return key ? (live.get(key)?.spec ?? null) : null;
 }

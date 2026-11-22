@@ -56,11 +56,13 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
-import { endTalk, Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
+import { endTalk, npcPositions, Npcs, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
 import { registerProperties } from "./property-panel";
 import { Astroburger, ASTROBURGER_COVERS } from "./astroburger";
 import { FlightOverlay, Starports, STARPORT_COVERS } from "./starports";
+import { Roadside, ROADSIDE_COVERS } from "./roadside";
+import { WorldMap } from "./world-map";
 import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
@@ -108,6 +110,8 @@ const ROVER_SPEED = HUB_SPEED.rover * 0.92;
 const LOOK_SENS = 0.0022;
 /** Buildings within this range show their sign and load their art. */
 const NEAR_DISTANCE = 55;
+/** Most property signs shown at once (nearest first). */
+const MAX_NEAR = 5;
 
 /* ============================== local storage ============================== */
 
@@ -774,11 +778,17 @@ function PropertyField({ props, places }: { props: WorldProperty[]; places: Map<
     tick.current += dt;
     if (tick.current < 0.35) return;
     tick.current = 0;
-    const next = new Set<string>();
+    // Within range, nearest first, at most MAX_NEAR: a full district in view
+    // would otherwise stack a dozen signs on top of each other.
+    const inRange: [string, number][] = [];
     for (const p of props) {
       const at = places.get(p.id);
-      if (at && Math.hypot(at.x - camera.position.x, at.z - camera.position.z) < NEAR_DISTANCE) next.add(p.id);
+      if (!at) continue;
+      const d = Math.hypot(at.x - camera.position.x, at.z - camera.position.z);
+      if (d < NEAR_DISTANCE) inRange.push([p.id, d]);
     }
+    inRange.sort((a, b) => a[1] - b[1]);
+    const next = new Set(inRange.slice(0, MAX_NEAR).map(([id]) => id));
     if (next.size !== near.size || [...next].some((id) => !near.has(id))) {
       setView((v) => ({ near: next, seen: [...next].some((id) => !v.seen.has(id)) ? new Set([...v.seen, ...next]) : v.seen }));
     }
@@ -1112,7 +1122,9 @@ const World3D = memo(function World3D({
   const state = room?.state as HubState | undefined;
   return (
     <Canvas
-      className="!absolute inset-0"
+      // isolate: drei <Html> labels use huge z-indexes; this keeps them all
+      // below the HUD, map and menus, which are siblings of the canvas.
+      className="!absolute inset-0 isolate z-0"
       camera={{ fov: 70, near: 0.1, far: 3200, position: [0, 20, 40] }}
       dpr={[1, 1.6]}
       gl={{ toneMappingExposure: 1.15 }}
@@ -1132,6 +1144,7 @@ const World3D = memo(function World3D({
       <SkyTraffic />
       <Astroburger />
       <Starports />
+      <Roadside />
       <Effects />
 
       {room &&
@@ -1227,6 +1240,8 @@ function LiveHud({
   onToggleRover,
   onOpenPicker,
   news,
+  props,
+  places,
 }: {
   room: Room | null;
   status: Status;
@@ -1242,10 +1257,24 @@ function LiveHud({
   onToggleRover: () => void;
   onOpenPicker: () => void;
   news: NewsIndex | null;
+  props: WorldProperty[];
+  places: Map<string, Placement>;
 }) {
   const hud = useStore(stores.hud);
   const kills = useStore(stores.kills);
   const hitAt = useStore(stores.hit);
+  // World map (M).
+  const [mapOpen, setMapOpen] = useState(false);
+  const closeMap = useCallback(() => setMapOpen(false), []);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const a = document.activeElement;
+      if (a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement) return;
+      if ((e.key === "m" || e.key === "M") && !e.repeat) setMapOpen((o) => !o);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, []);
   const travel = useStore(stores.travel);
   const [now, setNow] = useState(() => Date.now());
   const [snap, setSnap] = useState<Snap>({ players: [], hp: MAX_HP, alive: true });
@@ -1349,6 +1378,14 @@ function LiveHud({
         >
           {mode === "walk" ? "🚙 Rover (F)" : "🚶 Walk (F)"}
         </button>
+        <button
+          type="button"
+          onClick={() => setMapOpen(true)}
+          disabled={!room}
+          className="rounded-lg border border-cyan-400/60 bg-black/70 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300 hover:bg-black/90 disabled:opacity-40"
+        >
+          🗺 Map (M)
+        </button>
       </div>
       <div className="pointer-events-none flex flex-col items-end gap-1">
         {recentKills.map((k) => (
@@ -1385,6 +1422,11 @@ function LiveHud({
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
 
+    {/* full world map */}
+    {mapOpen && room && (
+      <WorldMap props={props} places={places} players={snap.players} npcs={npcPositions()} meId={room.sessionId} onClose={closeMap} />
+    )}
+
     {/* flight cut-scene after boarding a ship */}
     {travel.at > 0 && now - travel.at < 2600 && <FlightOverlay to={travel.to} since={now - travel.at} />}
 
@@ -1408,6 +1450,7 @@ function LiveHud({
             <span>F · rover</span>
             <span>E · talk / use</span>
             <span>V · camera (1st person, face)</span>
+            <span>M · world map</span>
             <span>Tab · scoreboard</span>
             <span>Enter · chat</span>
             <span>Esc · free the mouse</span>
@@ -1557,6 +1600,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
       ...NEWS_SPOTS.map((k): Cover => [k.x, k.z, 3.2, 5.5]),
       ...ASTROBURGER_COVERS,
       ...STARPORT_COVERS,
+      ...ROADSIDE_COVERS,
       ...exchangeColliders(),
       ...props.flatMap((p) => {
         const at = places.get(p.id);
@@ -1693,6 +1737,8 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
         onToggleRover={toggleMode}
         onOpenPicker={openPicker}
         news={news}
+        props={props}
+        places={places}
       />
 
       {/* chat */}
