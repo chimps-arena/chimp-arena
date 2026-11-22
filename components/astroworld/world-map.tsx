@@ -11,6 +11,7 @@ import { CORE_RING, DISTRICTS, LOT_SPACING, ROAD_ANGLES, SAFE_RADIUS, STARPORTS,
 import type { WorldProperty } from "./buildings";
 import { NEWS_SPOTS } from "./news";
 import { ASTROBURGER } from "./astroburger";
+import { ARENA } from "@chimp-arena/shared";
 
 const SIZE = 1000;
 const K = SIZE / 2 / (WORLD_RADIUS + 20);
@@ -23,6 +24,7 @@ const LANDMARKS: { name: string; x: number; z: number; color: string; icon: stri
   { name: "Astrocorp HQ", x: 0, z: 0, color: "#a855f7", icon: "♛" },
   { name: "Rover Showroom", x: 26, z: -14, color: "#f5b301", icon: "🚙" },
   { name: "Astroburger", x: ASTROBURGER.x, z: ASTROBURGER.z, color: "#e879f9", icon: "🍔" },
+  { name: "The Arena", x: ARENA.x, z: ARENA.z, color: "#f5b301", icon: "⚔" },
 ];
 
 interface MapPlayer {
@@ -191,6 +193,7 @@ export function WorldMap({
           <span>🍔 Astroburger</span>
           <span>🚙 Rover Showroom</span>
           <span>♛ Astrocorp HQ</span>
+          <span>⚔ The Arena</span>
         </div>
         <div className="relative min-h-0 flex-1">
           <svg

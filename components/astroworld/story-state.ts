@@ -22,10 +22,14 @@ export interface StoryState {
   rep: Record<Faction, number>;
   /** Who got Tommy's map in Chapter 2. */
   mapTo: Faction | null;
+  /** Chapter 3: the faction sponsoring you in the Arena. */
+  sponsor: Faction | null;
+  /** Best Arena trial score (drones in 60 s). */
+  trialBest: number;
 }
 
 const KEY = "astroworld:story:v1";
-const FRESH: StoryState = { intro: false, done: [], rep: { astrocorp: 0, hunters: 0, rebels: 0 }, mapTo: null };
+const FRESH: StoryState = { intro: false, done: [], rep: { astrocorp: 0, hunters: 0, rebels: 0 }, mapTo: null, sponsor: null, trialBest: 0 };
 
 function load(): StoryState {
   try {
@@ -118,6 +122,42 @@ export const CHAPTER_2: Step[] = [
 ];
 
 export const chapter1Done = (s: StoryState) => CHAPTER_1.every((st) => isDone(s, st.id));
+export const chapter2Done = (s: StoryState) => isDone(s, "ch2-choice");
+
+// Chapter 3 steps come from Caesar's dialogue and the Arena trials.
+export const CHAPTER_3: Step[] = [
+  { id: "ch3-caesar", title: "Answer Caesar's summons", hint: "Caesar waits at the Arena gate. Fly to The Arena from any starport." },
+  { id: "ch3-sponsor", title: "Choose a sponsor", hint: "Ask Caesar: Astrocorp, the hunters or the rebels will back you." },
+  { id: "ch3-trial", title: "Pass a trial: 15 drones", hint: "Press E at the trial gate in the middle of the Arena. 60 seconds." },
+  { id: "ch3-champion", title: "Become a champion: 25 drones", hint: "Beat 25 in one trial. Every trial earns your sponsor's favour." },
+];
+
+/** Thresholds for the trial steps. */
+export const TRIAL_PASS = 15;
+export const TRIAL_CHAMPION = 25;
+
+/** Chapter 3: a faction backs you in the Arena (+10 with them). Can be changed later at Caesar. */
+export function setSponsor(f: Faction) {
+  const s = storyStore.get();
+  if (s.sponsor === f) return;
+  const first = !s.sponsor;
+  set({ ...s, sponsor: f, rep: { ...s.rep, [f]: clamp(s.rep[f] + (first ? 10 : 0)) } });
+  completeStep("ch3-sponsor");
+}
+
+/**
+ * A finished trial: +3 with your sponsor (+2 more for a new best), and the
+ * chapter steps it earns. This is how players win factions back over time.
+ */
+export function recordTrial(score: number) {
+  const s = storyStore.get();
+  const best = Math.max(s.trialBest, score);
+  const rep = { ...s.rep };
+  if (s.sponsor) rep[s.sponsor] = clamp(rep[s.sponsor] + 3 + (score > s.trialBest ? 2 : 0));
+  set({ ...s, rep, trialBest: best });
+  if (score >= TRIAL_PASS) completeStep("ch3-trial");
+  if (score >= TRIAL_CHAMPION) completeStep("ch3-champion");
+}
 
 /** Tommy's hideout: out in the open ground between the Belt and the Rim. */
 export const HIDEOUT = { x: Math.sin(Math.PI / 3) * 470, z: Math.cos(Math.PI / 3) * 470 };

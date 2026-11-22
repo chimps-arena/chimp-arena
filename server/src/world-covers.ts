@@ -9,12 +9,13 @@
  * Until the first load succeeds - or with no SUPABASE_URL configured, as in
  * tests - there is no cover and shots behave as before.
  */
-import { buildingCovers, layoutProperties, type Cover } from "@chimp-arena/shared";
+import { arenaCovers, buildingCovers, layoutProperties, type Cover } from "@chimp-arena/shared";
 
 const REFRESH_MS = 10 * 60 * 1000;
 const RETRY_MS = 30 * 1000;
 
-let covers: readonly Cover[] = [];
+// The arena wall is fixed: it stops bullets even before the property layout loads.
+let covers: readonly Cover[] = arenaCovers();
 /** Dock lots (ships you can board), from the same layout. */
 let docks: readonly { id: string; x: number; z: number }[] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -45,7 +46,7 @@ async function load(url: string, key: string): Promise<boolean> {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const rows = (await res.json()) as { id: string; zone: string; type: string }[];
-    covers = buildingCovers(rows);
+    covers = [...buildingCovers(rows), ...arenaCovers()];
     const places = layoutProperties(rows);
     docks = rows.filter((r) => r.type === "dock").flatMap((r) => {
       const at = places.get(r.id);

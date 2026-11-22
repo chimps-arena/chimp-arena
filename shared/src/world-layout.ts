@@ -170,6 +170,41 @@ export function shotBlockedAt(o: { x: number; y: number; z: number }, d: { x: nu
   return best;
 }
 
+/* --------------------------------- the arena --------------------------------- */
+
+/**
+ * The Gladiator Arena (Chapter 3, "The Games"): a walled ring in the open
+ * ground between the Belt and the Helios Docks. A combat zone like the rest
+ * of the outskirts. Its wall is a ring of segments with four gates.
+ */
+const ARENA_ANGLE = (300 * Math.PI) / 180;
+const ARENA_DISTANCE = 470;
+export const ARENA = { x: Math.sin(ARENA_ANGLE) * ARENA_DISTANCE, z: Math.cos(ARENA_ANGLE) * ARENA_DISTANCE, radius: 44 };
+export const ARENA_WALL_HEIGHT = 7;
+/** Wall segments: 28 around the ring, minus 4 gates facing the compass points. */
+export const ARENA_SEGMENTS = 28;
+export const arenaGate = (i: number) => i % 7 === 0;
+
+export function inArena(x: number, z: number): boolean {
+  return Math.hypot(x - ARENA.x, z - ARENA.z) < ARENA.radius;
+}
+
+/** The arena wall as cover (bullets and walking): one cylinder per segment. */
+export function arenaCovers(): Cover[] {
+  const out: Cover[] = [];
+  const seg = (2 * Math.PI * ARENA.radius) / ARENA_SEGMENTS;
+  for (let i = 0; i < ARENA_SEGMENTS; i++) {
+    if (arenaGate(i)) continue;
+    const a = (i / ARENA_SEGMENTS) * Math.PI * 2;
+    // Two overlapping cylinders per segment so there's no gap to shoot through.
+    for (const off of [-0.25, 0.25]) {
+      const b = a + (off * 2 * Math.PI) / ARENA_SEGMENTS;
+      out.push([ARENA.x + Math.sin(b) * ARENA.radius, ARENA.z + Math.cos(b) * ARENA.radius, seg * 0.32, ARENA_WALL_HEIGHT]);
+    }
+  }
+  return out;
+}
+
 /* -------------------------------- starports -------------------------------- */
 
 /**
@@ -203,6 +238,8 @@ export const STARPORTS: Starport[] = [
       ry: Math.atan2(-ux, -uz),
     };
   }),
+  // Outside the arena's north-east gate.
+  { id: "arena", name: "The Arena", x: ARENA.x + 62, z: ARENA.z + 20, ry: Math.atan2(-62, -20) },
 ];
 
 /** You can board a ship within this many metres of its pad or dock. */

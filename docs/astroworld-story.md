@@ -66,8 +66,13 @@ You've just landed in the Core. Everyone wants something from you.
    it controls the boom. Choose who gets it: Astrocorp (order and the
    official reward), the hunters (a bigger cut) or the rebels (the crystal
    for the people who dig it). The choice decides your faction.
-3. **The Games** (later). The Gladiator Arena opens (Astro-News, "The games
-   commence"): ranked fights for status and prizes.
+3. **The Games** (in the game now). The Imperial Dynasty opens the Arena in
+   the open ground between the Belt and the Helios Docks (its own starport).
+   Caesar is Master of the Games. Choose a faction to sponsor you (+10 the
+   first time), then run 60-second trials against training drones: 15 passes,
+   25 makes you a champion. Every trial raises your sponsor's favour (+3, +2
+   more for a new best), and so does every fight won inside the Arena (+2).
+   This is the repeatable way to win factions back.
 4. **The Grand Prix** (later). The rover racing circuit around the districts.
 
 ## Open questions for the founders

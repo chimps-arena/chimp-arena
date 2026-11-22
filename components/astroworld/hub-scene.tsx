@@ -18,7 +18,9 @@ import { Html } from "./drei-html";
 import * as THREE from "three";
 import { Callbacks, Client, CloseCode, type Room } from "@colyseus/sdk";
 import {
+  arenaCovers,
   buildingCover,
+  inArena,
   type Cover,
   shotBlockedAt,
   CHARACTERS,
@@ -68,7 +70,8 @@ import { WorldMap } from "./world-map";
 import { audioStore, setMuted, sfx, startAudio } from "./audio";
 import { Story } from "./story";
 import { ObjectiveMarker, ObjectiveTracker } from "./objective";
-import { HIDEOUT, isDone, storyStore } from "./story-state";
+import { Arena, arenaShot, TrialHud } from "./arena";
+import { adjustRep, HIDEOUT, isDone, storyStore } from "./story-state";
 import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
@@ -472,6 +475,8 @@ function stepLocal(c: LocalCtx, rawDt: number) {
         .normalize();
       // What's under the crosshair? Nearest other player along the camera ray.
       const camPos = camera.position;
+      // Arena trial drones (local practice targets).
+      arenaShot(camPos, dir, SHOT_RANGE);
       const camDist = camPos.distanceTo(new THREE.Vector3(st.x, st.y + 1.4, st.z));
       let reach = SHOT_RANGE + camDist;
       (room.state as HubState).players?.forEach((p, id) => {
@@ -900,6 +905,9 @@ function useHubRoom(name: string | undefined, initialSkin: string) {
           if (k.killer === joined.sessionId) {
             sfx.kill();
             stores.killAt.set(Date.now());
+            const me = playerPosition();
+            const sponsor = storyStore.get().sponsor;
+            if (sponsor && inArena(me.x, me.z)) adjustRep(sponsor, 2);
           }
           if (k.victim === joined.sessionId) sfx.death();
         });
@@ -1191,6 +1199,7 @@ const World3D = memo(function World3D({
       <Npcs props={props} places={places} />
       {news && NEWS_SPOTS.map((spot) => <NewsKiosk key={spot.key} news={news} spot={spot} />)}
       <SkyTraffic />
+      <Arena />
       <ObjectiveTracker getMe={playerPosition} />
       <Astroburger />
       <Starports />
@@ -1524,6 +1533,9 @@ function LiveHud({
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
 
+    {/* arena trial countdown / results */}
+    {room && <TrialHud />}
+
     {/* story: objective marker + first-visit briefing + chapter tracker */}
     {room && status === "online" && <ObjectiveMarker />}
     {room && status === "online" && !picking && <Story onArrive={stores.travel.subscribe} />}
@@ -1718,6 +1730,7 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
       ...ASTROBURGER_COVERS,
       ...STARPORT_COVERS,
       ...ROADSIDE_COVERS,
+      ...arenaCovers(),
       ...exchangeColliders(),
       ...props.flatMap((p) => {
         const at = places.get(p.id);

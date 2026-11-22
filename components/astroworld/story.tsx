@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { npcTalkStore } from "./npcs";
-import { CHAPTER_1, CHAPTER_2, chapter1Done, completeStep, FACTIONS, finishIntro, isDone, storyStore, type Faction, type StoryState } from "./story-state";
+import { CHAPTER_1, CHAPTER_2, CHAPTER_3, chapter1Done, chapter2Done, completeStep, FACTIONS, finishIntro, isDone, storyStore, type Faction, type StoryState } from "./story-state";
 
 const INTRO: { title: string; text: string }[] = [
   {
@@ -112,9 +112,10 @@ export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }
     );
   }
 
-  const inCh2 = chapter1Done(s);
-  const steps = inCh2 ? CHAPTER_2 : CHAPTER_1;
-  const title = inCh2 ? "Chapter 2 · The Sector 7 Manhunt" : "Chapter 1 · Arrival";
+  const inCh3 = chapter2Done(s);
+  const inCh2 = chapter1Done(s) && !inCh3;
+  const steps = inCh3 ? CHAPTER_3 : inCh2 ? CHAPTER_2 : CHAPTER_1;
+  const title = inCh3 ? "Chapter 3 · The Games" : inCh2 ? "Chapter 2 · The Sector 7 Manhunt" : "Chapter 1 · Arrival";
   const doneCount = steps.filter((st) => isDone(s, st.id)).length;
   const finished = doneCount === steps.length;
   const nextStep = steps.find((st) => !isDone(s, st.id));
@@ -131,26 +132,31 @@ export function Story({ onArrive }: { onArrive: (cb: () => void) => () => void }
       </button>
       {open && (
         <div className="border-t border-white/10 px-3 py-2">
-          {finished && inCh2 && s.mapTo ? (
+          {finished && inCh3 ? (
             <>
-              <p className="text-xs leading-relaxed text-white/80">{ENDINGS[s.mapTo]}</p>
+              <p className="text-xs leading-relaxed text-white/80">
+                Champion of the Arena. Keep running trials and winning fights here to raise your sponsor&apos;s favour. Best: {s.trialBest} drones.
+              </p>
               <p className="mt-1.5 text-[11px] text-white/50">
-                Reputation rises and falls: you can win factions back. <b className="text-fuchsia-300">Chapter 3: The Games</b> is coming.
+                <b className="text-fuchsia-300">Chapter 4: The Grand Prix</b> is coming.
               </p>
             </>
           ) : (
-            <ul className="space-y-1.5">
-              {steps.map((st) => {
-                const done = isDone(s, st.id);
-                return (
-                  <li key={st.id} className="text-xs">
-                    <span className={done ? "text-emerald-400" : "text-white/40"}>{done ? "✓" : "○"}</span>{" "}
-                    <span className={done ? "text-white/50 line-through" : "font-semibold"}>{st.title}</span>
-                    {!done && st.id === nextStep?.id && <div className="ml-4 text-[11px] text-white/60">{st.hint}</div>}
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              {inCh3 && s.mapTo && doneCount === 0 && <p className="mb-2 text-xs leading-relaxed text-white/70">{ENDINGS[s.mapTo]}</p>}
+              <ul className="space-y-1.5">
+                {steps.map((st) => {
+                  const done = isDone(s, st.id);
+                  return (
+                    <li key={st.id} className="text-xs">
+                      <span className={done ? "text-emerald-400" : "text-white/40"}>{done ? "✓" : "○"}</span>{" "}
+                      <span className={done ? "text-white/50 line-through" : "font-semibold"}>{st.title}</span>
+                      {!done && st.id === nextStep?.id && <div className="ml-4 text-[11px] text-white/60">{st.hint}</div>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
           {inCh2 && !s.mapTo && doneCount === 0 && (
             <p className="mt-2 text-[11px] leading-relaxed text-white/60">Death says Tommy came through the Belt claims. Start there.</p>

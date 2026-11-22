@@ -20,14 +20,14 @@
 import { memo, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { characterById, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
+import { ARENA, characterById, ROAD_ANGLES, SAFE_RADIUS, type Placement } from "@chimp-arena/shared";
 import { CharacterBody } from "./character-body";
 import { idlePose, type PoseInput } from "./chimp-rig";
 import { NearLabel } from "./items";
 import { EnvModel, Pet, type PetId } from "./env-models";
 import type { WorldProperty } from "./buildings";
 import { sfx } from "./audio";
-import { chapter1Done, HIDEOUT, isDone, storyStore, type StoryState } from "./story-state";
+import { chapter1Done, chapter2Done, HIDEOUT, isDone, storyStore, type StoryState } from "./story-state";
 
 type XZ = [number, number];
 
@@ -51,7 +51,9 @@ export interface NpcSpec {
   /** Carries a rifle (security, military, bounty hunter). */
   armed?: boolean;
   /** Not a character: something to use (news kiosk, a property, a ship to board). */
-  kind?: "npc" | "news" | "property" | "port";
+  kind?: "npc" | "news" | "property" | "port" | "trial";
+  /** Instead of opening a panel, E runs this (e.g. start an Arena trial). */
+  onUse?: () => void;
   /** How close you must be to use it, metres (default TALK_RANGE). */
   range?: number;
   /** For kind "property": the property it opens. */
@@ -264,6 +266,11 @@ export function toggleTalk(): boolean {
     return false;
   }
   if (talk.near) {
+    const action = live.get(talk.near)?.spec.onUse;
+    if (action) {
+      action();
+      return false;
+    }
     setTalk({ ...talk, talking: talk.near });
     sfx.ui();
     return true;
@@ -390,6 +397,18 @@ export function storyNpcSpecs(props: WorldProperty[], places: Map<string, Placem
   at("mining_claim", "The Belt", "story-belt", "rare-bad-mike", "Prison Dock 7 crew · Belt claims");
   at("dome", "Lunar Rim", "story-rim", "rare-senex", "The watcher · Lunar Rim");
   at("dock", "Helios Docks", "story-docks", "rare-lady-winter", "Smuggler · Helios Docks");
+  // Chapter 3: Caesar runs the Games from the Arena's east gate.
+  if (chapter2Done(s)) {
+    out.push({
+      key: "story-caesar",
+      characterId: "rare-caesar",
+      role: "Master of the Games · Imperial Dynasty",
+      story: true,
+      route: { kind: "line", a: [ARENA.x + ARENA.radius - 3, ARENA.z - 4], b: [ARENA.x + ARENA.radius - 3, ARENA.z + 4], pause: 6 },
+      speed: 0.7,
+      phase: 0,
+    });
+  }
   // Tommy waits at the hideout from the moment you learn where it is; he stays
   // there afterwards only if you kept the map with the rebels.
   if (isDone(s, "ch2-docks") && (!s.mapTo || s.mapTo === "rebels")) {

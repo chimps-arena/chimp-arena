@@ -16,7 +16,7 @@ import { endTalk, npcSpec, npcTalkStore, toggleTalk } from "./npcs";
 import { NewsReader, type NewsIndex } from "./news";
 import { PropertyPanel } from "./property-panel";
 import { TravelPanel } from "./starports";
-import { chapter1Done, completeStep, giveMapTo, isDone, storyStore, type StoryState } from "./story-state";
+import { chapter1Done, chapter2Done, completeStep, FACTIONS, giveMapTo, isDone, setSponsor, storyStore, TRIAL_CHAMPION, TRIAL_PASS, type StoryState } from "./story-state";
 
 const ch2 = (step: string) => (s: StoryState) => chapter1Done(s) && isDone(s, step);
 const ch2Open = (prev: string | null, step: string) => (s: StoryState) => chapter1Done(s) && (!prev || isDone(s, prev)) && !isDone(s, step);
@@ -333,6 +333,76 @@ Object.assign(SCRIPTS, {
   },
 } satisfies Record<string, Script>);
 
+/* ------------------------------- Chapter 3: The Games ------------------------------- */
+
+const ch3 = (s: StoryState) => chapter2Done(s) && isDone(s, "ch3-caesar");
+
+Object.assign(SCRIPTS, {
+  "rare-caesar": {
+    intro: "Ah. The one who decided where the crystal map went. All of Astroworld is talking about you. Good. The crowd loves a name.",
+    topics: [
+      {
+        q: "You summoned me?",
+        when: (s) => chapter2Done(s) && !isDone(s, "ch3-caesar"),
+        onAsk: () => completeStep("ch3-caesar"),
+        a: () =>
+          "The Imperial Dynasty has opened the Arena. Astrocorp, the hunters, the rebels: they all hate each other, and they all love a winner. Fight here, and whoever backs you will forgive a great deal. Choose a sponsor, then prove yourself in the trials.",
+      },
+      {
+        q: "Fight for Astrocorp.",
+        when: (s) => ch3(s) && s.sponsor !== "astrocorp",
+        onAsk: () => setSponsor("astrocorp"),
+        a: () => "Astrocorp it is. Castro will be watching from the box. Don't embarrass him.",
+      },
+      {
+        q: "Fight for the hunters.",
+        when: (s) => ch3(s) && s.sponsor !== "hunters",
+        onAsk: () => setSponsor("hunters"),
+        a: () => "The hunters. Death doesn't cheer, but he does keep score.",
+      },
+      {
+        q: "Fight for the rebels.",
+        when: (s) => ch3(s) && s.sponsor !== "rebels",
+        onAsk: () => setSponsor("rebels"),
+        a: () => "The rebels! The crowd will love it. Astrocorp will not.",
+      },
+      {
+        q: "How do the trials work?",
+        when: ch3,
+        a: () => (
+          <ul className="list-disc space-y-0.5 pl-5">
+            <li>Press E at the trial gate in the middle of the Arena.</li>
+            <li>You have 60 seconds to shoot down as many training drones as you can.</li>
+            <li>
+              {TRIAL_PASS} drones passes. {TRIAL_CHAMPION} makes you a champion.
+            </li>
+            <li>Every trial wins your sponsor&apos;s favour, more for a new record. So does every fight you win inside these walls.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "How am I doing?",
+        when: ch3,
+        a: () => {
+          const s = storyStore.get();
+          return (
+            <>
+              Your best trial: <b>{s.trialBest}</b> drones.{" "}
+              {s.sponsor ? (
+                <>
+                  Fighting for <b style={{ color: FACTIONS[s.sponsor].color }}>{FACTIONS[s.sponsor].name}</b>.
+                </>
+              ) : (
+                "No sponsor yet."
+              )}
+            </>
+          );
+        },
+      },
+    ],
+  },
+} satisfies Record<string, Script>);
+
 const FALLBACK: Script = { intro: "…", topics: [] };
 
 /** "Press E to talk" when an NPC is in range; the conversation panel when talking. */
@@ -348,7 +418,7 @@ export function NpcHud({ context, touch, news }: { context: NpcContext; touch: b
   const near = npcSpec(st.near);
   if (!near) return null;
   const name = near.title ?? characterById(near.characterId).name;
-  const verb = near.kind === "news" ? "Read" : near.kind === "property" ? "Visit" : near.kind === "port" ? "Board" : "Talk to";
+  const verb = near.kind === "news" ? "Read" : near.kind === "property" ? "Visit" : near.kind === "port" ? "Board" : near.kind === "trial" ? "Start" : "Talk to";
   return (
     <div className="absolute inset-x-0 top-[36%] z-30 flex justify-center">
       {touch ? (

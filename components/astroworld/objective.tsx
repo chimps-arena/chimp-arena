@@ -16,7 +16,8 @@ import * as THREE from "three";
 import { STARPORTS } from "@chimp-arena/shared";
 import { nearestWithPrefix, npcPosition } from "./npcs";
 import { ASTROBURGER } from "./astroburger";
-import { CHAPTER_1, CHAPTER_2, chapter1Done, HIDEOUT, isDone, storyStore } from "./story-state";
+import { CHAPTER_1, CHAPTER_2, CHAPTER_3, chapter1Done, chapter2Done, HIDEOUT, isDone, storyStore } from "./story-state";
+import { TRIAL_GATE } from "./arena";
 
 type Pos = { x: number; z: number };
 
@@ -54,6 +55,12 @@ function targetFor(step: string, me: Pos): Pos | null {
     case "ch2-tommy":
     case "ch2-choice":
       return npcPosition("story-tommy") ?? HIDEOUT;
+    case "ch3-caesar":
+    case "ch3-sponsor":
+      return npcPosition("story-caesar");
+    case "ch3-trial":
+    case "ch3-champion":
+      return TRIAL_GATE;
     default:
       return null;
   }
@@ -62,7 +69,7 @@ function targetFor(step: string, me: Pos): Pos | null {
 function currentStep(): string | null {
   const s = storyStore.get();
   if (!s.intro) return null;
-  const steps = chapter1Done(s) ? CHAPTER_2 : CHAPTER_1;
+  const steps = chapter2Done(s) ? CHAPTER_3 : chapter1Done(s) ? CHAPTER_2 : CHAPTER_1;
   return steps.find((st) => !isDone(s, st.id))?.id ?? null;
 }
 
