@@ -25,6 +25,9 @@ import {
   cleanText,
   DEFAULT_CHARACTER_ID,
   FIRE_INTERVAL_MS,
+  MAG_SIZE,
+  RELOAD_MS,
+  RELOAD_SLACK_MS,
   HEADSHOT_DAMAGE,
   HUB_MAX_PLAYERS,
   HUB_SPEED,
@@ -105,6 +108,10 @@ interface Track {
   lastMoveAt: number;
   lastTravelAt: number;
   lastShotAt: number;
+  /** Rounds left in the magazine, as the server counts them. */
+  ammo: number;
+  /** Reload finishes at this time (0 = not reloading). */
+  reloadUntil: number;
   chatTimes: number[];
 }
 
@@ -188,6 +195,12 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     });
 
     this.onMessage("shoot", (client, msg: HubShootMessage) => this.shoot(client, msg));
+    this.onMessage("reload", (client) => {
+      const player = this.state.players.get(client.sessionId);
+      const track = player && this.tracks.get(player);
+      if (!track || track.reloadUntil !== 0 || track.ammo >= MAG_SIZE) return;
+      track.reloadUntil = Date.now() + RELOAD_MS;
+    });
 
     this.onMessage("chat", (client, msg: HubChatMessage) => {
       const player = this.state.players.get(client.sessionId);
@@ -251,6 +264,17 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
 
     const now = Date.now();
     if (now - track.lastShotAt < FIRE_INTERVAL_MS) return;
+    // Ammo, counted here so a modified client can't fire forever.
+    if (track.reloadUntil !== 0) {
+      if (now < track.reloadUntil - RELOAD_SLACK_MS) return;
+      track.ammo = MAG_SIZE;
+      track.reloadUntil = 0;
+    }
+    if (track.ammo <= 0) {
+      track.reloadUntil = now + RELOAD_MS;
+      return;
+    }
+    track.ammo--;
     track.lastShotAt = now;
 
     // The shot must start at (roughly) the shooter, not wherever they claim.
@@ -310,7 +334,11 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
       still.hp = MAX_HP;
       still.alive = true;
       const track = this.tracks.get(still);
-      if (track) track.lastMoveAt = Date.now();
+      if (track) {
+        track.lastMoveAt = Date.now();
+        track.ammo = MAG_SIZE;
+        track.reloadUntil = 0;
+      }
       this.clients.getById(victimId)?.send("respawn", spot);
     }, RESPAWN_MS);
   }
@@ -327,7 +355,7 @@ export class HubRoom extends Room<{ state: InstanceType<typeof HubRoomState> }> 
     player.ry = spot.ry;
 
     this.state.players.set(client.sessionId, player);
-    this.tracks.set(player, { lastMoveAt: Date.now(), lastTravelAt: 0, lastShotAt: 0, chatTimes: [] });
+    this.tracks.set(player, { lastMoveAt: Date.now(), lastTravelAt: 0, lastShotAt: 0, ammo: MAG_SIZE, reloadUntil: 0, chatTimes: [] });
   }
 
   /**

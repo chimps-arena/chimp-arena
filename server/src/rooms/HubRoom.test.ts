@@ -6,6 +6,9 @@ import {
   MAX_HP,
   SHOT_DAMAGE,
   STARPORTS,
+  MAG_SIZE,
+  RELOAD_MS,
+  FIRE_INTERVAL_MS,
   type HubTravelBroadcast,
   type HubChatBroadcast,
   type HubKillBroadcast,
@@ -212,6 +215,26 @@ describe("HubRoom (Astroworld)", () => {
       await settle();
       expect(t.hp).toBe(MAX_HP);
     });
+
+    it("counts ammo server-side: an empty magazine fires nothing until a reload", async () => {
+      const { shooter, t } = await duel();
+      // Fire a full magazine (30) plus a few, spaced past the fire-rate limit.
+      for (let i = 0; i < MAG_SIZE + 3; i++) {
+        shooter.send("shoot", { o: { x: 200, y: 1.2, z: 0 }, d: { x: 0, y: 0, z: 1 } }); // misses: keeps the target alive
+        await sleep(FIRE_INTERVAL_MS + 15);
+      }
+      const shots: HubShotBroadcast[] = [];
+      shooter.onMessage("shot", (m: HubShotBroadcast) => shots.push(m));
+      // Magazine empty: this one is refused even though it would hit.
+      shooter.send("shoot", body);
+      await settle();
+      expect(t.hp).toBe(MAX_HP);
+      expect(shots).toHaveLength(0);
+      // After the reload time, shots land again.
+      await sleep(RELOAD_MS);
+      shooter.send("shoot", body);
+      await waitFor(() => t.hp === MAX_HP - SHOT_DAMAGE);
+    }, 20000);
 
     it("buildings stop bullets: no hits through a wall, and the tracer ends at it", async () => {
       const { shooter, t, shots } = await duel();

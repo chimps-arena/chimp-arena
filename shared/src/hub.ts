@@ -40,6 +40,11 @@ export const SHOT_DAMAGE = 20;
 /** Headshots (top of the capsule) hit harder, like any shooter. */
 export const HEADSHOT_DAMAGE = 45;
 export const FIRE_INTERVAL_MS = 110;
+/** Rounds per magazine, and how long a reload takes. The server counts them too. */
+export const MAG_SIZE = 30;
+export const RELOAD_MS = 1500;
+/** Network slack the server allows on a reload finishing early. */
+export const RELOAD_SLACK_MS = 200;
 export const SHOT_RANGE = 160;
 /** Where the server lets a shot start relative to the shooter's known position. */
 export const MUZZLE_SLACK = 3;

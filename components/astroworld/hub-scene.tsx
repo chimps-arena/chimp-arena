@@ -31,6 +31,8 @@ import {
   GRAVITY,
   HUB_SPEED,
   inSafeZone,
+  MAG_SIZE,
+  RELOAD_MS,
   isCharacterId,
   JUMP_VELOCITY,
   layoutProperties,
@@ -105,8 +107,6 @@ type Status = "connecting" | "online" | "offline";
 
 const SEND_EVERY_MS = 66;
 const BUBBLE_MS = 6000;
-const MAG_SIZE = 30;
-const RELOAD_MS = 1500;
 const ROVER_TURN = 1.7;
 const ROVER_SPEED = HUB_SPEED.rover * 0.92;
 const LOOK_SENS = 0.0022;
@@ -445,6 +445,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
   if ((st.firing || touch.fire) && armed && st.view !== "face" && !reloading && now - st.lastShot >= FIRE_INTERVAL_MS + 5) {
     if (st.ammo <= 0) {
       st.reloadUntil = now + RELOAD_MS;
+      room.send("reload");
     } else {
       st.lastShot = now;
       st.ammo--;
@@ -652,7 +653,10 @@ function LocalPlayer({
       if (e.repeat && (k === "c" || k === "control" || k === "f")) return;
       keys.current.add(k);
       if (k === "c" || k === "control") s.current.crouch = !s.current.crouch;
-      if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) s.current.reloadUntil = performance.now() + RELOAD_MS;
+      if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) {
+        s.current.reloadUntil = performance.now() + RELOAD_MS;
+        room.send("reload");
+      }
       if (k === "f") onToggleRover();
       if (k === "e" && !e.repeat) toggleTalk();
       if (k === "v" && !e.repeat) {
@@ -710,7 +714,7 @@ function LocalPlayer({
       window.removeEventListener("mouseup", mup);
       el.removeEventListener("contextmenu", ctx);
     };
-  }, [gl, onToggleRover]);
+  }, [gl, onToggleRover, room]);
 
   useFrame((_, rawDt) => {
     stepLocal(
