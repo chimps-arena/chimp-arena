@@ -63,6 +63,7 @@ import { Astroburger, ASTROBURGER_COVERS } from "./astroburger";
 import { FlightOverlay, Starports, STARPORT_COVERS } from "./starports";
 import { Roadside, ROADSIDE_COVERS } from "./roadside";
 import { WorldMap } from "./world-map";
+import { Story } from "./story";
 import { fetchNews, NEWS_SPOTS, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
@@ -1421,6 +1422,9 @@ function LiveHud({
     {room && snap.hp < MAX_HP && snap.alive && (
       <div className="pointer-events-none absolute inset-0" style={{ boxShadow: `inset 0 0 ${160 - snap.hp}px rgba(220,38,38,${(1 - snap.hp / MAX_HP) * 0.6})` }} />
     )}
+
+    {/* story: first-visit briefing + chapter tracker */}
+    {room && status === "online" && !picking && <Story onArrive={stores.travel.subscribe} />}
 
     {/* full world map */}
     {mapOpen && room && (

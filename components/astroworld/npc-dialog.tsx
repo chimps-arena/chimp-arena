@@ -95,6 +95,11 @@ const SCRIPTS: Record<string, Script> = {
     intro: "Castro, Astromilitary. I keep this plaza in order. Make it quick.",
     topics: [
       {
+        q: "What's going on out there?",
+        a: () =>
+          "Kill Boy Tommy walked out of Sector 7 with something that belongs to Astrocorp. Now every bounty hunter in the galaxy is landing on my world. Keep your weapon holstered in the Core, and if you hear anything about Tommy, you tell Astromilitary first.",
+      },
+      {
         q: "What's that tower?",
         a: () =>
           "Astrocorp HQ. Around it is the Resource Exchange: every raw ore beside its refined form. The Charged Crystal out front is a Void Crystal and a Charge Kit, fused.",
@@ -112,6 +117,11 @@ const SCRIPTS: Record<string, Script> = {
   "std-death": {
     intro: "You found me. Most don't, until it's too late.",
     topics: [
+      {
+        q: "Where's Kill Boy Tommy?",
+        a: () =>
+          "Half a million on his head and every hunter in the sector chasing rumours. Here's one that isn't: he came through the Belt claims before he vanished. Start there. And if you find him first, you come to me. Not Astrocorp.",
+      },
       {
         q: "Who's worth hunting?",
         a: (c) => (
