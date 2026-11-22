@@ -121,9 +121,9 @@ const COVER_HEIGHT: Record<string, number> = {
   foundry: 11,
   hangar: 8,
   yard: 5,
-  quarry: 4,
+  quarry: 10,
   array: 2.5,
-  field: 1.5,
+  field: 6,
 };
 export const DEFAULT_COVER_HEIGHT = 7;
 

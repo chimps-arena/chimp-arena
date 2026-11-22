@@ -378,11 +378,44 @@ const ARCHES: Record<string, Arch> = {
  * of models (a fuel lot is a few tanks). The code archetype shows while the
  * model downloads and if it ever fails.
  */
-type Piece = { id: EnvId; fit?: Fit; size: number; at?: [number, number]; ry?: number };
+/** One model in a lot's arrangement; `y` stacks it (e.g. a container on two others). */
+type Piece = { id: EnvId; fit?: Fit; size: number; at?: [number, number]; ry?: number; y?: number };
 const MODEL_ARCHES: Partial<Record<string, Piece[][]>> = {
   hangar: [[{ id: "hangar", size: 13 }]],
   armory: [[{ id: "armory", size: 12 }], [{ id: "rock-armory-front", size: 12 }]],
   mining_claim: [[{ id: "automated-drilling", size: 12 }]],
+  // Reuses until the art team delivers models of their own (approved 2026-11-22).
+  quarry: [
+    [
+      { id: "automated-drilling", size: 10, at: [-1.5, -1] },
+      { id: "cargo-box", size: 4.5, at: [4, 3.5], ry: 0.4 },
+    ],
+  ],
+  dome: [[{ id: "greenhouse", size: 12 }]],
+  field: [
+    [
+      { id: "greenhouse", size: 7, at: [-3, -2] },
+      { id: "greenhouse", size: 7, at: [3.5, 2] },
+      { id: "fuel-tank-2", fit: "height", size: 4.5, at: [4, -3.5] },
+    ],
+  ],
+  vault: [[{ id: "bunker", size: 11 }]],
+  box: [
+    [
+      { id: "cargo-box", size: 6, at: [-2.2, 0] },
+      { id: "cargo-box", size: 6, at: [2.2, 0] },
+      { id: "cargo-box", size: 6, at: [0, 0.2], ry: 0.05, y: 2.8 },
+    ],
+  ],
+  scrapheap: [
+    [
+      { id: "automated-drilling", size: 7, at: [-2.5, -1.5], ry: 0.6 },
+      { id: "cargo-box", size: 4.5, at: [3, -2.5], ry: 1.1 },
+      { id: "fuel-tank-4", size: 4.5, at: [2.5, 2.5], ry: -0.7 },
+      { id: "cargo-box", size: 4, at: [-3, 3], ry: 2.3 },
+    ],
+  ],
+  station: [[{ id: "outpost", size: 11 }]],
   bunker: [[{ id: "bunker", size: 11 }]],
   outpost: [[{ id: "outpost", size: 11 }]],
   greenhouse: [[{ id: "greenhouse", size: 12 }]],
@@ -443,7 +476,7 @@ function ModelBody({ pieces }: { pieces: Piece[] }) {
   return (
     <>
       {pieces.map((pc, i) => (
-        <group key={i} position={[pc.at?.[0] ?? 0, 0, pc.at?.[1] ?? 0]} rotation={[0, pc.ry ?? 0, 0]}>
+        <group key={i} position={[pc.at?.[0] ?? 0, pc.y ?? 0, pc.at?.[1] ?? 0]} rotation={[0, pc.ry ?? 0, 0]}>
           <EnvModel id={pc.id} fit={pc.fit} size={pc.size} />
         </group>
       ))}
