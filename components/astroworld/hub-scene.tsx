@@ -12,7 +12,7 @@
  *   reloads. Hits are decided by the server, never by the shooter's machine.
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -60,6 +60,7 @@ import { NpcHud, type NpcContext } from "./npc-dialog";
 import { fetchNews, KIOSK, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
+import { GearModel } from "./gear";
 import { DrivenRover, ShowroomLot, ShowroomStar, SkyTraffic } from "./vehicles";
 
 const SHOWROOM_ROVER = <ShowroomStar fallback={<RoverModel color="#a855f7" />} />;
@@ -135,7 +136,12 @@ interface TouchInput {
 }
 
 /** HUD values the controller reports when they change. */
+/** Camera: over the shoulder, first person, or a free orbit in front of you (see your face). */
+export type CamView = "third" | "first" | "face";
+const NEXT_VIEW: Record<CamView, CamView> = { third: "first", first: "face", face: "third" };
+
 interface LocalHud {
+  view: CamView;
   ammo: number;
   reloading: boolean;
   aiming: boolean;
@@ -276,6 +282,10 @@ interface LocalState {
   firing: boolean;
   aiming: boolean;
   camInit: boolean;
+  view: CamView;
+  /** Face view: camera angle around the player (0 = straight in front) and its height angle. */
+  orbit: number;
+  orbitPitch: number;
   lastSent: { at: number; x: number; z: number; ry: number; y: number; pitch: number; crouch: boolean };
   hud: LocalHud;
 }
@@ -297,9 +307,24 @@ interface LocalCtx {
   room: Room;
   colliders: Cover[];
   group: THREE.Group | null;
+  /** The local character's body (hidden in first person). */
+  body: THREE.Group | null;
+  /** First-person rifle, placed in front of the camera each frame. */
+  viewRifle: THREE.Group | null;
   pose: PoseInput;
   look: CharacterLook;
   onHud: (h: LocalHud) => void;
+}
+
+const vrOffset = new THREE.Vector3();
+/** Hold the first-person rifle at the bottom right of the view (centred when aiming), with a little recoil. */
+function placeViewRifle(g: THREE.Group, camera: THREE.Camera, show: boolean, aiming: boolean, sinceShot: number) {
+  g.visible = show;
+  if (!show) return;
+  const kick = Math.max(0, 0.06 - sinceShot * 0.6);
+  vrOffset.set(aiming ? 0 : 0.22, aiming ? -0.16 : -0.24, -0.55 + kick).applyQuaternion(camera.quaternion);
+  g.position.copy(camera.position).add(vrOffset);
+  g.quaternion.copy(camera.quaternion);
 }
 
 /** One frame of the local player: input -> movement -> shooting -> network -> camera -> HUD. */
@@ -407,7 +432,7 @@ function stepLocal(c: LocalCtx, rawDt: number) {
   const reloading = st.reloadUntil !== 0;
   const camDir = new THREE.Vector3();
   camera.getWorldDirection(camDir);
-  if ((st.firing || touch.fire) && armed && !reloading && now - st.lastShot >= FIRE_INTERVAL_MS + 5) {
+  if ((st.firing || touch.fire) && armed && st.view !== "face" && !reloading && now - st.lastShot >= FIRE_INTERVAL_MS + 5) {
     if (st.ammo <= 0) {
       st.reloadUntil = now + RELOAD_MS;
     } else {
@@ -481,15 +506,36 @@ function stepLocal(c: LocalCtx, rawDt: number) {
   const f = new THREE.Vector3(Math.sin(st.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(st.yaw) * Math.cos(pitch));
   const rightV = new THREE.Vector3(-Math.cos(st.yaw), 0, Math.sin(st.yaw));
   const pivot = new THREE.Vector3(st.x, st.y + eye, st.z);
+  const view: CamView = rover ? "third" : st.view;
   const desired = pivot.clone().addScaledVector(f, -back).addScaledVector(rightV, shoulder);
+  let lookAt = pivot.clone().addScaledVector(f, 30).addScaledVector(rightV, shoulder);
+  if (view === "first") {
+    // At the eyes, a touch forward so the head never fills the view.
+    desired.copy(pivot).addScaledVector(new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw)), 0.18);
+    lookAt = desired.clone().addScaledVector(f, 30);
+  } else if (view === "face") {
+    // In front of you, orbiting with the mouse, looking at your face.
+    const a = st.heading + st.orbit;
+    const dist = 2.9;
+    const face = new THREE.Vector3(st.x, st.y + (st.crouch ? 1.1 : 1.55), st.z);
+    desired.set(
+      face.x + Math.sin(a) * Math.cos(st.orbitPitch) * dist,
+      face.y + Math.sin(st.orbitPitch) * dist,
+      face.z + Math.cos(a) * Math.cos(st.orbitPitch) * dist,
+    );
+    lookAt = face;
+  }
   desired.y = Math.max(0.4, desired.y);
-  if (!st.camInit) {
+  if (!st.camInit || view === "first") {
     camera.position.copy(desired);
     st.camInit = true;
   } else {
     camera.position.lerp(desired, 1 - Math.exp(-18 * dt));
   }
-  camera.lookAt(pivot.clone().addScaledVector(f, 30).addScaledVector(rightV, shoulder));
+  camera.lookAt(lookAt);
+  // First person: hide your own body (the held rifle shows instead).
+  if (c.body) c.body.visible = view !== "first" && !rover;
+  if (c.viewRifle) placeViewRifle(c.viewRifle, camera, view === "first" && armed, aiming, poseIn.sinceShot);
   // Dev QA only: window.__awCam = [x, y, z, lookX, lookY, lookZ] pins the camera
   // anywhere, for screenshots of distant districts (scripts/astroworld-snapshot.mjs).
   const pin = process.env.NODE_ENV !== "production" ? (globalThis as { __awCam?: number[] }).__awCam : undefined;
@@ -508,8 +554,8 @@ function stepLocal(c: LocalCtx, rawDt: number) {
   const locked = document.pointerLockElement === el;
   const zone = zoneAt(st.x, st.z);
   const h = st.hud;
-  if (h.ammo !== st.ammo || h.reloading !== reloading || h.aiming !== aiming || h.armed !== armed || h.locked !== locked || h.zone !== zone) {
-    st.hud = { ammo: st.ammo, reloading, aiming, armed, locked, zone };
+  if (h.view !== view || h.ammo !== st.ammo || h.reloading !== reloading || h.aiming !== aiming || h.armed !== armed || h.locked !== locked || h.zone !== zone) {
+    st.hud = { view, ammo: st.ammo, reloading, aiming, armed, locked, zone };
     onHud(st.hud);
   }
   }
@@ -542,6 +588,8 @@ function LocalPlayer({
   const group = useRef<THREE.Group>(null);
   const { camera, gl } = useThree();
   const pose = useRef<PoseInput>(idlePose());
+  const body = useRef<THREE.Group>(null);
+  const viewRifle = useRef<THREE.Group>(null);
   const s = useRef<LocalState>({
     fov: 70,
     x: me.x,
@@ -558,8 +606,11 @@ function LocalPlayer({
     firing: false,
     aiming: false,
     camInit: false,
+    view: "third",
+    orbit: 0,
+    orbitPitch: 0.1,
     lastSent: { at: 0, x: me.x, z: me.z, ry: me.ry, y: 0, pitch: 0, crouch: false },
-    hud: { ammo: -1, reloading: false, aiming: false, armed: false, locked: false, zone: "" },
+    hud: { view: "third", ammo: -1, reloading: false, aiming: false, armed: false, locked: false, zone: "" },
   });
   const keys = useRef(new Set<string>());
 
@@ -594,6 +645,11 @@ function LocalPlayer({
       if (k === "r" && s.current.ammo < MAG_SIZE && performance.now() > s.current.reloadUntil) s.current.reloadUntil = performance.now() + RELOAD_MS;
       if (k === "f") onToggleRover();
       if (k === "e" && !e.repeat) toggleTalk();
+      if (k === "v" && !e.repeat) {
+        s.current.view = NEXT_VIEW[s.current.view];
+        s.current.orbit = 0;
+        s.current.orbitPitch = 0.1;
+      }
       if ([" ", "arrowup", "arrowdown", "tab"].includes(k)) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
@@ -606,6 +662,12 @@ function LocalPlayer({
       if (document.pointerLockElement !== el) return;
       const st = s.current;
       const sens = LOOK_SENS * (st.aiming ? 0.55 : 1);
+      if (st.view === "face") {
+        // Face view: the mouse swings the camera around you; you don't turn.
+        st.orbit -= e.movementX * sens;
+        st.orbitPitch = THREE.MathUtils.clamp(st.orbitPitch + e.movementY * sens, -0.5, 1.1);
+        return;
+      }
       st.yaw -= e.movementX * sens;
       st.pitch = THREE.MathUtils.clamp(st.pitch - e.movementY * sens, -1.2, 1.2);
     };
@@ -642,7 +704,23 @@ function LocalPlayer({
 
   useFrame((_, rawDt) => {
     stepLocal(
-      { st: s.current, keys: keys.current, touch: getTouch(), me, mode, camera, el: gl.domElement, room, colliders, group: group.current, pose: pose.current, look, onHud },
+      {
+        st: s.current,
+        keys: keys.current,
+        touch: getTouch(),
+        me,
+        mode,
+        camera,
+        el: gl.domElement,
+        room,
+        colliders,
+        group: group.current,
+        body: body.current,
+        viewRifle: viewRifle.current,
+        pose: pose.current,
+        look,
+        onHud,
+      },
       rawDt,
     );
     trackPlayerForNpcs(s.current.x, s.current.z);
@@ -650,14 +728,24 @@ function LocalPlayer({
 
   const getPose = useCallback(() => pose.current, []);
   return (
-    <group ref={group}>
-      {mode === "rover" && <DrivenRover fallback={<RoverModel color={look.glow} />} />}
-      {/* the driver rides inside the rover */}
-      <group visible={mode !== "rover"}>
-        <CharacterBody look={look} pose={getPose} />
+    <>
+      {/* first-person rifle: lives in world space, moved to the camera every frame */}
+      <group ref={viewRifle} visible={false}>
+        <Suspense fallback={null}>
+          <group rotation={[0, -Math.PI / 2, 0]}>
+            <GearModel id="rifle-standard" length={0.9} />
+          </group>
+        </Suspense>
       </group>
-      <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} hidden={!bubble} />
-    </group>
+      <group ref={group}>
+        {mode === "rover" && <DrivenRover fallback={<RoverModel color={look.glow} />} />}
+        {/* the driver rides inside the rover; hidden in first person */}
+        <group ref={body}>
+          <CharacterBody look={look} pose={getPose} />
+        </group>
+        <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} hidden={!bubble} />
+      </group>
+    </>
   );
 }
 
@@ -1013,7 +1101,7 @@ const World3D = memo(function World3D({
   return (
     <Canvas
       className="!absolute inset-0"
-      camera={{ fov: 70, near: 0.1, far: 2600, position: [0, 20, 40] }}
+      camera={{ fov: 70, near: 0.1, far: 3200, position: [0, 20, 40] }}
       dpr={[1, 1.6]}
       gl={{ toneMappingExposure: 1.15 }}
       onCreated={({ gl, scene }) => {
@@ -1096,7 +1184,7 @@ interface HudStores {
 }
 function createHudStores(): HudStores {
   return {
-    hud: createStore<LocalHud>({ ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE }),
+    hud: createStore<LocalHud>({ view: "third", ammo: MAG_SIZE, reloading: false, aiming: false, armed: false, locked: false, zone: CORE_ZONE }),
     kills: createStore<Kill[]>([]),
     hit: createStore(0),
   };
@@ -1173,7 +1261,14 @@ function LiveHud({
   return (
     <>
     {/* crosshair */}
-    {room && mode === "walk" && snap.alive && (
+    {room && mode === "walk" && snap.alive && hud.view === "face" && (
+      <div className="pointer-events-none absolute inset-x-0 top-16 z-20 flex justify-center">
+        <div className="rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+          Face view · move the mouse to look around you · <b>V</b> to switch view
+        </div>
+      </div>
+    )}
+    {room && mode === "walk" && snap.alive && hud.view !== "face" && (
       <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         {hud.armed ? (
           <div className="relative" style={{ width: hud.aiming ? 18 : 34, height: hud.aiming ? 18 : 34, transition: "all 120ms" }}>
@@ -1284,7 +1379,8 @@ function LiveHud({
             <span>C · crouch</span>
             <span>R · reload</span>
             <span>F · rover</span>
-            <span>E · talk to NPCs</span>
+            <span>E · talk / use</span>
+            <span>V · camera (1st person, face)</span>
             <span>Tab · scoreboard</span>
             <span>Enter · chat</span>
             <span>Esc · free the mouse</span>

@@ -17,8 +17,8 @@ const SERVER = process.argv[3] ?? "http://localhost:2567";
 const CHARACTERS = JSON.parse(readFileSync(new URL("../shared/src/characters.json", import.meta.url), "utf8"));
 
 // Mirrors shared/src/world-layout.ts + hub.ts (plain .mjs can't import the TS).
-const SAFE_RADIUS = 70;
-const DISTRICT_DISTANCE = 205;
+const SAFE_RADIUS = 110;
+const DISTRICT_DISTANCE = 390;
 const DISTRICTS = [0, 120, 240].map((deg) => {
   const a = (deg * Math.PI) / 180;
   return { x: Math.sin(a) * DISTRICT_DISTANCE, z: Math.cos(a) * DISTRICT_DISTANCE };

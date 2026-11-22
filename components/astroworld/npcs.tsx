@@ -88,10 +88,10 @@ export function npcSpecs(props: WorldProperty[], places: Map<string, Placement>)
   });
 
   // Military: patrols the plaza between the Exchange and the property ring.
-  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 38, dir: 1 }, speed: 1.7, phase: 0, armed: true });
+  out.push({ key: "military", characterId: "std-castro", role: "Military · Core patrol", route: { kind: "circle", c: [0, 0], r: 55, dir: 1 }, speed: 1.7, phase: 0, armed: true });
 
   // Bounty Hunter: stalks the open ground outside the safe zone.
-  out.push({ key: "bounty", characterId: "std-death", role: "Bounty Hunter", route: { kind: "circle", c: [0, 0], r: 120, dir: -1 }, speed: 2.4, phase: 0, armed: true });
+  out.push({ key: "bounty", characterId: "std-death", role: "Bounty Hunter", route: { kind: "circle", c: [0, 0], r: 230, dir: -1 }, speed: 2.4, phase: 0, armed: true });
 
   // Workers at their buildings: pacing the front of the lot.
   const workers: [string, string, string][] = [

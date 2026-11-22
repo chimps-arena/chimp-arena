@@ -174,7 +174,7 @@ function Tower() {
 /** Asteroid rock scattered between districts (instanced: one draw call). */
 function Rocks() {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const count = 220;
+  const count = 600;
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
@@ -283,9 +283,9 @@ function Sky() {
   return (
     <group>
       <mesh material={skyMaterial} renderOrder={-10}>
-        <sphereGeometry args={[1200, 32, 16]} />
+        <sphereGeometry args={[2000, 32, 16]} />
       </mesh>
-      <Stars radius={500} depth={100} count={5000} factor={6} fade speed={0.4} />
+      <Stars radius={1500} depth={200} count={5000} factor={6} fade speed={0.4} />
       <group position={[-260, 140, -420]} rotation={[0.3, 0, 0.35]}>
         <mesh>
           <sphereGeometry args={[90, 48, 32]} />

@@ -20,10 +20,12 @@ export interface District {
   accent: string;
 }
 
-export const SAFE_RADIUS = 70;
-export const WORLD_RADIUS = 330;
+// Sized for a few hundred players: a roomy Core, districts a real trip out
+// (fast travel by ship from the docks), open ground between them.
+export const SAFE_RADIUS = 110;
+export const WORLD_RADIUS = 640;
 
-const DISTRICT_DISTANCE = 205;
+const DISTRICT_DISTANCE = 390;
 const at = (deg: number) => {
   const a = (deg * Math.PI) / 180;
   return { x: Math.sin(a) * DISTRICT_DISTANCE, z: Math.cos(a) * DISTRICT_DISTANCE };
@@ -37,9 +39,9 @@ export const DISTRICTS: District[] = [
 
 export const CORE_ZONE = "Astroworld Core";
 /** Core properties stand on this ring, facing the tower. */
-export const CORE_RING = 56;
+export const CORE_RING = 88;
 /** Lot pitch inside a district grid (building footprint + street). */
-export const LOT_SPACING = 26;
+export const LOT_SPACING = 34;
 /** Radius used for walking collisions around a building. */
 export const BUILDING_RADIUS = 7;
 

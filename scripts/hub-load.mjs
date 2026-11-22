@@ -28,7 +28,7 @@ const HOLD_S = Number(process.argv[4] ?? 30);
 const CHARACTERS = JSON.parse(readFileSync(new URL("../shared/src/characters.json", import.meta.url), "utf8"));
 
 // Mirrors shared/src (plain .mjs can't import the TS).
-const SAFE_RADIUS = 70;
+const SAFE_RADIUS = 110;
 const SEND_EVERY_MS = 66;
 const SPEED = 8.4; // sprint, under the server's walk cap
 const FIRE_MS = 150;

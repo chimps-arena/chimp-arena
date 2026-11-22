@@ -37,9 +37,15 @@ export interface CharacterLook {
   fur: string;
   /** Hair colour, when head === "hair". */
   hair?: string;
+  /** Face covered by a mask, only glowing eyes showing. */
+  mask?: boolean;
+  /** Tattered cloak over the shoulders. */
+  cloak?: boolean;
+  /** Second accent (glyph trims), defaults to glow. */
+  accent?: string;
 }
 
-type Look = Pick<CharacterLook, "outfit" | "head" | "suit" | "trim" | "glow"> & Partial<Pick<CharacterLook, "species" | "gear" | "fur" | "hair">>;
+type Look = Pick<CharacterLook, "outfit" | "head" | "suit" | "trim" | "glow"> & Partial<Pick<CharacterLook, "species" | "gear" | "fur" | "hair" | "mask" | "cloak" | "accent">>;
 
 const L = (outfit: Outfit, head: Headwear, suit: string, trim: string, glow: string, extra: Partial<Look> = {}): Look => ({
   outfit,
@@ -53,7 +59,7 @@ const L = (outfit: Outfit, head: Headwear, suit: string, trim: string, glow: str
 const LOOKS: Record<string, Look> = {
   // One of ones
   "chimp-1of1-cleopatra": L("royal", "crown", "#d4a93a", "#4a1d5c", "#f5c542", { hair: "#1fa890" }),
-  "chimp-1of1-dex": L("armor", "hood", "#1d1f1b", "#4a5a2a", "#a855f7", { gear: "rifle" }),
+  "chimp-1of1-dex": L("armor", "hood", "#1d1f1b", "#4a5a2a", "#a855f7", { gear: "rifle", mask: true, cloak: true }),
   "chimp-1of1-kill-boy-tommy": L("coat", "fedora", "#17141a", "#7c3aed", "#b06cf1", { gear: "rifle" }),
   "chimp-1of1-lex": L("coat", "hood", "#1b2a26", "#2f6b5e", "#3fd0c9", { gear: "rifle" }),
   "chimp-1of1-napoleon": L("royal", "crown", "#4a1d5c", "#d4a93a", "#f5c542"),
@@ -66,7 +72,8 @@ const LOOKS: Record<string, Look> = {
   "rare-bad-mike": L("casual", "none", "#d9661e", "#2d2d2d", "#ff9a3c", { gear: "pickaxe" }),
   "rare-bertha-brick-hit": L("armor", "hood", "#1c1424", "#5b2d8a", "#b06cf1"),
   "rare-caesar": L("royal", "none", "#e8dcc0", "#d4a93a", "#a855f7"),
-  "rare-deezy-chimp": L("armor", "hood", "#1a1a17", "#4d5a2a", "#b65cf5", { gear: "blade" }),
+  // Olive hooded cloak with teal glyphs, black armour, purple-lit mask and eyes.
+  "rare-deezy-chimp": L("armor", "hood", "#1a1a17", "#4d5a2a", "#b65cf5", { gear: "blade", mask: true, cloak: true, accent: "#2dd4bf" }),
   "rare-ella": L("gown", "hair", "#c98bb9", "#e8b4d8", "#f5a3e0", { hair: "#1fa890" }),
   "rare-eva": L("gown", "hair", "#c0249a", "#e055c2", "#f04fd0", { hair: "#1fa890" }),
   "rare-foxtrot": L("armor", "hood", "#1b1d1a", "#3e5a3a", "#53b0c9", { gear: "rifle" }),
@@ -133,6 +140,9 @@ export const CHARACTERS: CharacterLook[] = (characters as GeneratedCharacter[]).
     glow: look?.glow ?? c.glow,
     fur: look?.fur ?? "#4a2f1d",
     hair: look?.hair,
+    mask: look?.mask,
+    cloak: look?.cloak,
+    accent: look?.accent,
   };
 });
 

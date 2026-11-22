@@ -149,16 +149,16 @@ interface Flight {
 
 const FLIGHTS: Flight[] = [
   // The Astrocorp flagship on a slow, high patrol around the whole map.
-  { id: "ship-dreadnought", c: [0, 0], r: [420, 420], y: 150, period: 600, dir: 1, phase: 0 },
+  { id: "ship-dreadnought", c: [0, 0], r: [760, 760], y: 170, period: 900, dir: 1, phase: 0 },
   // Its escort, a little behind and below.
-  { id: "ship-vanguard", c: [0, 0], r: [380, 380], y: 120, period: 600, dir: 1, phase: -0.035 },
+  { id: "ship-vanguard", c: [0, 0], r: [700, 700], y: 140, period: 900, dir: 1, phase: -0.035 },
   // Ore runs between the Belt and Helios Docks.
-  { id: "ship-titan", c: [-90, 50], r: [170, 110], y: 70, period: 160, dir: -1, phase: 0.3 },
-  { id: "ship-atlas", c: [-90, 50], r: [170, 110], y: 55, period: 160, dir: -1, phase: 0.8 },
+  { id: "ship-titan", c: [-170, 95], r: [320, 210], y: 75, period: 220, dir: -1, phase: 0.3 },
+  { id: "ship-atlas", c: [-170, 95], r: [320, 210], y: 60, period: 220, dir: -1, phase: 0.8 },
   // Passenger liner over the Core and Lunar Rim.
-  { id: "ship-starliner", c: [80, -30], r: [200, 140], y: 95, period: 240, dir: 1, phase: 0.5 },
+  { id: "ship-starliner", c: [150, -55], r: [380, 260], y: 100, period: 320, dir: 1, phase: 0.5 },
   // A rebel raider skimming the outskirts, fast and low.
-  { id: "ship-rebel-raider", c: [0, 0], r: [300, 260], y: 38, period: 70, dir: -1, phase: 0.2 },
+  { id: "ship-rebel-raider", c: [0, 0], r: [560, 480], y: 40, period: 110, dir: -1, phase: 0.2 },
 ];
 
 function placeFlight(g: THREE.Group | null, f: Flight) {

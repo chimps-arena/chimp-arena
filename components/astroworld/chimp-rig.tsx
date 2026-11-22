@@ -79,6 +79,7 @@ function useMaterials(look: CharacterLook) {
       gold: std("#d4a93a", 0.9, 0.25),
       white: std("#e8e8ee", 0.2, 0.5),
       glow: new THREE.MeshBasicMaterial({ color: look.glow, toneMapped: false }),
+      accent: new THREE.MeshBasicMaterial({ color: look.accent ?? look.glow, toneMapped: false }),
       eye: new THREE.MeshBasicMaterial({ color: "#0b0b0d" }),
       glass: new THREE.MeshPhysicalMaterial({
         color: "#cfe8ff",
@@ -126,10 +127,11 @@ function Head({ look, m }: { look: CharacterLook; m: Mats }) {
     <group>
       <P g={G.sphere} m={m.fur} p={[0, 0.2, 0]} s={[0.27, 0.29, 0.27]} />
       {/* muzzle / snout */}
-      <P g={G.sphere} m={m.face} p={[0, 0.13, dog ? 0.24 : 0.18]} s={dog ? [0.13, 0.11, 0.17] : [0.17, 0.13, 0.12]} />
-      <P g={G.sphere} m={m.face} p={[0, 0.27, 0.17]} s={[0.17, 0.1, 0.1]} />
-      <P g={G.sphere} m={m.eye} p={[-0.085, 0.27, 0.235]} s={0.035} />
-      <P g={G.sphere} m={m.eye} p={[0.085, 0.27, 0.235]} s={0.035} />
+      {/* masked characters: the face is covered (see Headwear), only glowing eyes show */}
+      <P g={G.sphere} m={look.mask ? m.dark : m.face} p={[0, 0.13, dog ? 0.24 : 0.18]} s={dog ? [0.13, 0.11, 0.17] : [0.17, 0.13, 0.12]} />
+      <P g={G.sphere} m={look.mask ? m.dark : m.face} p={[0, 0.27, 0.17]} s={[0.17, 0.1, 0.1]} />
+      {!look.mask && <P g={G.sphere} m={m.eye} p={[-0.085, 0.27, 0.235]} s={0.035} />}
+      {!look.mask && <P g={G.sphere} m={m.eye} p={[0.085, 0.27, 0.235]} s={0.035} />}
       {dog && <P g={G.sphere} m={m.eye} p={[0, 0.17, 0.4]} s={0.04} />}
       {/* ears */}
       {cat ? (
@@ -166,10 +168,27 @@ function Headwear({ look, m }: { look: CharacterLook; m: Mats }) {
     case "hood":
       return (
         <group>
-          <P g={G.hemi} m={m.trim} p={[0, 0.2, -0.02]} s={[0.33, 0.38, 0.34]} />
-          <P g={G.box} m={m.trim} p={[0, 0.05, -0.2]} s={[0.56, 0.42, 0.14]} />
-          <P g={G.box} m={m.dark} p={[0, 0.17, 0.25]} s={[0.3, 0.1, 0.04]} />
-          <P g={G.box} m={m.glow} p={[0, 0.27, 0.26]} s={[0.26, 0.035, 0.02]} />
+          {/* shell over the crown, drapes down the sides and back, peak over the brow */}
+          <P g={G.hemi} m={m.trim} p={[0, 0.2, -0.1]} s={[0.35, 0.42, 0.33]} />
+          <P g={G.box} m={m.trim} p={[-0.29, 0.08, 0.02]} s={[0.07, 0.42, 0.4]} />
+          <P g={G.box} m={m.trim} p={[0.29, 0.08, 0.02]} s={[0.07, 0.42, 0.4]} />
+          <P g={G.box} m={m.trim} p={[0, 0.03, -0.22]} s={[0.6, 0.46, 0.12]} />
+          <P g={G.box} m={m.trim} p={[0, 0.47, 0.13]} s={[0.4, 0.07, 0.16]} r={[0.45, 0, 0]} />
+          {/* glyph trim down the hood's front edges */}
+          <P g={G.box} m={m.accent} p={[-0.26, 0.16, 0.22]} s={[0.025, 0.34, 0.02]} r={[0, 0, -0.12]} />
+          <P g={G.box} m={m.accent} p={[0.26, 0.16, 0.22]} s={[0.025, 0.34, 0.02]} r={[0, 0, 0.12]} />
+          {look.mask ? (
+            <>
+              {/* mask over the muzzle, lit seam, glowing eyes */}
+              <P g={G.box} m={m.dark} p={[0, 0.12, 0.25]} s={[0.3, 0.16, 0.08]} />
+              <P g={G.box} m={m.glow} p={[0, 0.12, 0.295]} s={[0.16, 0.018, 0.01]} />
+              <P g={G.box} m={m.dark} p={[0, 0.27, 0.235]} s={[0.3, 0.07, 0.05]} />
+              <P g={G.sphere} m={m.glow} p={[-0.075, 0.28, 0.27]} s={[0.05, 0.026, 0.02]} />
+              <P g={G.sphere} m={m.glow} p={[0.075, 0.28, 0.27]} s={[0.05, 0.026, 0.02]} />
+            </>
+          ) : (
+            <P g={G.box} m={m.glow} p={[0, 0.36, 0.27]} s={[0.24, 0.025, 0.02]} />
+          )}
         </group>
       );
     case "fedora":
@@ -274,6 +293,28 @@ function Torso({ look, m }: { look: CharacterLook; m: Mats }) {
       )}
       {(o === "royal" || o === "gown") && <P g={G.box} m={o === "royal" ? m.gold : m.glow} p={[0, 0.48, 0.19]} s={[0.24, 0.03, 0.02]} />}
       {o === "royal" && <P g={G.box} m={m.trim} p={[0, 0.0, -0.26]} s={[0.62, 1.15, 0.04]} />}
+      {look.cloak && <Cloak m={m} />}
+    </group>
+  );
+}
+
+/** Ragged cloak: a mantle over the shoulders and uneven strips hanging down the back. */
+const CLOAK_STRIPS: [number, number, number][] = [
+  [-0.27, 1.0, 0.05],
+  [-0.16, 1.2, -0.1],
+  [-0.05, 0.95, 0.08],
+  [0.06, 1.25, -0.06],
+  [0.17, 1.05, 0.1],
+  [0.28, 0.9, -0.08],
+];
+function Cloak({ m }: { m: Mats }) {
+  return (
+    <group>
+      <P g={G.capsule} m={m.trim} p={[0, 0.5, -0.02]} s={[0.4, 0.1, 0.3]} />
+      {CLOAK_STRIPS.map(([x, len, tilt], i) => (
+        <P key={i} g={G.box} m={m.trim} p={[x, 0.55 - len / 2, -0.27]} s={[0.12, len, 0.03]} r={[0.08, 0, tilt]} />
+      ))}
+      <P g={G.box} m={m.accent} p={[0, 0.5, -0.29]} s={[0.5, 0.025, 0.01]} />
     </group>
   );
 }

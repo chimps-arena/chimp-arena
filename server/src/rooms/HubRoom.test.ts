@@ -136,9 +136,9 @@ describe("HubRoom (Astroworld)", () => {
       const server = colyseus.getRoomById<State>(room.roomId);
       const s = server.state.players.get(shooter.sessionId)!;
       const t = server.state.players.get(target.sessionId)!;
-      s.x = 100;
+      s.x = 200;
       s.z = 0;
-      t.x = 110;
+      t.x = 210;
       t.z = 0;
       const shots: HubShotBroadcast[] = [];
       const kills: HubKillBroadcast[] = [];
@@ -147,8 +147,8 @@ describe("HubRoom (Astroworld)", () => {
       shooter.onMessage("chat", () => {});
       return { shooter, target, s, t, shots, kills };
     }
-    const body = { o: { x: 100, y: 1.2, z: 0 }, d: { x: 1, y: 0, z: 0 } };
-    const head = { o: { x: 100, y: 1.75, z: 0 }, d: { x: 1, y: 0, z: 0 } };
+    const body = { o: { x: 200, y: 1.2, z: 0 }, d: { x: 1, y: 0, z: 0 } };
+    const head = { o: { x: 200, y: 1.75, z: 0 }, d: { x: 1, y: 0, z: 0 } };
 
     it("a body shot and a headshot do the right damage, server-side", async () => {
       const { shooter, target, t, shots } = await duel();
@@ -159,7 +159,7 @@ describe("HubRoom (Astroworld)", () => {
       await waitFor(() => t.hp === MAX_HP - SHOT_DAMAGE - HEADSHOT_DAMAGE);
       await waitFor(() => shots.length === 2);
       expect(shots[0].hit).toBe(target.sessionId);
-      expect(shots[0].end.x).toBeCloseTo(109.45, 1); // tracer stops at the capsule
+      expect(shots[0].end.x).toBeCloseTo(209.45, 1); // tracer stops at the capsule
     });
 
     it("ignores shots faster than the fire rate and shots that miss", async () => {
@@ -173,7 +173,7 @@ describe("HubRoom (Astroworld)", () => {
 
     it("rejects a shot that claims to start somewhere else", async () => {
       const { shooter, t } = await duel();
-      shooter.send("shoot", { o: { x: 108, y: 1.2, z: 0 }, d: body.d }); // point-blank from 8 m away
+      shooter.send("shoot", { o: { x: 208, y: 1.2, z: 0 }, d: body.d }); // point-blank from 8 m away
       await settle();
       expect(t.hp).toBe(MAX_HP);
     });
@@ -200,11 +200,11 @@ describe("HubRoom (Astroworld)", () => {
     it("nobody can be hurt in the Core, and nobody can shoot from it", async () => {
       const { shooter, s, t } = await duel();
       t.x = 20; // target inside the safe zone
-      shooter.send("shoot", { o: { x: 100, y: 1.2, z: 0 }, d: { x: -1, y: 0, z: 0 } });
+      shooter.send("shoot", { o: { x: 200, y: 1.2, z: 0 }, d: { x: -1, y: 0, z: 0 } });
       await settle();
       expect(t.hp).toBe(MAX_HP);
 
-      t.x = 110;
+      t.x = 210;
       s.x = 10; // shooter inside the safe zone
       shooter.send("shoot", { o: { x: 10, y: 1.2, z: 0 }, d: { x: 1, y: 0, z: 0 } });
       await settle();
@@ -213,17 +213,17 @@ describe("HubRoom (Astroworld)", () => {
 
     it("buildings stop bullets: no hits through a wall, and the tracer ends at it", async () => {
       const { shooter, t, shots } = await duel();
-      setWorldCovers([[105, 0, 1.5, 6]]); // a building between them
+      setWorldCovers([[205, 0, 1.5, 6]]); // a building between them
       try {
         shooter.send("shoot", body);
         await waitFor(() => shots.length === 1);
         expect(t.hp).toBe(MAX_HP);
         expect(shots[0].hit).toBeNull();
-        expect(shots[0].end.x).toBeCloseTo(103.5, 1);
+        expect(shots[0].end.x).toBeCloseTo(203.5, 1);
 
         await sleep(150);
         // A lob over the top of a low building still lands.
-        setWorldCovers([[105, 0, 1.5, 1]]);
+        setWorldCovers([[205, 0, 1.5, 1]]);
         shooter.send("shoot", body);
         await waitFor(() => t.hp === MAX_HP - SHOT_DAMAGE);
       } finally {
