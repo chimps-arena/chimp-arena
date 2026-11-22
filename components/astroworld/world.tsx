@@ -307,7 +307,7 @@ function Sky() {
 /** Rover showroom pad in the Core. */
 export const SHOWROOM = { x: 26, z: -14 };
 
-export function WorldScenery({ showroomRover }: { showroomRover: React.ReactNode }) {
+export function WorldScenery({ showroomRover, showroomLot }: { showroomRover: React.ReactNode; showroomLot?: React.ReactNode }) {
   const spin = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
     if (spin.current) spin.current.rotation.y += dt * 0.25;
@@ -329,6 +329,7 @@ export function WorldScenery({ showroomRover }: { showroomRover: React.ReactNode
         <group ref={spin} position={[0, 0.3, 0]}>
           {showroomRover}
         </group>
+        {showroomLot}
         <pointLight position={[0, 6, 0]} color="#f5b301" intensity={60} distance={14} />
         <Html position={[0, 4.4, 0]} center distanceFactor={14} style={{ pointerEvents: "none" }}>
           <div className="whitespace-nowrap rounded border border-amber-400/60 bg-black/75 px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wider text-amber-300">

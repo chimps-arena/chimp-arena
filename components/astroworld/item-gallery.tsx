@@ -15,6 +15,7 @@ import { characterById } from "@chimp-arena/shared";
 import { ChargedCrystal, ItemModel, ITEMS, type ItemId } from "./items";
 import { ENV_IDS, EnvModel, Pet } from "./env-models";
 import { GearModel, TOOL_IDS, TOOLS, WEAPON_IDS, WEAPONS } from "./gear";
+import { ROVER_IDS, SHIP_IDS, VEHICLES, VehicleModel } from "./vehicles";
 import { WorldLighting } from "./world";
 import { CharacterBody, ModelIndexContext, type ModelIndex } from "./character-body";
 import { idlePose, type PoseInput } from "./chimp-rig";
@@ -45,8 +46,8 @@ const ITEM_ORDER: ItemId[] = [
   "crystal-charged",
 ];
 
-type Tab = "items" | "weapons" | "tools" | "buildings" | "characters" | "armed" | "pets";
-const TABS: Tab[] = ["items", "weapons", "tools", "buildings", "characters", "armed", "pets"];
+type Tab = "items" | "weapons" | "tools" | "vehicles" | "buildings" | "characters" | "armed" | "pets";
+const TABS: Tab[] = ["items", "weapons", "tools", "vehicles", "buildings", "characters", "armed", "pets"];
 
 type Entry = { key: string; title: string; sub: string; color: string; node: React.ReactNode };
 
@@ -171,7 +172,23 @@ export function ItemGallery() {
         </group>
       ),
     }));
-    return { items, weapons, tools, buildings, characters, armed, pets };
+    // Vehicles at a common display size; a small arrow on the ring marks +z (forward).
+    const vehicles: Entry[] = [...ROVER_IDS, ...SHIP_IDS].map((id) => ({
+      key: id,
+      title: VEHICLES[id].name,
+      sub: VEHICLES[id].kind,
+      color: VEHICLES[id].glow,
+      node: (
+        <group>
+          <VehicleModel id={id} length={2.4} />
+          <mesh position={[0, 0.02, 1.25]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.12, 3]} />
+            <meshBasicMaterial color="#ffffff" toneMapped={false} />
+          </mesh>
+        </group>
+      ),
+    }));
+    return { items, weapons, tools, vehicles, buildings, characters, armed, pets };
   }, [index, clip]);
 
   return (
@@ -190,7 +207,7 @@ export function ItemGallery() {
         </mesh>
         {TABS.map((t) => (
           <group key={t} visible={t === tab}>
-            <Shelf entries={byTab[t]} cols={t === "characters" || t === "armed" || t === "buildings" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" || t === "armed" ? 2.2 : t === "buildings" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
+            <Shelf entries={byTab[t]} cols={t === "characters" || t === "armed" || t === "buildings" || t === "vehicles" ? 6 : t === "weapons" ? 3 : 5} gap={t === "characters" || t === "armed" ? 2.2 : t === "buildings" || t === "vehicles" ? 3.4 : t === "weapons" ? 3.6 : 3} hidden={t !== tab} />
           </group>
         ))}
         </ModelIndexContext.Provider>

@@ -60,8 +60,10 @@ import { NpcHud, type NpcContext } from "./npc-dialog";
 import { fetchNews, KIOSK, NewsKiosk, type NewsIndex } from "./news";
 import { exchangeColliders } from "./items";
 import { Effects, fx, RoverModel } from "./fx";
+import { DrivenRover, ShowroomLot, ShowroomStar, SkyTraffic } from "./vehicles";
 
-const SHOWROOM_ROVER = <RoverModel color="#a855f7" />;
+const SHOWROOM_ROVER = <ShowroomStar fallback={<RoverModel color="#a855f7" />} />;
+const SHOWROOM_LOT = <ShowroomLot />;
 
 /** Game server: env override, else the Fly.io deployment in production builds, else local dev. */
 const SERVER_URL =
@@ -246,8 +248,9 @@ function RemoteChimp({ player, bubble }: { player: NetPlayer; bubble?: string })
   const rover = view.mode === "rover";
   return (
     <group ref={group}>
-      {rover && <RoverModel color={look.glow} />}
-      <group position={rover ? [0, 0.55, -0.3] : [0, 0, 0]}>
+      {rover && <DrivenRover fallback={<RoverModel color={look.glow} />} />}
+      {/* the driver rides inside the rover */}
+      <group visible={!rover}>
         <CharacterBody look={look} pose={getPose} />
       </group>
       <NameTag name={player.name} look={look} bubble={bubble} height={rover ? 3.3 : 2.45} hp={view.hp} showHp={view.armed && view.hp < MAX_HP} hidden={!view.alive} />
@@ -648,8 +651,9 @@ function LocalPlayer({
   const getPose = useCallback(() => pose.current, []);
   return (
     <group ref={group}>
-      {mode === "rover" && <RoverModel color={look.glow} />}
-      <group position={mode === "rover" ? [0, 0.55, -0.3] : [0, 0, 0]}>
+      {mode === "rover" && <DrivenRover fallback={<RoverModel color={look.glow} />} />}
+      {/* the driver rides inside the rover */}
+      <group visible={mode !== "rover"}>
         <CharacterBody look={look} pose={getPose} />
       </group>
       <NameTag name={`${me.name} (you)`} look={look} bubble={bubble} height={mode === "rover" ? 3.3 : 2.45} hp={me.hp} showHp={false} hidden={!bubble} />
@@ -1021,10 +1025,11 @@ const World3D = memo(function World3D({
       <fog attach="fog" args={["#3a2760", 160, 700]} />
       <WorldLighting />
       <ModelIndexContext.Provider value={models}>
-      <WorldScenery showroomRover={SHOWROOM_ROVER} />
+      <WorldScenery showroomRover={SHOWROOM_ROVER} showroomLot={SHOWROOM_LOT} />
       <PropertyField props={props} places={places} />
       <Npcs props={props} places={places} />
       {news && <NewsKiosk news={news} />}
+      <SkyTraffic />
       <Effects />
 
       {room &&
@@ -1422,6 +1427,10 @@ export function HubScene({ playerName, loggedIn }: { playerName?: string; logged
     () => [
       ...STATIC_COLLIDERS,
       [SHOWROOM.x, SHOWROOM.z, 4.6, 0.6],
+      // parked rovers beside the showroom (see ShowroomLot)
+      [SHOWROOM.x - 7.5, SHOWROOM.z + 2, 2.4, 2.4],
+      [SHOWROOM.x + 7.5, SHOWROOM.z + 2, 2.4, 2.4],
+      [SHOWROOM.x, SHOWROOM.z - 7.5, 2.4, 2.4],
       [KIOSK.x, KIOSK.z, 3.2, 5.5],
       ...exchangeColliders(),
       ...props.flatMap((p) => {

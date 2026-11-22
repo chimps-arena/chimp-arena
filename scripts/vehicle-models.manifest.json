@@ -1,0 +1,19 @@
+{
+  "sourceDir": "../astro-resources/materials2/Vehicle Kits",
+  "outDir": "public/models/vehicles",
+  "texture": 1024,
+  "models": {
+    "rover-terra-explorer": "Rovers/Base Rover - Terra-Explorer/Base Rover - Terra-Explorer - Low Poly - 5k.glb",
+    "rover-apex-r": "Rovers/Racing Rover - Apex-R/Racing Rover - Apex-R - Mesh - Low Poly - 5K.glb",
+    "rover-aurora": "Rovers/Luxury Rover - Aurora/Luxury Rover - Aurora - Mesh - Low Poly - 5K.glb",
+    "rover-warlord": "Rovers/Assault Rover - Warlord/Assualt Rover - Warlord - Mesh - Low Poly - 5K.glb",
+    "ship-pioneer": "Spaceships/Civilian Chimpz/Base Transport - Pioneer/Base Transport - Pioneer - Mesh - Low Poly - 5K.glb",
+    "ship-starliner": "Spaceships/Civilian Chimpz/Mega Transport - Starliner/Mega Transport - Starliner - Mesh - Low Poly - 5K.glb",
+    "ship-agena": "Spaceships/Civilian Chimpz/Luxury Sports-Spaceship - Agena/Luxury Sports-Spaceship - Agena - Mesh - Low Poly - 5K.glb",
+    "ship-titan": "Spaceships/Transport Shipz/Heavy Ore Transport - Titan/Heavy Ore Transport - Titan - Mesh - Low Poly 5k.glb",
+    "ship-atlas": "Spaceships/Transport Shipz/Light Ore Transport - Atlas/Light Ore Transport - Atlas - Mesh - Low Poly 5K.glb",
+    "ship-dreadnought": "Spaceships/Military Chimpz/Heavy Battleship - Dreadnought/Heavy Battleship - Dreadnought - Mesh - Low Poly - 5K.glb",
+    "ship-vanguard": "Spaceships/Military Chimpz/Light Battleship - Vanguard/Light Battleship - Vanguard - Mesh - Low Poly - 5K.glb",
+    "ship-rebel-raider": "Spaceships/Military Chimpz/Rebel Ship - The Rebel Raider/Rebel Ship - The Rebel Raider - Mesh - Low Poly - 5K.glb"
+  }
+}

@@ -17,6 +17,7 @@ import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 import { NearLabel } from "./items";
 import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
+import { DockedShip, dockedShipFor } from "./vehicles";
 
 export interface WorldProperty {
   id: string;
@@ -556,6 +557,12 @@ export const Building = memo(function Building({
       {near && productFor(prop.type, prop.id) && (
         <group position={[-2.6, 0, 5.4]}>
           <ItemPedestal id={productFor(prop.type, prop.id)!} size={1} />
+        </group>
+      )}
+      {/* docks have a ship hovering over the landing stand */}
+      {prop.type === "dock" && (
+        <group position={[0, 0, -1.5]}>
+          <DockedShip id={dockedShipFor(prop.id)} />
         </group>
       )}
       {/* armories show their weapon rack; mining lots show a mining tool */}
