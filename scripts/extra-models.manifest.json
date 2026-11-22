@@ -1,0 +1,10 @@
+{
+  "sourceDir": "../astro-resources/materials",
+  "outDir": "public/models",
+  "texture": 1024,
+  "models": {
+    "items/nutrition-cell": "Nutrition Suit Cell/Astrofoods - Nutrition Suit Cell - Mesh - Low Poly - 600.glb",
+    "pets/astrodog": "NPC's copy/Pets/Astrodog/Astrodog - Low Poly - 2K.glb",
+    "pets/astrokitty": "NPC's copy/Pets/Astrokitty/Astrokitty - Mesh - Low Poly - 2K.glb"
+  }
+}

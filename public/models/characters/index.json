@@ -1,1 +1,68 @@
-{}
+{
+  "std-astrogaurd-safu-security": {
+    "file": "std-astrogaurd-safu-security.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-castro": {
+    "file": "std-castro.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-death": {
+    "file": "std-death.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-techno-left-the-building": {
+    "file": "std-techno-left-the-building.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-undercover-dave": {
+    "file": "std-undercover-dave.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  },
+  "std-weapon-specialist-ryan": {
+    "file": "std-weapon-specialist-ryan.glb",
+    "clips": [
+      "Running",
+      "Walking",
+      "Heavy_Hammer_Swing",
+      "Idle",
+      "Regular_Jump",
+      "victory"
+    ]
+  }
+}

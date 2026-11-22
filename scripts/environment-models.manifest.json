@@ -1,0 +1,24 @@
+{
+  "sourceDir": "../astro-resources/materials/Environment Assets",
+  "outDir": "public/models/env",
+  "texture": 1024,
+  "models": {
+    "armory": "Armory.glb",
+    "automated-drilling": "Automated Drilling.glb",
+    "basic-comms-tower": "Basic Comms Tower.glb",
+    "bunker": "Bunker.glb",
+    "cargo-box": "Cargo Box.glb",
+    "chimp-stand": "Chimp Stand.glb",
+    "fuel-tank-1": "Fuel Tank 1.glb",
+    "fuel-tank-2": "Fuel Tank 2.glb",
+    "fuel-tank-3": "Fuel Tank 3.glb",
+    "fuel-tank-4": "Fuel Tank 4.glb",
+    "fuel-tank-5": "Fuel Tank 5.glb",
+    "greenhouse": "Greenhouse.glb",
+    "hangar": "Hangar.glb",
+    "outpost": "Outpost.glb",
+    "rock-armory-front": "Rock Armory Front.glb",
+    "ship-docking-stand": "Ship Docking Stand.glb",
+    "tall-comms-tower": "Tall Comms Tower.glb"
+  }
+}

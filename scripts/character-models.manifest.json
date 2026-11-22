@@ -1,0 +1,14 @@
+{
+  "sourceDir": "../astro-resources/materials/NPC's copy",
+  "outDir": "public/models/characters",
+  "texture": 1024,
+  "rootInPlace": true,
+  "models": {
+    "std-undercover-dave": "Foundry/Undercover Dave/Undercover Dave - Mesh - Low Poly - 3K - Rigged Character + Animations.glb",
+    "std-weapon-specialist-ryan": "Armory/Weapon Speacilist Ryan/Weapon Speacilist Ryan - Mesh - Low Poly - 3K - Rigged Character + Animations.glb",
+    "std-castro": "Military/Castro/Castro - Mesh - Low Poly - 3K - Rigged Character + Animations.glb",
+    "std-astrogaurd-safu-security": "Security_ Operational Personel/Astroguard - Safu Security/Astroguard - Safu Security - Mesh - Low Poly - 3K - Rigged Character + Animations.glb",
+    "std-techno-left-the-building": "Comms Operator/Techno Left The Building/Techno Left The Building - Mesh - Low Poly - 3K - Rigged Character + Animations.glb",
+    "std-death": "NPC Bounty Hunters/Death/Death - Mesh - Low Poly - 3K - Rigged Character + Animations.glb"
+  }
+}
