@@ -7,7 +7,7 @@
  */
 
 import { Suspense } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import { DISTRICTS, LOT_SPACING, ROAD_ANGLES, SAFE_RADIUS, type Cover } from "@chimp-arena/shared";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 

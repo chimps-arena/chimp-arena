@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored library code (a patched copy of drei's Html; see the file header).
+    "components/astroworld/drei-html.js",
   ]),
 ]);
 

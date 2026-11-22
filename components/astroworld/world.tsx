@@ -8,7 +8,8 @@
 import type { Cover } from "@chimp-arena/shared";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Environment, Html, Lightformer, Stars } from "@react-three/drei";
+import { Environment, Lightformer, Stars } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import { DISTRICTS, ROAD_ANGLES, SAFE_RADIUS, WORLD_RADIUS, LOT_SPACING } from "@chimp-arena/shared";
 import { preloadCoreItems, ResourceExchange } from "./items";

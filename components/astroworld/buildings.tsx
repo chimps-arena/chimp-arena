@@ -10,7 +10,7 @@
  */
 
 import { memo, Suspense, useEffect, useMemo, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";

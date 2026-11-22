@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import { CORE_ZONE, type Cover } from "@chimp-arena/shared";
 import type { WorldProperty } from "./buildings";

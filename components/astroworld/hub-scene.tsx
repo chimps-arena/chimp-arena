@@ -14,7 +14,7 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import { Callbacks, Client, CloseCode, type Room } from "@colyseus/sdk";
 import {

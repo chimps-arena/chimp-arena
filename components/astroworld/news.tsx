@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import { DISTRICTS, LOT_SPACING } from "@chimp-arena/shared";
 import { endTalk, registerInteractable, type NpcSpec } from "./npcs";

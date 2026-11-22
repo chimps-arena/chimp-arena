@@ -8,7 +8,7 @@
  */
 
 import { Suspense, useEffect } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 import { STARPORTS, type Cover, type Starport } from "@chimp-arena/shared";
 import { endTalk, npcSpec, registerInteractable, type NpcSpec } from "./npcs";

@@ -13,7 +13,8 @@
 
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
+import { Html } from "./drei-html";
 import * as THREE from "three";
 
 export type ItemId =
