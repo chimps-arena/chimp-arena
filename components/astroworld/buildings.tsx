@@ -15,6 +15,7 @@ import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
+import { MoltenFlow } from "./molten-flow";
 import { NearLabel } from "./items";
 import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
 import { DockedShip, dockedShipFor } from "./vehicles";
@@ -466,8 +467,12 @@ function pick<T>(list: T[], key: string): T {
   return list[Math.abs(h) % list.length];
 }
 
+// Exterior pilot for The Foundry in The Belt. The other Foundry lots keep their code archetype.
+const FOUNDRY_PILOT: Piece[] = [{ id: "foundry", size: 12, at: [0, 0.1] }];
+
 /** Which team models (if any) draw this property. */
 export function modelPiecesFor(type: string, id: string): Piece[] | null {
+  if (type === "foundry" && id === "belt-fb") return FOUNDRY_PILOT;
   const variants = MODEL_ARCHES[type];
   return variants ? pick(variants, id) : null;
 }
@@ -478,6 +483,7 @@ function ModelBody({ pieces }: { pieces: Piece[] }) {
       {pieces.map((pc, i) => (
         <group key={i} position={[pc.at?.[0] ?? 0, pc.y ?? 0, pc.at?.[1] ?? 0]} rotation={[0, pc.ry ?? 0, 0]}>
           <EnvModel id={pc.id} fit={pc.fit} size={pc.size} />
+          {pc.id === "foundry" && <MoltenFlow />}
         </group>
       ))}
     </>

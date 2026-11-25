@@ -10,7 +10,7 @@
  * side to `size` metres, `fit: "height"` scales the height (towers).
  */
 
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -22,6 +22,7 @@ export type EnvId =
   | "bunker"
   | "cargo-box"
   | "chimp-stand"
+  | "foundry"
   | "fuel-tank-1"
   | "fuel-tank-2"
   | "fuel-tank-3"
@@ -83,6 +84,75 @@ export function EnvModel({ id, fit = "width", size }: { id: EnvId; fit?: Fit; si
   // Meshopt-compressed: decoded locally, no third-party decoder download.
   const gltf = useGLTF(envUrl(id), false, true);
   const model = useMemo(() => fitted(gltf.scene, fit, size), [gltf.scene, fit, size]);
+  return id === "foundry" ? <FoundryModel model={model} /> : <primitive object={model} />;
+}
+
+/** Animate only the GLB's dedicated molten material. Rock, steel and rim stay unchanged. */
+function FoundryModel({ model }: { model: THREE.Object3D }) {
+  const time = useRef({ value: 0 });
+  useFrame(({ clock }) => { time.current.value = clock.elapsedTime % 120; });
+
+  useLayoutEffect(() => {
+    const uniform = time.current;
+    const clones = new Map<THREE.Material, THREE.Material>();
+    function animate(material: THREE.Material) {
+      if (!(material instanceof THREE.MeshStandardMaterial) || material.name !== "Molten ore") return material;
+      const cached = clones.get(material);
+      if (cached) return cached;
+      const molten = material.clone();
+      molten.onBeforeCompile = (shader) => {
+        shader.uniforms.foundryMoltenTime = uniform;
+        shader.vertexShader = shader.vertexShader.replace("#include <common>", `
+          #include <common>
+          varying vec3 foundryMoltenPosition;
+        `).replace("#include <begin_vertex>", `
+          #include <begin_vertex>
+          foundryMoltenPosition = position;
+        `);
+        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `
+          #include <common>
+          varying vec3 foundryMoltenPosition;
+          uniform float foundryMoltenTime;
+        `).replace("#include <emissivemap_fragment>", `
+          #include <emissivemap_fragment>
+          // Coordinates are in the original GLB mesh, before placement and lot rotation.
+          vec3 p = foundryMoltenPosition;
+          float t = foundryMoltenTime;
+          float alongFlow = -p.y * 210.0 + p.z * 65.0;
+          float lanes = sin(p.x * 155.0 + p.y * 20.0) * 0.5 + 0.5;
+          float streak = pow(0.5 + 0.5 * sin(alongFlow + sin(p.x * 126.0) * 1.5 - t * 12.5663706), 3.0);
+          float fine = 0.5 + 0.5 * sin(alongFlow * 1.63 + p.x * 176.0 - t * 18.8495559);
+          float stream = 0.12 + streak * mix(0.19, 0.47, lanes) + 0.06 * fine;
+          float poolRadius = length(p.xz - vec2(0.031, 0.304));
+          float ripples = 0.5 + 0.5 * sin(poolRadius * 260.0 - t * 12.5663706);
+          float pool = 0.14 + 0.21 * ripples * ripples;
+          float falling = smoothstep(-0.381, -0.369, p.y);
+          totalEmissiveRadiance += vec3(1.0, 0.27, 0.025) * mix(pool, stream, falling);
+        `);
+      };
+      molten.customProgramCacheKey = () => "foundry-molten-flow-v1";
+      clones.set(material, molten);
+      return molten;
+    }
+
+    const restored: { mesh: THREE.Mesh; material: THREE.Material | THREE.Material[] }[] = [];
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const original = object.material;
+      const next = Array.isArray(original) ? original.map(animate) : animate(original);
+      const changed = Array.isArray(original) && Array.isArray(next)
+        ? original.some((material, i) => material !== next[i])
+        : original !== next;
+      if (!changed) return;
+      restored.push({ mesh: object, material: original });
+      object.material = next;
+    });
+    return () => {
+      for (const { mesh, material } of restored) mesh.material = material;
+      for (const clone of clones.values()) clone.dispose();
+    };
+  }, [model]);
+
   return <primitive object={model} />;
 }
 
