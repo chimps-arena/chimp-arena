@@ -74,9 +74,10 @@ it tells you the proportions to aim for.
 > two speaker towers either side of the door
 
 **cantina** (~12 m wide, ~6 m tall)
-> a space cantina bar: a round open-sided bar counter under a wide circular
-> metal canopy on four legs, bottle shelves in the middle, bar stools around the
-> counter, warm amber hanging lamps
+> a space cantina bar: a wide circular metal roof canopy held up by four thick
+> solid support pillars standing on the ground, a round open-sided bar counter
+> under the roof, bottle shelves in the middle, bar stools around the counter,
+> warm amber lamps under the roof
 
 **loft** (~10 m wide, ~12 m tall)
 > a stacked habitation loft: three boxy living modules stacked slightly offset

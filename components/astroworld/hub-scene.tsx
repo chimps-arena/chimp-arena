@@ -61,6 +61,7 @@ import {
 import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
+import { GameBloom } from "./bloom";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
 import { endTalk, npcPositions, Npcs, playerPosition, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
@@ -1209,6 +1210,8 @@ const World3D = memo(function World3D({
       <Starports />
       <Roadside />
       <Effects />
+      {/* Halos on neon/lamps that opt in by going brighter than white (desktop only). */}
+      <GameBloom />
 
       {room &&
         state &&

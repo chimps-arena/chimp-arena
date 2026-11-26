@@ -9,13 +9,14 @@
  * buildings cheap.
  */
 
-import { memo, Suspense, useEffect, useMemo, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Html } from "./drei-html";
 import * as THREE from "three";
 import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 import { MoltenFlow } from "./molten-flow";
+import { NeonCantina } from "./neon-cantina";
 import { NearLabel } from "./items";
 import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
 import { DockedShip, dockedShipFor } from "./vehicles";
@@ -467,6 +468,14 @@ function pick<T>(list: T[], key: string): T {
   return list[Math.abs(h) % list.length];
 }
 
+/**
+ * Properties built one-off from their own NFT art (model + exact signs, lights,
+ * props). Checklists live in docs/property-details/.
+ */
+const HERO_BUILDINGS: Record<string, () => ReactNode> = {
+  "core-nc4": () => <NeonCantina />, // Neon Cantina, "Orbital Drift"
+};
+
 // Exterior pilot for The Foundry in The Belt. The other Foundry lots keep their code archetype.
 const FOUNDRY_PILOT: Piece[] = [{ id: "foundry", size: 12, at: [0, 0.1] }];
 
@@ -588,8 +597,11 @@ export const Building = memo(function Building({
   const arch = ARCHES[prop.type] ?? storefront(5, accent);
   const code = useMemo(() => arch(accent), [arch, accent]);
   const pieces = modelPiecesFor(prop.type, prop.id);
-  // Team model when there is one; the code archetype stands in while it loads.
-  const body = pieces ? (
+  const hero = HERO_BUILDINGS[prop.id];
+  // Hero build or team model when there is one; the code archetype stands in while it loads.
+  const body = hero ? (
+    <Suspense fallback={code}>{hero()}</Suspense>
+  ) : pieces ? (
     <Suspense fallback={code}>
       <ModelBody pieces={pieces} />
     </Suspense>
@@ -608,9 +620,9 @@ export const Building = memo(function Building({
       <group position={[4, 3.9, 6.2]} rotation={[0, -0.25, 0]}>
         {near && prop.image ? <ArtBoard url={prop.image} accent={accent} /> : <B m={M.frame} p={[0, 0, 0]} s={[4.8, 3.6, 0.1]} />}
       </group>
-      {/* what this property produces, on a pedestal at the front of the lot */}
+      {/* what this property produces, on a pedestal at the front of the lot (a corner on hero lots, clear of the frontage) */}
       {near && productFor(prop.type, prop.id) && (
-        <group position={[-2.6, 0, 5.4]}>
+        <group position={hero ? [-6.2, 0, 6.3] : [-2.6, 0, 5.4]}>
           <ItemPedestal id={productFor(prop.type, prop.id)!} size={1} />
         </group>
       )}

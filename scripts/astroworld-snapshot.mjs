@@ -6,7 +6,8 @@
 //     url    default http://localhost:3000/astroworld
 //     outDir default ./snapshots
 //     plan   comma list of steps: "wait:8000", "key:w:2500" (hold W 2.5s),
-//            "shot:name", "eval:<js>", "evalenv:VAR", "fps:3000"
+//            "shot:name", "eval:<js>", "evalenv:VAR", "fps:3000",
+//            "click:x:y" (a real mouse click at viewport pixels, e.g. a dialog button)
 //            default "wait:9000,shot:spawn"
 //   ASTRO_SNAP_PHONE=1 emulates a phone (390x844, touch).
 //
@@ -102,6 +103,10 @@ for (const step of PLAN) {
     await send("Input.dispatchKeyEvent", { type: "keyDown", ...base });
     await sleep(ms);
     await send("Input.dispatchKeyEvent", { type: "keyUp", ...base });
+  } else if (kind === "click") {
+    const [x, y] = rest.map(Number);
+    for (const type of ["mouseMoved", "mousePressed", "mouseReleased"])
+      await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: type === "mouseMoved" ? 0 : 1 });
   } else if (kind === "fps") {
     // Frames per second over N ms, plus which GPU the page actually got.
     const ms = Number(rest[0] ?? 3000);
