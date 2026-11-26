@@ -472,7 +472,7 @@ function pick<T>(list: T[], key: string): T {
  * Properties built one-off from their own NFT art (model + exact signs, lights,
  * props). Checklists live in docs/property-details/.
  */
-const HERO_BUILDINGS: Record<string, () => ReactNode> = {
+const HERO_BUILDINGS: Partial<Record<string, () => ReactNode>> = {
   "core-nc4": () => <NeonCantina />, // Neon Cantina, "Orbital Drift"
 };
 
