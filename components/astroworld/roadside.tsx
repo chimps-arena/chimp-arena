@@ -10,6 +10,7 @@ import { Suspense } from "react";
 import { Html } from "./drei-html";
 import { DISTRICTS, LOT_SPACING, ROAD_ANGLES, SAFE_RADIUS, type Cover } from "@chimp-arena/shared";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 const DISTRICT_HALF = LOT_SPACING * 3.6;
 
@@ -93,9 +94,11 @@ export function Roadside() {
               const [x, z] = place(a, p.along, p.side);
               return (
                 <group key={k} position={[x, 0, z]} rotation={[0, a + p.ry, 0]}>
-                  <Suspense fallback={null}>
-                    <EnvModel id={p.id} fit={p.fit} size={p.size} />
-                  </Suspense>
+                  <ModelErrorBoundary fallback={null} what={`roadside model (${p.id})`}>
+                    <Suspense fallback={null}>
+                      <EnvModel id={p.id} fit={p.fit} size={p.size} />
+                    </Suspense>
+                  </ModelErrorBoundary>
                 </group>
               );
             })}

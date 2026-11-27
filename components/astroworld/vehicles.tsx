@@ -12,6 +12,7 @@ import { Suspense, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export type RoverId = "rover-terra-explorer" | "rover-apex-r" | "rover-aurora" | "rover-warlord";
 export type ShipId =
@@ -59,7 +60,16 @@ const vehicleUrl = (id: VehicleId) => `/models/vehicles/${id}.glb`;
  * A vehicle scaled to `length` metres (default: its real length), nose along
  * +z, wheels/landing gear on y=0, centred.
  */
-export function VehicleModel({ id, length }: { id: VehicleId; length?: number }) {
+/** A ship or rover; if its model fails to download it is simply left out instead of crashing the game. */
+export function VehicleModel(props: { id: VehicleId; length?: number }) {
+  return (
+    <ModelErrorBoundary fallback={null} what={`vehicle model (${props.id})`}>
+      <VehicleModelInner {...props} />
+    </ModelErrorBoundary>
+  );
+}
+
+function VehicleModelInner({ id, length }: { id: VehicleId; length?: number }) {
   const gltf = useGLTF(vehicleUrl(id), false, true);
   const info = VEHICLES[id];
   const size = length ?? info.length;

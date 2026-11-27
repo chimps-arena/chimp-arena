@@ -28,6 +28,7 @@ import { EnvModel, Pet, type PetId } from "./env-models";
 import type { WorldProperty } from "./buildings";
 import { sfx } from "./audio";
 import { chapter1Done, chapter2Done, HIDEOUT, isDone, storyStore, type StoryState } from "./story-state";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 type XZ = [number, number];
 
@@ -438,9 +439,11 @@ export const Npcs = memo(function Npcs({ props, places }: { props: WorldProperty
       {/* Tommy's hideout: a bunker in the open ground between the Belt and the Rim */}
       {hideoutKnown && (
         <group position={[HIDEOUT.x, 0, HIDEOUT.z]}>
-          <Suspense fallback={null}>
-            <EnvModel id="bunker" size={10} />
-          </Suspense>
+          <ModelErrorBoundary fallback={null} what="hideout bunker model">
+            <Suspense fallback={null}>
+              <EnvModel id="bunker" size={10} />
+            </Suspense>
+          </ModelErrorBoundary>
           <NearLabel title="The hideout" sub="Kill Boy Tommy was here" color="#f59e0b" y={7} within={30} />
         </group>
       )}

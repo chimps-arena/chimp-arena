@@ -62,6 +62,7 @@ import { idlePose, type PoseInput } from "./chimp-rig";
 import { CharacterBody, fetchModelIndex, ModelIndexContext, type ModelIndex } from "./character-body";
 import { Building, type WorldProperty } from "./buildings";
 import { GameBloom } from "./bloom";
+import { ModelErrorBoundary } from "./model-error-boundary";
 import { DISTRICT_HALF, SHOWROOM, STATIC_COLLIDERS, WorldLighting, WorldScenery } from "./world";
 import { endTalk, npcPositions, Npcs, playerPosition, npcTalkStore, toggleTalk, trackPlayerForNpcs } from "./npcs";
 import { NpcHud, type NpcContext } from "./npc-dialog";
@@ -1198,6 +1199,12 @@ const World3D = memo(function World3D({
       <color attach="background" args={["#120c2a"]} />
       <fog attach="fog" args={["#3a2760", 160, 700]} />
       <WorldLighting />
+      {/*
+        Last safety net: every model already has its own fallback, but if anything
+        in the 3D world still throws, only the world is lost and the HUD, chat and
+        menus keep working, instead of the whole page showing "This page couldn't load".
+      */}
+      <ModelErrorBoundary fallback={null} what="3D world">
       <ModelIndexContext.Provider value={models}>
       <WorldScenery showroomRover={SHOWROOM_ROVER} showroomLot={SHOWROOM_LOT} />
       <PropertyField props={props} places={places} />
@@ -1239,6 +1246,7 @@ const World3D = memo(function World3D({
           return <RemoteChimp key={id} player={p} bubble={bubbles.get(id)} />;
         })}
       </ModelIndexContext.Provider>
+      </ModelErrorBoundary>
     </Canvas>
   );
 });

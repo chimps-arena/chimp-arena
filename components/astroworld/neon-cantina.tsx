@@ -15,6 +15,7 @@ import { HeroModel } from "./hero-model";
 import { CollectionBottles } from "./neon-cantina-bottles";
 import * as THREE from "three";
 import { banner, coldFuelPoster, crownPanel, languagePanel, loadCrown, mainSign, menuBoard, ORBITAL_DRIFT, screen, stoolSkin } from "./neon-cantina-signs";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export const NEON_CANTINA_URL = "/models/env/neon-cantina.glb";
 export const WIDTH = 12;
@@ -316,7 +317,9 @@ function Bottles() {
   const glow = useMemo(() => shelfGlowMat(), []);
   return (
     <group>
-      <CollectionBottles />
+      <ModelErrorBoundary fallback={null} what="Neon Cantina bottle labels">
+        <CollectionBottles />
+      </ModelErrorBoundary>
       {/* Warm backlight behind each shelf, as in the art; bright enough to glow. */}
       {SHELVES.map((s, i) => (
         <mesh key={i} position={[(s.x[0] + s.x[1]) / 2, s.y + 0.24, SHELF_BACK]} material={glow}>

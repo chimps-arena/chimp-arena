@@ -10,6 +10,8 @@
 //            "click:x:y" (a real mouse click at viewport pixels, e.g. a dialog button)
 //            default "wait:9000,shot:spawn"
 //   ASTRO_SNAP_PHONE=1 emulates a phone (390x844, touch).
+//   ASTRO_SNAP_BLOCK="*astrocorp-hq.glb,*vault.glb" fails those downloads, like a
+//   patchy connection, to check the game survives a missing model.
 //
 // Exit code 1 if the page logged errors.
 import { spawn } from "node:child_process";
@@ -89,6 +91,10 @@ if (process.env.ASTRO_SNAP_PHONE) {
   await send("Emulation.setUserAgentOverride", {
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
   });
+}
+if (process.env.ASTRO_SNAP_BLOCK) {
+  await send("Network.enable");
+  await send("Network.setBlockedURLs", { urls: process.env.ASTRO_SNAP_BLOCK.split(",") });
 }
 await send("Page.navigate", { url: URL_ });
 

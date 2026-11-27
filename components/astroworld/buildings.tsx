@@ -17,7 +17,7 @@ import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 import { MoltenFlow } from "./molten-flow";
 import { NameBoard } from "./name-board";
-import { ModelErrorBoundary } from "./character-body";
+import { ModelErrorBoundary } from "./model-error-boundary";
 import { NeonCantina } from "./neon-cantina";
 import { GravityWellLounge } from "./gravity-well-lounge";
 import { NearLabel } from "./items";

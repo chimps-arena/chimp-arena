@@ -14,6 +14,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export type EnvId =
   | "armory"
@@ -80,6 +81,11 @@ function fitted(scene: THREE.Object3D, fit: Fit, size: number) {
   return s;
 }
 
+/**
+ * A team building model. Not self-protecting on purpose: on a property lot a
+ * failure should reach the lot's boundary (buildings.tsx), which swaps in the
+ * whole code-built stand-in. Elsewhere, wrap it in a ModelErrorBoundary.
+ */
 export function EnvModel({ id, fit = "width", size }: { id: EnvId; fit?: Fit; size: number }) {
   // Meshopt-compressed: decoded locally, no third-party decoder download.
   const gltf = useGLTF(envUrl(id), false, true);
@@ -166,7 +172,16 @@ export function preloadEnv(ids: EnvId[]) {
  * A companion pet that pads around a small loop near its spot. The pet models
  * aren't rigged, so the motion is a body bob and sway, not a walk cycle.
  */
-export function Pet({ id, size, radius = 2.5, speed = 0.35, phase = 0 }: { id: PetId; size: number; radius?: number; speed?: number; phase?: number }) {
+/** A pet; if its model fails to download it is left out instead of crashing the game. */
+export function Pet(props: { id: PetId; size: number; radius?: number; speed?: number; phase?: number }) {
+  return (
+    <ModelErrorBoundary fallback={null} what={`pet model (${props.id})`}>
+      <PetInner {...props} />
+    </ModelErrorBoundary>
+  );
+}
+
+function PetInner({ id, size, radius = 2.5, speed = 0.35, phase = 0 }: { id: PetId; size: number; radius?: number; speed?: number; phase?: number }) {
   const gltf = useGLTF(petUrl(id), false, true);
   const model = useMemo(() => fitted(gltf.scene, "height", size), [gltf.scene, size]);
   const body = useRef<THREE.Group>(null);

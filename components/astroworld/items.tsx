@@ -16,6 +16,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { Html } from "./drei-html";
 import * as THREE from "three";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export type ItemId =
   | "ore-gold"
@@ -247,7 +248,10 @@ export function ItemPedestal({ id, size = 1.1, label = true }: { id: ItemId; siz
         <meshBasicMaterial color={item.glow} toneMapped={false} />
       </mesh>
       <group position={[0, 0.95, 0]}>
-        <Suspense fallback={null}>{id === "crystal-charged" ? <ChargedCrystal size={size * 1.4} /> : <ItemModel id={id} size={size} />}</Suspense>
+        {/* A failed download leaves an empty pedestal, not a crashed game. */}
+        <ModelErrorBoundary fallback={null} what={`item model (${id})`}>
+          <Suspense fallback={null}>{id === "crystal-charged" ? <ChargedCrystal size={size * 1.4} /> : <ItemModel id={id} size={size} />}</Suspense>
+        </ModelErrorBoundary>
       </group>
       {label && <NearLabel title={item.name} sub={item.kind} color={item.glow} y={size + 2.4} />}
     </group>

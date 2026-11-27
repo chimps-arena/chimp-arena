@@ -18,6 +18,7 @@ import { CollectionBottles, type ShelfLayout } from "./neon-cantina-bottles";
 import { loadCrown, stoolSkin } from "./neon-cantina-signs";
 import { wetTiles } from "./neon-cantina";
 import { crownPanel, leftSign, mainSign, menuScreen, rightSign, windowCrown, windowSign } from "./gravity-well-signs";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export const GRAVITY_WELL_URL = "/models/env/gravity-well.glb";
 export const WIDTH = 12;
@@ -131,7 +132,9 @@ function BackBar() {
           </mesh>
         </group>
       ))}
-      <CollectionBottles shelves={SHELVES} rowZ={BACK.z + 0.16} size={0.78} />
+      <ModelErrorBoundary fallback={null} what="Gravity Well bottle labels">
+        <CollectionBottles shelves={SHELVES} rowZ={BACK.z + 0.16} size={0.78} />
+      </ModelErrorBoundary>
     </group>
   );
 }

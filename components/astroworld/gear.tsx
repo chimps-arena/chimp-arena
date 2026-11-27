@@ -10,6 +10,7 @@ import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 export type WeaponId = "rifle-standard" | "rifle-power-1" | "rifle-power-2" | "rifle-power-3" | "rifle-power-4" | "rifle-power-5";
 export type ToolId = "pickaxe-t1" | "jackhammer-t2" | "plasma-cutter-t3";
@@ -39,7 +40,16 @@ export const gearUrl = (id: GearId) => `/models/${isWeapon(id) ? "weapons" : "to
  * A kit model scaled so its longest side is `length` metres, centred on the
  * origin (weapons and tools are held or racked, not stood on the ground).
  */
-export function GearModel({ id, length }: { id: GearId; length: number }) {
+/** A weapon or tool; if its model fails to download it is left out instead of crashing the game. */
+export function GearModel(props: { id: GearId; length: number }) {
+  return (
+    <ModelErrorBoundary fallback={null} what={`gear model (${props.id})`}>
+      <GearModelInner {...props} />
+    </ModelErrorBoundary>
+  );
+}
+
+function GearModelInner({ id, length }: { id: GearId; length: number }) {
   const gltf = useGLTF(gearUrl(id), false, true);
   const model = useMemo(() => {
     const s = gltf.scene.clone(true);

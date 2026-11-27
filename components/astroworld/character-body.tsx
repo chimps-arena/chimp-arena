@@ -10,7 +10,7 @@
  * fails to load falls back to the code rig instead of breaking the scene.
  */
 
-import { Component, createContext, Suspense, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -51,19 +51,9 @@ export function CharacterBody({ look, pose }: { look: CharacterLook; pose: () =>
   );
 }
 
-/** Shows `fallback` instead of crashing the game when a model fails to download or parse. */
-export class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode; what?: string }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch(err: unknown) {
-    console.warn(`[astroworld] ${this.props.what ?? "character model"} failed to load, using the stand-in`, err);
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
+// Moved to its own file so any model component can use it without circular imports.
+export { ModelErrorBoundary } from "./model-error-boundary";
+import { ModelErrorBoundary } from "./model-error-boundary";
 
 /* ------------------------------ glb model ------------------------------ */
 
