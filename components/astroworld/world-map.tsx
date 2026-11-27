@@ -6,12 +6,13 @@
  * Same orientation as the corner minimap (+x right, +z up).
  */
 
-import { memo, useEffect, useState } from "react";
-import { CORE_RING, DISTRICTS, LOT_SPACING, ROAD_ANGLES, SAFE_RADIUS, STARPORTS, WORLD_RADIUS, type Placement } from "@chimp-arena/shared";
+import { memo, useEffect, useMemo, useState } from "react";
+import { CORE_RING, CRATERS, DISTRICTS, LOT_SPACING, ROAD_ANGLES, SAFE_RADIUS, STARPORTS, WORLD_RADIUS, type Placement } from "@chimp-arena/shared";
 import type { WorldProperty } from "./buildings";
 import { NEWS_SPOTS } from "./news";
 import { ASTROBURGER } from "./astroburger";
 import { ARENA } from "@chimp-arena/shared";
+import { mapRelief } from "./map-relief";
 
 const SIZE = 1000;
 const K = SIZE / 2 / (WORLD_RADIUS + 20);
@@ -36,10 +37,14 @@ interface MapPlayer {
 }
 
 const Base = memo(function Base({ props, places }: { props: WorldProperty[]; places: Map<string, Placement> }) {
+  // The real ground from above (hills, craters, mountains), drawn once on first open.
+  const relief = useMemo(() => mapRelief(WORLD_RADIUS + 20), []);
   return (
     <g>
-      {/* world disc, roads, safe zone */}
-      <circle cx={SIZE / 2} cy={SIZE / 2} r={WORLD_RADIUS * K} fill="#1d1730" stroke="#3b3552" strokeWidth={2} />
+      {/* the land itself, then roads, safe zone */}
+      <circle cx={SIZE / 2} cy={SIZE / 2} r={WORLD_RADIUS * K} fill="#1d1730" />
+      <image href={relief} x={0} y={0} width={SIZE} height={SIZE} preserveAspectRatio="none" />
+      <circle cx={SIZE / 2} cy={SIZE / 2} r={WORLD_RADIUS * K} fill="none" stroke="#3b3552" strokeWidth={2} />
       {ROAD_ANGLES.map((a, i) => {
         const d = DISTRICTS[i];
         const end = Math.hypot(d.x, d.z) - DISTRICT_HALF;
@@ -65,7 +70,7 @@ const Base = memo(function Base({ props, places }: { props: WorldProperty[]; pla
             y={Z(d.z + DISTRICT_HALF)}
             width={DISTRICT_HALF * 2 * K}
             height={DISTRICT_HALF * 2 * K}
-            fill="rgba(239,68,68,0.08)"
+            fill="rgba(11,8,18,0.35)"
             stroke={d.accent}
             strokeWidth={2}
             rx={6}
@@ -78,6 +83,18 @@ const Base = memo(function Base({ props, places }: { props: WorldProperty[]; pla
           </text>
         </g>
       ))}
+      {/* named places in the wild */}
+      {CRATERS.map((c) => (
+        <g key={c.name}>
+          <circle cx={X(c.x)} cy={Z(c.z)} r={c.r * K} fill="none" stroke="#e9e3f5" strokeOpacity={0.35} strokeWidth={1} strokeDasharray="3 4" />
+          <text x={X(c.x)} y={Z(c.z) + 4} textAnchor="middle" fill="#f4efff" fontSize={13} fontStyle="italic" fontWeight={600} letterSpacing={1} paintOrder="stroke" stroke="#0b0812" strokeWidth={3}>
+            {c.name}
+          </text>
+        </g>
+      ))}
+      <text x={SIZE / 2} y={Z(WORLD_RADIUS - 45)} textAnchor="middle" fill="#ece8f4" fillOpacity={0.8} fontSize={12} letterSpacing={6} paintOrder="stroke" stroke="#0b0812" strokeWidth={3}>
+        THE EDGE MOUNTAINS
+      </text>
       <text x={SIZE / 2} y={Z(SAFE_RADIUS) - 8} textAnchor="middle" fill="#34d399" fontSize={18} fontWeight={800} letterSpacing={2}>
         ASTROWORLD CORE · SAFE ZONE
       </text>
