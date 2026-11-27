@@ -308,7 +308,7 @@ create table if not exists public.properties (
   zone          text not null,
   type          text not null,
   price_chimp   integer not null check (price_chimp > 0),
-  owner_wallet  text references public.players (wallet) on delete set null,
+  owner_wallet  text,  -- any Solana wallet; no players link (migration 0042)
   tx_signature  text unique,
   acquired_at   timestamptz,
   created_at    timestamptz not null default now()
