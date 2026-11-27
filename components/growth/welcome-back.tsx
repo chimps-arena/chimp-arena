@@ -76,7 +76,7 @@ export function WelcomeBack() {
   const pathname = usePathname();
   const wallet = me?.player?.wallet ?? null;
   const [offer, setOffer] = useState<Offer | null>(null);
-  const [state, setState] = useState<"offer" | "collecting" | "done">("offer");
+  const [state, setState] = useState<"offer" | "done">("offer");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const skip = SKIP.some((p) => pathname?.startsWith(p));
 
@@ -115,21 +115,15 @@ export function WelcomeBack() {
 
   if (!offer || !wallet || !me?.player) return null;
 
-  const collect = async (withSound: boolean) => {
+  // The burst + chime happen on the click itself; the save finishes behind it.
+  const collect = (withSound: boolean) => {
     if (state !== "offer") return;
-    setState("collecting");
-    if (withSound) playWelcomeChime();
-    markSeen(wallet);
-    try {
-      await fetch("/api/welcome-back", { method: "POST" });
-    } catch {
-      // nothing to do - tomorrow's popup still works
-    }
     setState("done");
-    void refresh();
+    if (withSound) playWelcomeChime();
+    void quietCollect(wallet).then(refresh);
   };
   const close = () => {
-    if (state === "offer") void collect(false);
+    if (state === "offer") collect(false);
     setOffer(null);
   };
 
@@ -204,8 +198,7 @@ export function WelcomeBack() {
             ref={buttonRef}
             type="button"
             className="hud-btn"
-            disabled={state === "collecting"}
-            onClick={() => void collect(true)}
+            onClick={() => collect(true)}
           >
             Collect +{offer.xp} XP
           </button>
