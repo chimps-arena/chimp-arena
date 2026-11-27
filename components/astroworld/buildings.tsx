@@ -16,6 +16,8 @@ import type { Placement } from "@chimp-arena/shared";
 import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 import { MoltenFlow } from "./molten-flow";
+import { NameBoard } from "./name-board";
+import { ModelErrorBoundary } from "./character-body";
 import { NeonCantina } from "./neon-cantina";
 import { NearLabel } from "./items";
 import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
@@ -599,12 +601,17 @@ export const Building = memo(function Building({
   const pieces = modelPiecesFor(prop.type, prop.id);
   const hero = HERO_BUILDINGS[prop.id];
   // Hero build or team model when there is one; the code archetype stands in while it loads.
+  // A model that fails to download falls back to the code building instead of crashing the game.
   const body = hero ? (
-    <Suspense fallback={code}>{hero()}</Suspense>
+    <ModelErrorBoundary fallback={code} what={`building model (${prop.id})`}>
+      <Suspense fallback={code}>{hero()}</Suspense>
+    </ModelErrorBoundary>
   ) : pieces ? (
-    <Suspense fallback={code}>
-      <ModelBody pieces={pieces} />
-    </Suspense>
+    <ModelErrorBoundary fallback={code} what={`building model (${prop.id})`}>
+      <Suspense fallback={code}>
+        <ModelBody pieces={pieces} />
+      </Suspense>
+    </ModelErrorBoundary>
   ) : (
     code
   );
@@ -645,8 +652,14 @@ export const Building = memo(function Building({
           <NearLabel title={TOOLS[toolFor(prop.id)].name} sub={TOOLS[toolFor(prop.id)].tier} color={TOOLS[toolFor(prop.id)].glow} y={3.1} within={14} />
         </group>
       )}
+      {/* the property's own name board at the front corner (hero builds carry their own signage) */}
+      {!hero && (
+        <group position={[-4.4, 0, 6.4]} rotation={[0, 0.2, 0]}>
+          <NameBoard id={prop.id} name={prop.name} zone={prop.zone} type={prop.type} accent={accent} near={near} />
+        </group>
+      )}
       {prop.forSale && (
-        <mesh position={[-5.5, 0.9, 6]}>
+        <mesh position={[-6.75, 0.9, 6.3]}>
           <boxGeometry args={[1.4, 1.8, 0.1]} />
           <meshBasicMaterial color="#10b981" toneMapped={false} />
         </mesh>

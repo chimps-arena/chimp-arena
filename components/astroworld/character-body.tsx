@@ -51,13 +51,14 @@ export function CharacterBody({ look, pose }: { look: CharacterLook; pose: () =>
   );
 }
 
-class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+/** Shows `fallback` instead of crashing the game when a model fails to download or parse. */
+export class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode; what?: string }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
   componentDidCatch(err: unknown) {
-    console.warn("[astroworld] character model failed to load, using the built-in rig", err);
+    console.warn(`[astroworld] ${this.props.what ?? "character model"} failed to load, using the stand-in`, err);
   }
   render() {
     return this.state.failed ? this.props.fallback : this.props.children;
