@@ -17,6 +17,7 @@ import { ItemPedestal, productFor } from "./items";
 import { EnvModel, type EnvId, type Fit } from "./env-models";
 import { MoltenFlow } from "./molten-flow";
 import { NameBoard } from "./name-board";
+import { CoreNeon } from "./core-neon";
 import { ModelErrorBoundary } from "./model-error-boundary";
 import { NeonCantina } from "./neon-cantina";
 import { GravityWellLounge } from "./gravity-well-lounge";
@@ -654,6 +655,8 @@ export const Building = memo(function Building({
           <NearLabel title={TOOLS[toolFor(prop.id)].name} sub={TOOLS[toolFor(prop.id)].tier} color={TOOLS[toolFor(prop.id)].glow} y={3.1} within={14} />
         </group>
       )}
+      {/* Core lots wear the Core's neon (hero builds bring their own) */}
+      {!hero && prop.zone === "Astroworld Core" && <CoreNeon />}
       {/* the property's own name board at the front corner (hero builds carry their own signage) */}
       {!hero && (
         <group position={[-4.4, 0, 6.4]} rotation={[0, 0.2, 0]}>
