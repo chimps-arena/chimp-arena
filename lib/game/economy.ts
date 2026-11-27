@@ -67,6 +67,17 @@ export const STREAK_MILESTONES: Record<number, number> = {
   30: 1200,
 };
 
+/** Welcome-back gift (devlog #28): XP for the first visit of each UTC day,
+ *  more after a few days away. Level/rank only - it never feeds the weekly
+ *  $CHIMP pool (see migration 0044). */
+export const WELCOME_BACK_XP = 5;
+export const WELCOME_BACK_AWAY_DAYS = 3;
+export const WELCOME_BACK_AWAY_XP = 25;
+
+export function welcomeBackXp(daysAway: number): number {
+  return daysAway >= WELCOME_BACK_AWAY_DAYS ? WELCOME_BACK_AWAY_XP : WELCOME_BACK_XP;
+}
+
 /** The next milestone day at or after the current streak, or null past the top. */
 export function nextStreakMilestone(streakDay: number): number | null {
   const days = Object.keys(STREAK_MILESTONES)

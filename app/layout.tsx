@@ -7,6 +7,7 @@ import { TxTrackerProvider } from "@/components/tx-tracker";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
 import { RefCapture } from "@/components/growth/ref-capture";
+import { WelcomeBack } from "@/components/growth/welcome-back";
 import { CopyContractAddress, SocialLinks } from "@/components/social-links";
 import { BUY_CHIMP_URL, CHART_URL, SIMILAR_GAMES, SOLSCAN_TOKEN_URL } from "@/lib/links";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
@@ -92,6 +93,7 @@ export default function RootLayout({
         <SessionProvider>
           <TxTrackerProvider>
             <WalletSessionGuard />
+            <WelcomeBack />
             <NavBar />
             <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
               {children}
