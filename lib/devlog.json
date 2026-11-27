@@ -1,5 +1,19 @@
 [
  {
+  "hash": "00f0cc5",
+  "date": "2026-11-27",
+  "kind": "Fix",
+  "area": "Growth",
+  "text": "Welcome-back XP burst fires on the click, save runs behind it"
+ },
+ {
+  "hash": "d6b5bfe",
+  "date": "2026-11-27",
+  "kind": "New",
+  "area": "Growth",
+  "text": "Welcome-back popup with a daily XP gift"
+ },
+ {
   "hash": "7136794",
   "date": "2026-11-27",
   "kind": "Fix",
