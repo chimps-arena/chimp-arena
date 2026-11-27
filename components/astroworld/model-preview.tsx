@@ -5,6 +5,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import type * as THREE from "three";
 import { NeonCantina } from "./neon-cantina";
+import { GravityWellLounge } from "./gravity-well-lounge";
 import { Bloom } from "./bloom";
 
 /**
@@ -12,7 +13,8 @@ import { Bloom } from "./bloom";
  * (scripts/astroworld-snapshot.mjs); ?grid=0 hides the metre grid.
  */
 function CamPin() {
-  const { camera, controls } = useThree();
+  const { camera, controls, scene } = useThree();
+  useEffect(() => void ((globalThis as { __mpScene?: unknown }).__mpScene = scene), [scene]);
   useEffect(() => {
     const id = setInterval(() => {
       const p = (globalThis as { __mpCam?: number[] }).__mpCam;
@@ -59,7 +61,8 @@ export function ModelPreview() {
           <Lightformer form="rect" intensity={0.6} color="#2b1d5c" scale={[400, 400, 1]} position={[0, -10, 0]} rotation-x={-Math.PI / 2} />
         </Environment>
         <Suspense fallback={null}>
-          <NeonCantina signs={q.get("signs") !== "0"} />
+          {/* ?m=gravity shows Gravity Well Lounge; default is the Neon Cantina. */}
+          {q.get("m") === "gravity" ? <GravityWellLounge signs={q.get("signs") !== "0"} /> : <NeonCantina signs={q.get("signs") !== "0"} />}
         </Suspense>
         {grid && (
           <>

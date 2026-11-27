@@ -20,13 +20,15 @@ import { CHARACTERS } from "@chimp-arena/shared";
 const LABEL_COLS = 8;
 const LABEL_ROWS = Math.ceil(CHARACTERS.length / LABEL_COLS);
 
-/** Shelf boards measured from the model (y = board top, x = usable span). */
-const SHELF = {
-  common: { y: 1.93, x: [-3.7, 1.8] as const },
-  rare: { y: 2.71, x: [-3.7, 1.8] as const },
-  one_of_one: { y: 3.43, x: [-3.66, -2.54] as const },
+/** Where each tier stands: board-top height y and usable x span, in the venue's own space. */
+export type ShelfLayout = Record<"common" | "rare" | "one_of_one", { y: number; x: readonly [number, number] }>;
+
+/** The Neon Cantina's shelves, measured from its model; the default. */
+const NEON_SHELVES: ShelfLayout = {
+  common: { y: 1.93, x: [-3.7, 1.8] },
+  rare: { y: 2.71, x: [-3.7, 1.8] },
+  one_of_one: { y: 3.43, x: [-3.66, -2.54] },
 };
-const ROW_Z = -0.5; // one row, just in front of the back wall (z -0.8)
 
 /**
  * Bottle silhouettes as [radius, height] lathe profiles (metres, base at 0).
@@ -84,7 +86,7 @@ function labelGeometry(r: number, cell: number) {
 
 type Placed = { cell: number; tier: string; shape: Shape; x: number; y: number; ry: number; liquid: [string, number] };
 
-function layout(): Placed[] {
+function layout(SHELF: ShelfLayout): Placed[] {
   const r = seeded(2175);
   const out: Placed[] = [];
   for (const tier of ["common", "rare", "one_of_one"] as const) {
@@ -115,7 +117,11 @@ const PUCK = (() => {
   return m;
 })();
 
-export function CollectionBottles() {
+/**
+ * `rowZ`: depth of the bottle row (just in front of the back wall).
+ * `size`: overall scale, for narrower back bars.
+ */
+export function CollectionBottles({ shelves = NEON_SHELVES, rowZ = -0.5, size = 1 }: { shelves?: ShelfLayout; rowZ?: number; size?: number } = {}) {
   const sheet = useTexture("/astroworld/neon-cantina/labels.webp", (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
@@ -147,9 +153,9 @@ export function CollectionBottles() {
     };
     const capMats = Object.fromEntries(Object.entries(CAP).map(([t, c]) => [t, new THREE.MeshStandardMaterial({ color: c, metalness: 0.9, roughness: 0.3 })]));
     const labelMat = new THREE.MeshStandardMaterial({ map: sheet, roughness: 0.75, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1 });
-    const items = layout().map((p) => ({ ...p, geo: geoFor(p.shape), liq: liquidMat(p.liquid), label: labelGeometry(p.shape.r, p.cell) }));
+    const items = layout(shelves).map((p) => ({ ...p, geo: geoFor(p.shape), liq: liquidMat(p.liquid), label: labelGeometry(p.shape.r, p.cell) }));
     return { items, geos, liquidMats, capMats, labelMat };
-  }, [sheet]);
+  }, [sheet, shelves]);
   useEffect(
     () => () => {
       built.geos.forEach((g) => { g.body.dispose(); g.liquid.dispose(); });
@@ -166,7 +172,7 @@ export function CollectionBottles() {
       {built.items.map((b) => {
         const top = b.shape.profile[b.shape.profile.length - 1][1];
         return (
-          <group key={b.cell} position={[b.x, b.y, ROW_Z]} rotation={[0, b.ry, 0]} scale={SCALE[b.tier]}>
+          <group key={b.cell} position={[b.x, b.y, rowZ]} rotation={[0, b.ry, 0]} scale={SCALE[b.tier] * size}>
             <mesh geometry={b.geo.liquid} material={b.liq} />
             <mesh geometry={b.geo.body} material={GLASS} renderOrder={1} />
             <mesh position={[0, b.shape.label, 0]} geometry={b.label} material={built.labelMat} />

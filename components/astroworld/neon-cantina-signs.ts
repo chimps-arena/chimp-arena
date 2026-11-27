@@ -33,8 +33,8 @@ function fontVar(name: string, fallback: string) {
   const v = getComputedStyle(document.body).getPropertyValue(name).trim();
   return v ? `${v}, ${fallback}` : fallback;
 }
-const hud = () => fontVar("--font-hud", "sans-serif");
-const body = () => fontVar("--font-geist-sans", "sans-serif");
+export const hud = () => fontVar("--font-hud", "sans-serif");
+export const body = () => fontVar("--font-geist-sans", "sans-serif");
 const MARKER = "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Chalkboard SE', cursive";
 
 let crownImg: HTMLImageElement | null = null;
@@ -49,14 +49,14 @@ export function loadCrown(): Promise<HTMLImageElement> {
   });
 }
 
-function canvas(w: number, h: number) {
+export function canvas(w: number, h: number) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
   return [c, c.getContext("2d")!] as const;
 }
 
-function finish(c: HTMLCanvasElement) {
+export function finish(c: HTMLCanvasElement) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
@@ -64,7 +64,7 @@ function finish(c: HTMLCanvasElement) {
 }
 
 /** Dark panel with a scuffed metal edge, like the boards in the art. */
-function panel(g: CanvasRenderingContext2D, w: number, h: number, fill = INK) {
+export function panel(g: CanvasRenderingContext2D, w: number, h: number, fill = INK) {
   g.fillStyle = fill;
   g.fillRect(0, 0, w, h);
   g.strokeStyle = "rgba(160,150,175,0.35)";
@@ -73,7 +73,7 @@ function panel(g: CanvasRenderingContext2D, w: number, h: number, fill = INK) {
 }
 
 /** Neon lettering: wide soft glow, coloured tube, white-hot core. */
-function neonText(g: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, font: string) {
+export function neonText(g: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, font: string) {
   g.font = `400 ${size}px ${font}`;
   g.textAlign = "center";
   g.textBaseline = "middle";
@@ -92,7 +92,7 @@ function neonText(g: CanvasRenderingContext2D, text: string, x: number, y: numbe
   g.shadowBlur = 0;
 }
 
-function glowText(g: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, font: string, weight = 600, align: CanvasTextAlign = "center") {
+export function glowText(g: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, font: string, weight = 600, align: CanvasTextAlign = "center") {
   g.font = `${weight} ${size}px ${font}`;
   g.textAlign = align;
   g.textBaseline = "middle";
@@ -103,7 +103,7 @@ function glowText(g: CanvasRenderingContext2D, text: string, x: number, y: numbe
   g.shadowBlur = 0;
 }
 
-function crown(g: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, w: number, glow: string, tint?: string) {
+export function crown(g: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, w: number, glow: string, tint?: string) {
   const h = (w * img.height) / img.width;
   let src: CanvasImageSource = img;
   if (tint) {

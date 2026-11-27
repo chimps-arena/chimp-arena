@@ -10,7 +10,8 @@
  * y=0, front (the bar) facing +z, scaled to WIDTH across.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Billboard, useGLTF } from "@react-three/drei";
+import { Billboard } from "@react-three/drei";
+import { HeroModel } from "./hero-model";
 import { CollectionBottles } from "./neon-cantina-bottles";
 import * as THREE from "three";
 import { banner, coldFuelPoster, crownPanel, languagePanel, loadCrown, mainSign, menuBoard, ORBITAL_DRIFT, screen, stoolSkin } from "./neon-cantina-signs";
@@ -87,37 +88,7 @@ function BarrelStool({ x, skin }: { x: number; skin: THREE.Texture }) {
 }
 
 function Model() {
-  const { scene } = useGLTF(NEON_CANTINA_URL, false, true);
-  const model = useMemo(() => {
-    const s = scene.clone(true);
-    const box = new THREE.Box3().setFromObject(s);
-    const size = box.getSize(new THREE.Vector3());
-    const k = WIDTH / size.x;
-    s.scale.setScalar(k);
-    const c = box.getCenter(new THREE.Vector3());
-    s.position.set(-c.x * k, -box.min.y * k, -c.z * k);
-    // Meshy's PBR maps read as crumpled foil: too metallic, too mirror-like, a
-    // noisy normal map. Calm them toward the art's dark, rusty steel.
-    const tuned = new Map<THREE.Material, THREE.Material>();
-    s.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const src = mesh.material as THREE.MeshStandardMaterial;
-      let m = tuned.get(src) as THREE.MeshStandardMaterial | undefined;
-      if (!m) {
-        m = src.clone();
-        m.metalness = 0.5;
-        m.roughness = 1;
-        m.envMapIntensity = 0.6;
-        m.normalScale?.setScalar(0.5);
-        m.color.multiplyScalar(0.88);
-        tuned.set(src, m);
-      }
-      mesh.material = m;
-    });
-    return s;
-  }, [scene]);
-  return <primitive object={model} />;
+  return <HeroModel url={NEON_CANTINA_URL} width={WIDTH} />;
 }
 
 /* --------------------------- wet floor + haze --------------------------- */
@@ -126,7 +97,7 @@ function Model() {
 const FLOOR = { x: [-5.9, 5.9] as const, z: [2.95, 5.35] as const, y: 0.036 };
 
 /** Dark wet tiles with grout lines and puddle patches. */
-function wetTiles() {
+export function wetTiles() {
   const c = document.createElement("canvas");
   c.width = 1024;
   c.height = 256;

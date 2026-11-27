@@ -19,6 +19,7 @@ import { MoltenFlow } from "./molten-flow";
 import { NameBoard } from "./name-board";
 import { ModelErrorBoundary } from "./character-body";
 import { NeonCantina } from "./neon-cantina";
+import { GravityWellLounge } from "./gravity-well-lounge";
 import { NearLabel } from "./items";
 import { ToolStand, toolFor, TOOLS, WeaponRack } from "./gear";
 import { DockedShip, dockedShipFor } from "./vehicles";
@@ -476,6 +477,7 @@ function pick<T>(list: T[], key: string): T {
  */
 const HERO_BUILDINGS: Partial<Record<string, () => ReactNode>> = {
   "core-nc4": () => <NeonCantina />, // Neon Cantina, "Orbital Drift"
+  "core-gravity-well": () => <GravityWellLounge />, // Gravity Well Lounge, "Chimp Arena Cantina"
 };
 
 // Exterior pilot for The Foundry in The Belt. The other Foundry lots keep their code archetype.
