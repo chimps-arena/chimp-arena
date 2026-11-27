@@ -11,7 +11,7 @@ const AREA = {
   ui: "Site design", site: "Site", mint: "Minting", market: "Market", land: "Properties",
   images: "Images", "my-assets": "My Assets", arena: "Arena", mining: "Mining", world: "3D world",
   wallet: "Wallet", chain: "Blockchain", nft: "NFTs", web3: "Wallet", mobile: "Mobile",
-  ux: "Site", rename: "Names", "chimp-balance": "Wallet", home: "Homepage",
+  ux: "Site", rename: "Names", "chimp-balance": "Wallet", home: "Homepage", growth: "Growth",
 };
 
 const log = execFileSync("git", ["log", "--no-merges", "--format=%h%x09%ad%x09%s", "--date=short"], {
