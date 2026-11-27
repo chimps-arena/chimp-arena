@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/solana-verify";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { DEFAULT_HANDLE } from "@/lib/game/config";
+import { recordReferral } from "@/lib/referral-server";
 
 export const runtime = "nodejs";
 
@@ -53,12 +54,13 @@ export async function POST(req: Request) {
 
   // Create the row on first sign-in only; never clobber an existing
   // handle / xp / crew.
-  const { error: insertError } = await db
+  const { data: created, error: insertError } = await db
     .from("players")
     .upsert(
       { wallet, handle: DEFAULT_HANDLE(wallet), last_seen: now },
       { onConflict: "wallet", ignoreDuplicates: true },
-    );
+    )
+    .select("wallet");
 
   if (insertError) {
     return NextResponse.json(
@@ -66,6 +68,9 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+  // ignoreDuplicates returns the row only when it was just created, so a
+  // returning player is never re-attributed to whoever shared a link.
+  if (created?.length) await recordReferral(db, req, wallet);
 
   // Touch last_seen for returning players (no-op fields for brand-new rows).
   await db.from("players").update({ last_seen: now }).eq("wallet", wallet);

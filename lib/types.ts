@@ -82,6 +82,11 @@ export interface PlayerProfile {
 export interface MeResponse {
   player: PlayerProfile | null;
   crew: Crew | null;
+  /** Share links + new-pilot checklist (devlog #30). refCode is null until migration 0043. */
+  growth: {
+    refCode: string | null;
+    astrochimpsMinted: number;
+  };
   today: {
     date: string; // UTC YYYY-MM-DD
     missions: Array<{

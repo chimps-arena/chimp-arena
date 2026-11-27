@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { setSessionCookie } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { recordReferral } from "@/lib/referral-server";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export const runtime = "nodejs";
 const GUEST_BURST_LIMIT = 40;
 const GUEST_BURST_WINDOW_MS = 10 * 60_000;
 
-export async function POST() {
+export async function POST(req: Request) {
   const hex = randomBytes(9).toString("hex"); // 18 hex chars
   const wallet = `guest_${hex}`;
   const now = new Date().toISOString();
@@ -47,6 +48,8 @@ export async function POST() {
       { status: 500 },
     );
   }
+
+  await recordReferral(db, req, wallet);
 
   const res = NextResponse.json({ ok: true, wallet });
   await setSessionCookie(res, wallet);

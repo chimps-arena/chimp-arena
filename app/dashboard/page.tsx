@@ -14,6 +14,7 @@ import { MissionCard } from "@/components/mission-card";
 import { StreakCard } from "@/components/streak-card";
 import { RankCard } from "@/components/rank-card";
 import { GuestButton } from "@/components/guest-button";
+import { NewPilotChecklist, TodaysOrders } from "@/components/growth/todays-orders";
 import { Lamp, Readout, SectionHeader, tint } from "@/components/hud";
 import { shortWallet } from "@/lib/format";
 import { TOKEN_SYMBOL } from "@/lib/game/economy";
@@ -56,6 +57,23 @@ export default function DashboardPage() {
 
   return (
     <div className="hud flex flex-col gap-8">
+      {/* ---------- what to do now (devlog #30) ---------- */}
+      <TodaysOrders me={me} />
+      <NewPilotChecklist me={me} />
+
+      {/* ---------- missions ---------- */}
+      <section className="flex flex-col gap-4">
+        <SectionHeader
+          title="Daily missions"
+          aside={`${missionsDone}/${playable.length} cleared · reset 00:00 UTC`}
+        />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {today.missions.map((m, i) => (
+            <MissionCard key={m.def.slug} status={m} index={i} />
+          ))}
+        </div>
+      </section>
+
       {/* ---------- pilot console ---------- */}
       <section className="hud-panel p-6" style={{ "--cut": "22px" } as React.CSSProperties}>
         <div className="hud-label flex items-center gap-2">
@@ -140,19 +158,6 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
-
-      {/* ---------- missions ---------- */}
-      <section className="flex flex-col gap-4">
-        <SectionHeader
-          title="Daily missions"
-          aside={`${missionsDone}/${playable.length} cleared · reset 00:00 UTC`}
-        />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {today.missions.map((m, i) => (
-            <MissionCard key={m.def.slug} status={m} index={i} />
-          ))}
-        </div>
-      </section>
 
       {/* ---------- ship systems ---------- */}
       <section className="flex flex-col gap-4">

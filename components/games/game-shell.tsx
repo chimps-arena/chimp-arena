@@ -5,6 +5,7 @@ import { useCallback, useState, type ReactNode } from "react";
 import { useSession } from "@/components/session-provider";
 import { Lamp, PageHeader, Readout, tint } from "@/components/hud";
 import { BUY_CHIMP_URL } from "@/lib/links";
+import { JoinTelegram, ShareBrag } from "@/components/growth/share-brag";
 import type { SubmitResult } from "@/lib/types";
 
 type Phase = "intro" | "loading" | "playing" | "submitting" | "result" | "error";
@@ -121,7 +122,7 @@ export function GameShell({
         {phase === "submitting" && <Centered>Scoring your run…</Centered>}
 
         {phase === "result" && result && (
-          <ResultView result={result} onReplay={replay} />
+          <ResultView result={result} slug={slug} title={title} onReplay={replay} />
         )}
 
         {phase === "error" && (
@@ -151,11 +152,25 @@ function Centered({ children }: { children: ReactNode }) {
 
 function ResultView({
   result,
+  slug,
+  title,
   onReplay,
 }: {
   result: SubmitResult;
+  slug: string;
+  title: string;
   onReplay: () => void;
 }) {
+  // The card shows today's best run (lib/pilot-card), so the post's words
+  // use the same number; `me` was refreshed right after submit.
+  const { me } = useSession();
+  const todays = me?.today.missions.find((m) => m.def.slug === slug);
+  const score = todays?.bestScore ?? result.scoreAccepted;
+  const crewName = me?.crew?.name;
+  const brag = `I just scored ${score.toLocaleString("en-US")} on ${title} in @Astrochimpz${
+    crewName ? ` for ${crewName}` : ""
+  }${result.streak && result.streak.count > 1 ? `, ${result.streak.count}-day streak` : ""}. Think you can beat it?`;
+
   return (
     <div className="flex flex-col items-center gap-4 py-2 text-center">
       <div className="hud-label flex items-center gap-2">
@@ -210,6 +225,26 @@ function ResultView({
       <div className="mono text-sm text-muted">
         Total XP: {result.totalXp.toLocaleString()}
       </div>
+      {me?.growth?.refCode && (
+        <div
+          className="mt-2 w-full max-w-md border p-4"
+          style={{
+            borderColor: "color-mix(in srgb, var(--hud-cyan) 40%, transparent)",
+            background: "color-mix(in srgb, var(--hud-cyan) 6%, transparent)",
+          }}
+        >
+          <div className="hud-label !text-[color:var(--hud-cyan)]">Brag about it</div>
+          <p className="mt-1 text-sm text-muted">
+            Your card goes with the post. Anyone who joins through your link is counted as brought in by you.
+          </p>
+          <div className="mt-3">
+            <ShareBrag refCode={me.growth.refCode} missionSlug={slug} text={brag} compact />
+          </div>
+          <div className="mt-3 flex justify-center">
+            <JoinTelegram className="hud-btn hud-btn-ghost !px-3 !py-2 !text-[0.7rem]" />
+          </div>
+        </div>
+      )}
       <div className="mt-1 flex gap-3">
         <button className="hud-btn hud-btn-ghost" onClick={onReplay}>
           Play again

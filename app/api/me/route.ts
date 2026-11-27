@@ -83,6 +83,14 @@ export async function GET() {
     .eq("owner_wallet", session.wallet);
   const rank = computeRank(row.xp, propertiesOwned ?? 0);
 
+  // Growth (devlog #30): share-link code + Astrochimps minted, for the
+  // share buttons and the new-pilot checklist. Read separately and
+  // tolerantly so a missing migration 0043 can't break /api/me.
+  const [refRes, mintedRes] = await Promise.all([
+    db.from("players").select("ref_code").eq("wallet", session.wallet).maybeSingle(),
+    db.from("nft_mint_claims").select("id", { count: "exact", head: true }).eq("wallet", session.wallet),
+  ]);
+
   const freeUntil = new Date(
     new Date(row.created_at).getTime() + RENAME_FREE_TRIAL_DAYS * 86_400_000,
   );
@@ -108,6 +116,10 @@ export async function GET() {
       lastRenamedAt: row.last_renamed_at,
     },
     crew: crewBySlug(row.crew_slug),
+    growth: {
+      refCode: (refRes.data as { ref_code?: string } | null)?.ref_code ?? null,
+      astrochimpsMinted: mintedRes.count ?? 0,
+    },
     today,
     week: {
       start: weekStart,

@@ -6,6 +6,7 @@ import { WalletSessionGuard } from "@/components/wallet-session-guard";
 import { TxTrackerProvider } from "@/components/tx-tracker";
 import { AppScene } from "@/components/app-scene";
 import { NavBar } from "@/components/nav-bar";
+import { RefCapture } from "@/components/growth/ref-capture";
 import { CopyContractAddress, SocialLinks } from "@/components/social-links";
 import { BUY_CHIMP_URL, CHART_URL, SIMILAR_GAMES, SOLSCAN_TOKEN_URL } from "@/lib/links";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
@@ -87,6 +88,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AppScene />
+        <RefCapture />
         <SessionProvider>
           <TxTrackerProvider>
             <WalletSessionGuard />
