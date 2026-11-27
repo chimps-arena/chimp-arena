@@ -1,5 +1,12 @@
 [
  {
+  "hash": "915c154",
+  "date": "2026-11-27",
+  "kind": "Fix",
+  "area": "Properties",
+  "text": "Record sales for wallets that never signed in; hide paid properties"
+ },
+ {
   "hash": "d760ee4",
   "date": "2026-11-21",
   "kind": "New",
