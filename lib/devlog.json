@@ -1,5 +1,12 @@
 [
  {
+  "hash": "7136794",
+  "date": "2026-11-27",
+  "kind": "Fix",
+  "area": "Wallet",
+  "text": "Ledger users can sign in"
+ },
+ {
   "hash": "8ba594e",
   "date": "2026-11-27",
   "kind": "New",
