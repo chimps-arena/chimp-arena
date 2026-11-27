@@ -1,6 +1,7 @@
 "use client";
 
 import bs58 from "bs58";
+import type { Transaction } from "@solana/web3.js";
 
 /** Minimal shape of the Phantom injected provider we rely on. */
 interface PhantomProvider {
@@ -15,6 +16,7 @@ interface PhantomProvider {
     message: Uint8Array,
     display?: "utf8" | "hex",
   ) => Promise<{ signature: Uint8Array }>;
+  signTransaction: (tx: Transaction) => Promise<Transaction>;
   on: (event: string, handler: (args: unknown) => void) => void;
   removeListener: (event: string, handler: (args: unknown) => void) => void;
 }
@@ -27,7 +29,7 @@ export const PHANTOM_INSTALL_URL = "https://phantom.com/download";
  * button stuck with no way to recover but a reload. Race every provider call
  * against a timeout so the UI always gets an actionable error back instead.
  */
-export function withPhantomTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+export function withPhantomTimeout<T>(promise: Promise<T>, label: string, ms = 15000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(
@@ -35,7 +37,7 @@ export function withPhantomTimeout<T>(promise: Promise<T>, label: string): Promi
           `Phantom didn't respond to "${label}" - its extension background process may be stuck. Toggle Phantom off/on at chrome://extensions, then try again.`,
         ),
       );
-    }, 15000);
+    }, ms);
     promise.then(
       (v) => {
         clearTimeout(timer);

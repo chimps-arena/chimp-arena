@@ -4,7 +4,8 @@ import { setSessionCookie } from "@/lib/auth/session";
 import {
   buildChallenge,
   isLikelySolanaAddress,
-  verifySignature,
+  verifyMessageSignature,
+  verifySignInTransaction,
 } from "@/lib/auth/solana-verify";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { DEFAULT_HANDLE } from "@/lib/game/config";
@@ -13,21 +14,25 @@ import { recordReferral } from "@/lib/referral-server";
 export const runtime = "nodejs";
 
 /**
- * POST { wallet, signature, challengeToken } -> { ok, wallet }
+ * POST { wallet, challengeToken, signature | transaction } -> { ok, wallet }
  * On success, sets the httpOnly session cookie and upserts the player row.
+ *
+ * `signature`: the signed challenge message (Ledger's off-chain envelope
+ * accepted too). `transaction`: base64 memo transaction holding the
+ * challenge, signed but never sent - the Ledger fallback (devlog #25).
  */
 export async function POST(req: Request) {
-  let body: { wallet?: unknown; signature?: unknown; challengeToken?: unknown };
+  let body: { wallet?: unknown; signature?: unknown; transaction?: unknown; challengeToken?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  const { wallet, signature, challengeToken } = body;
+  const { wallet, signature, transaction, challengeToken } = body;
   if (
     !isLikelySolanaAddress(wallet) ||
-    typeof signature !== "string" ||
+    (typeof signature !== "string" && typeof transaction !== "string") ||
     typeof challengeToken !== "string"
   ) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
@@ -45,7 +50,11 @@ export async function POST(req: Request) {
   }
 
   const message = buildChallenge(wallet, claims.nonce);
-  if (!verifySignature(message, signature, wallet)) {
+  const valid =
+    typeof transaction === "string"
+      ? transaction.length <= 4000 && verifySignInTransaction(transaction, message, wallet)
+      : typeof signature === "string" && verifyMessageSignature(message, signature, wallet);
+  if (!valid) {
     return NextResponse.json({ error: "bad signature" }, { status: 401 });
   }
 
